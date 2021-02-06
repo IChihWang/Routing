@@ -1,0 +1,6 @@
+*.pyc
+SUMO_env/data/net/lane16by16.net.xml
+SUMO_env/data/net/lane17by17.net.xml
+SUMO_env/data/net/lane18by18.net.xml
+SUMO_env/data/net/lane19by19.net.xml
+SUMO_env/data/net/lane20by20.net.xml
