@@ -46,7 +46,6 @@ from IntersectionManager import IntersectionManager
 vehNr = 0
 
 def run():
-    """execute the TraCI control loop"""
     simu_step = 0
 
     # Create a list with intersection managers
@@ -65,13 +64,38 @@ def run():
             if jdx <= cfg.INTER_SIZE-1:
                 intersection_manager_dict[(idx, jdx)].connect(2, intersection_manager_dict[(idx, jdx+1)], 0)
 
-
     # Start simulation
     try:
+        # Record car info
+        car_info = dict()
+
         while traci.simulation.getMinExpectedNumber() > 0:
+
+            '''
+            if (simu_step*10)//1%10 == 0:
+                print(intersection_manager_dict[(1, 1)].ID)
+                print(intersection_manager_dict[(1, 1)].my_road_info)
+                print('---')
+                print(intersection_manager_dict[(1, 1)].others_road_info)
+                print(str(simu_step) + '==============')
+            #'''
+
 
             if (simu_step*10)//1/10.0 == cfg.N_TIME_STEP:
                 break
+
+            '''
+            if (simu_step*10)//1/10.0 == 820:
+                print("check car_2711 car_3494  ?   (If not work, change back to max)")
+                input('Enter enter:')
+
+            #'''
+            '''
+            if (simu_step*10)//1/10.0 == 207:
+                print("check 811 832")
+                input('Enter enter:')
+            #'''
+
 
             traci.simulationStep()
             all_c = traci.vehicle.getIDList()
@@ -81,19 +105,65 @@ def run():
 
                 lane_id = traci.vehicle.getLaneID(car_id)
 
+                # Dummy: Generate routes (turnings)
+                if not car_id in car_info:
+                    car_info[car_id] = dict()
+                    route = []
+                    for i in range(20):
+                        route.append(random.choice(["S", "L", "R"]))
+                    car_info[car_id]["route"] = route
+
+
                 is_handled = False
                 for intersection_manager in intersection_manager_dict.values():
-                    if intersection_manager.check_in_my_region(lane_id):
+                    if (intersection_manager.check_in_my_region(lane_id) == "On my lane"):
 
-                        # TODO: get turning
-                        car_turn = random.choice(["S", "L", "R"])
+                        current_turn = car_info[car_id]["route"][0]
+                        next_turn = car_info[car_id]["route"][1]
 
+                        intersection_manager.update_car(car_id, lane_id, simu_step, current_turn, next_turn)
                         is_handled = True
-                        intersection_manager.update_car(car_id, lane_id, simu_step, car_turn)
-                        break
+                        car_info[car_id]["inter_status"] = "On my lane"
+
+                    elif (intersection_manager.check_in_my_region(lane_id) == "In my intersection"):
+
+                        # Check if the car enter the intersection (by changing state from "On my lane" to "in intersection")
+                        if (car_info[car_id]["inter_status"] == "On my lane"):
+                            car_info[car_id]["route"].pop(0)
+
+                            # Dummy: Generate routes (turnings)
+                            if len(car_info[car_id]["route"]) == 0:
+                                route = []
+                                for i in range(20):
+                                    route.append(random.choice(["S", "L", "R"]))
+                                car_info[car_id]["route"] = route
+
+
+                        current_turn = car_info[car_id]["route"][0]
+                        next_turn = car_info[car_id]["route"][1]
+
+                        intersection_manager.update_car(car_id, lane_id, simu_step, current_turn, next_turn)
+                        is_handled = True
+                        car_info[car_id]["inter_status"] = "In my intersection"
+
+                    else:   # The intersection doesn't have the car
+                        intersection_manager.delete_car(car_id)
+
                 if not is_handled:
                     # Leaving intersections
+
                     traci.vehicle.setSpeed(car_id, cfg.MAX_SPEED)
+                    car_info[car_id]["inter_status"] = "None"
+
+
+            # Remove cars
+            car_to_delete = []
+            for car_id in car_info:
+                if not car_id in all_c:
+                    car_to_delete.append(car_id)
+            for car_id in car_to_delete:
+                del car_info[car_id]
+
 
             for intersection_manager in intersection_manager_dict.values():
                 intersection_manager.run(simu_step)
@@ -119,18 +189,16 @@ def run():
     print("avg_fuel = ",intersection_manager.total_fuel_consumption/intersection_manager.fuel_consumption_count)
 
 
+    #'''
     file_name2 = 'result/result.csv'
 
     with open(file_name2, 'a', newline='') as csvfile2:
         writer2 = csv.writer(csvfile2, dialect='excel-tab', quoting=csv.QUOTE_MINIMAL, delimiter = ',')
         to_write2 = [sys.argv[1], sys.argv[2], sys.argv[3],
-                    sys.argv[4], "_", simu_step,
-                    intersections[0].car_num,
-                    intersections[1].car_num,
-                    vehNr,
-                    vehNr/6
+                    sys.argv[4], "_", simu_step
                     ]
         writer2.writerow(to_write2)
+    #'''
 
     sys.stdout.flush()
 
@@ -150,7 +218,7 @@ if __name__ == "__main__":
     arrival_rate = float(sys.argv[1])
     cfg.INTER_SIZE = int(sys.argv[4])
 
-    sumoBinary = checkBinary('sumo-gui')
+    sumoBinary = checkBinary('sumo')
 
     # 0. Generate the intersection information files
     os.system("bash gen_intersection/gen_data.sh " + str(cfg.LANE_NUM_PER_DIRECTION))

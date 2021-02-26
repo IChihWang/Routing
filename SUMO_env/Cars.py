@@ -26,24 +26,26 @@ import config as cfg
 import numpy as np
 
 class Car:
-    def __init__(self, car_id, length, lane, turning):
+    def __init__(self, car_id, length, lane, turn, next_turn):
         # ===== Profile of the car (Not change during the simulation) ==========
         self.ID = car_id
         self.length = length
-        self.turning = turning
+        self.current_turn = turn
+        self.next_turn = next_turn
 
-        self.in_dir = lane // cfg.LANE_NUM_PER_DIRECTION
-        self.out_dir = None
-        if turning == 'S':
-            self.out_dir = (self.in_dir+2)%4
-        elif turning == 'R':
-            self.out_dir = (self.in_dir+1)%4
-        elif turning == 'L':
-            self.out_dir = (self.in_dir-1)%4
+        self.in_direction = lane // cfg.LANE_NUM_PER_DIRECTION
+        self.out_direction = None
+        if turn == 'S':
+            self.out_direction = (self.in_direction+2)%4
+        elif turn == 'R':
+            self.out_direction = (self.in_direction+1)%4
+        elif turn == 'L':
+            self.out_direction = (self.in_direction-1)%4
+
 
         # Determine the speed in the intersection
         speed_in_intersection = cfg.TURN_SPEED
-        if turning == "S":
+        if turn == "S":
             speed_in_intersection = cfg.MAX_SPEED
         else:
             speed_in_intersection = cfg.TURN_SPEED
@@ -55,18 +57,23 @@ class Car:
 
         # ===== Information that might change during the simulation ============
         self.original_lane = lane   # The lane when the car joined the system
-        self.lane = lane
-        self.desired_lane = lane
+        self.lane = lane            # Current car lane
+        self.desired_lane = lane    # The lane that the car wants to change
         self.is_spillback = False
         self.is_spillback_strict = False
 
+
         out_sub_lane = (cfg.LANE_NUM_PER_DIRECTION-lane%cfg.LANE_NUM_PER_DIRECTION-1)
-        self.dst_lane_changed_to = int(self.out_dir*cfg.LANE_NUM_PER_DIRECTION + out_sub_lane)
-        if turning == 'R':
+        self.dst_lane = int(self.out_direction*cfg.LANE_NUM_PER_DIRECTION + out_sub_lane)     # Destination lane before next lane change
+        if next_turn == 'R':
             out_sub_lane = 0
-        elif turning == 'L':
+        elif next_turn == 'L':
             out_sub_lane = cfg.LANE_NUM_PER_DIRECTION-1
-        self.dst_lane = int(self.out_dir*cfg.LANE_NUM_PER_DIRECTION + out_sub_lane)
+        elif next_turn == 'S':
+            out_sub_lane = cfg.LANE_NUM_PER_DIRECTION//2
+
+        self.dst_lane_changed_to = int(self.out_direction*cfg.LANE_NUM_PER_DIRECTION + out_sub_lane)  # Destination lane after next lane change
+
 
 
         # Position: how far between it and the intersection (0 at the entry of intersection)
@@ -120,11 +127,12 @@ class Car:
         leader_tuple = traci.vehicle.getLeader(self.ID)
 
 
+
         if leader_tuple != None:
             if leader_tuple[0] in car_list.keys():
                 front_car_ID = leader_tuple[0]
                 front_car = car_list[front_car_ID]
-                front_distance = leader_tuple[1]
+                front_distance = leader_tuple[1] + 3    # Because SUMO measre the distance with a given Gap
 
                 if self.CC_front_pos_diff == 0:
                     self.CC_front_pos_diff = self.position - front_car.position
@@ -223,6 +231,7 @@ class Car:
             self.CC_state = "Entering_intersection"
             traci.vehicle.setSpeed(self.ID, self.speed_in_intersection)
 
+
         elif (self.CC_state == "Platoon_catchup"):
             if front_car == None:
                 my_speed = traci.vehicle.getSpeed(self.ID)
@@ -232,17 +241,22 @@ class Car:
                     self.CC_state = "Keep_Max_speed"
             else:
                 my_speed = traci.vehicle.getSpeed(self.ID)
-                min_catch_up_time = (my_speed-front_speed)/cfg.MAX_ACC
-                min_distance = (my_speed-front_speed)*min_catch_up_time
+                min_catch_up_time = (my_speed-0)/cfg.MAX_ACC
+                min_distance = (my_speed-0)*min_catch_up_time
 
                 if front_distance < min_distance:
                     target_speed = max(front_speed, my_speed - cfg.MAX_ACC*cfg.TIME_STEP)
 
-                    if front_speed == target_speed and front_distance <= cfg.HEADWAY:
+                    if front_distance <= cfg.HEADWAY:
                         self.CC_state = "Platoon_following"
                         traci.vehicle.setSpeed(self.ID, front_speed)
                     else:
-                        traci.vehicle.setSpeed(self.ID, target_speed)
+                        if front_speed > target_speed:
+                            target_speed = min(cfg.MAX_SPEED, my_speed + cfg.MAX_ACC*cfg.TIME_STEP)
+                            traci.vehicle.setSpeed(self.ID, target_speed)
+                        else:
+                            target_speed = max(front_speed + cfg.MAX_ACC*cfg.TIME_STEP, my_speed - cfg.MAX_ACC*cfg.TIME_STEP)
+                            traci.vehicle.setSpeed(self.ID, target_speed)
                 else:
                     target_speed = min(cfg.MAX_SPEED, my_speed + cfg.MAX_ACC*cfg.TIME_STEP)
                     traci.vehicle.setSpeed(self.ID, target_speed)
@@ -431,7 +445,7 @@ class Car:
 
 
         # Determine if there's stop and go
-        if speed == 0:
+        if speed < 1:
             self.CC_is_stop_n_go = True
 
 
