@@ -20,7 +20,6 @@ import time
 import threading
 import socket
 import sys
-import global_val
 import csv
 
 import traceback
@@ -335,10 +334,9 @@ if __name__ == '__main__':
     print("Usage: python code.py <choose_car_algorithm> <iteration_num> <thread_num> <Top N number>")
     print("--------------------- <arrival_rate> <rand_seed> <grid_size>")
     sys.argv[4]
-    sys.argv[7]
 
     #HOST, PORT = "128.238.147.124", 9999
-    HOST, PORT = "localhost", 9909
+    HOST, PORT = "localhost", 9996
     server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_sock.bind((HOST, PORT))
     print("start server")
@@ -347,6 +345,24 @@ if __name__ == '__main__':
         server_sock.listen(5)
         sock, addr = server_sock.accept()
         print("Got a connection from: ", addr)
-        SUMO_Handler(sock)
+
+        hello_msg = sock.recv(1024).decode().split(":")
+        print(hello_msg)
+        grid_size = int(hello_msg[1])
+        scheduling_period = float(hello_msg[3])
+        routing_period_num = int(hello_msg[5])    # The step it need to shift in database
+        sock.send("Got it ;@".encode())
+
+        while(True):
+            data = ""
+            while len(data) == 0 or data[-1] != "@":
+                get_str = sock.recv(8192).decode()
+                data += get_str
+            hello_msg = "Echo: " + data
+            print(hello_msg)
+            sock.send(hello_msg.encode())
+            print("=====================")
+
+        #SUMO_Handler(sock)
     except Exception as e:
         traceback.print_exc()

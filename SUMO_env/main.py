@@ -30,6 +30,9 @@ import csv
 import json
 from gen_route import generate_routefile_with_src_dst, generate_routefile_with_src_dst_event
 
+import socket
+import multiprocessing
+
 
 # For debug
 #from playsound import playsound
@@ -39,14 +42,98 @@ from IntersectionManager import IntersectionManager
 #import myGraphic
 
 
-#myGraphic.gui = Gui()
+# Initial the client
+HOST, PORT = "localhost", 9996
 
-###################
 
-vehNr = 0
+def initial_server_handler(HOST, PORT):
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.connect((HOST, PORT))
 
-def run():
+    to_handler_queue = multiprocessing.Queue()
+    from_handler_queue = multiprocessing.Queue()
+
+    init_message = "My_grid_size:" + str(cfg.INTER_SIZE)
+    init_message += ":My_schedule_period:" + "{:.2f}".format(cfg.SCHEDULING_PERIOD)
+    init_message += ":My_routing_period_num:" + str(cfg.ROUTING_PERIOD_NUM)
+    sock.send(init_message.encode())
+    reply_message = sock.recv(1024).decode()
+    print("Server replies: ", reply_message)
+
+    handler_process = multiprocessing.Process(target=handler, args=(sock, to_handler_queue, from_handler_queue))
+    handler_process.start()
+
+    return (handler_process, to_handler_queue, from_handler_queue)
+
+def handler(sock, to_handler_queue, from_handler_queue):
+    is_continue = True
+
+    while(is_continue):
+        try:
+            # Get data from SUMO part
+            send_str = to_handler_queue.get()
+            # ===========   Block   ================
+            if send_str == "end":
+                is_continue = False
+                break
+
+            # Send request
+            send_str = send_str + "@"
+            sock.sendall(send_str.encode())
+
+            # Receive the result
+            data = ""
+            while len(data) == 0 or data[-1] != "@":
+                get_str = sock.recv(8192).decode()
+                if get_str == None:
+                    return
+                data += get_str
+
+            if data == None:
+                from_handler_queue.put("get nothing")
+                is_continue = False
+                break
+
+            from_handler_queue.put(data)
+
+            # Parse data to path_dict
+            '''
+            data = data[0:-2]
+            cars_data_list = data.split(";")
+            if len(data) > 0:
+
+                for car_data in cars_data_list:
+                    car_data_list = car_data.split(",")
+                    car_id = car_data_list[0]
+                    route_str = car_data_list[1][0:-1]
+                    nodes_turn = route_str.split("/")
+
+                    node_turn_dict = dict()
+
+                    if len(route_str)>0:
+                        for node_turn in nodes_turn:
+                            intersection_id, turn = node_turn.split(":")
+                            node_turn_dict[intersection_id] = turn
+
+
+                        if (car_id in car_path_dict):
+                            current_intersection = car_intersection_id_dict[car_id]
+                            if current_intersection in car_path_dict[car_id]:
+                                node_turn_dict[current_intersection] = car_path_dict[car_id][current_intersection]
+
+                        car_path_to_write[car_id] = node_turn_dict
+            '''
+        except Exception as e:
+            traceback.print_exc()
+
+    sock.close()
+
+def run_sumo(_handler_process, _to_handler_queue, _from_handler_queue, src_dst_dict):
     simu_step = 0
+
+    handler_process = _handler_process
+    to_handler_queue = _to_handler_queue
+    from_handler_queue = _from_handler_queue
 
     # Create a list with intersection managers
     intersection_manager_dict = dict()
@@ -70,6 +157,10 @@ def run():
         car_info = dict()
 
         while traci.simulation.getMinExpectedNumber() > 0:
+            # Terminate the simulation
+            if (simu_step*10)//1/10.0 == cfg.N_TIME_STEP:
+                to_handler_queue.put("end")
+                break
 
             '''
             if (simu_step*10)//1%10 == 0:
@@ -80,25 +171,45 @@ def run():
                 print(str(simu_step) + '==============')
             #'''
 
-
-            if (simu_step*10)//1/10.0 == cfg.N_TIME_STEP:
-                break
-
-            '''
-            if (simu_step*10)//1/10.0 == 820:
-                print("check car_2711 car_3494  ?   (If not work, change back to max)")
-                input('Enter enter:')
-
-            #'''
-            '''
-            if (simu_step*10)//1/10.0 == 207:
-                print("check 811 832")
-                input('Enter enter:')
-            #'''
-
-
             traci.simulationStep()
             all_c = traci.vehicle.getIDList()
+
+            if simu_step%cfg.ROUTING_PERIOD < cfg.TIME_STEP:
+                if handler_process == None or not handler_process.is_alive():
+                    handler_process, to_handler_queue, from_handler_queue = initial_server_handler(HOST, PORT)
+
+                server_send_str = ""
+                for car_id, car in car_info.items():
+                    intersection_manager = car_info[car_id]["intersection_manager"]
+                    if intersection_manager != None:
+                        car_data = intersection_manager.get_car_info_for_route(car_id)
+                        if car_data != None:
+                            position_at_offset = car_data[0]
+                            time_offset_step = car_data[1]
+                            src_intersection_id = car_data[2]
+                            direction_of_src_intersection = car_data[3]
+                            server_send_str += car_id + ","
+                            server_send_str += car["route_state"] + ","
+                            server_send_str += str(car["car_length"]) + ","
+                            server_send_str += src_intersection_id + ","
+                            server_send_str += str(direction_of_src_intersection) + ","
+                            server_send_str += str(time_offset_step) + ","      # Step that the datacenter needs to take
+                            server_send_str += "{:.2f}".format(position_at_offset) + ","    # The position at the specific time
+                            server_send_str += str(car["dst_node_idx"]) + ";"
+                        else:
+                            server_send_str += car_id + ","
+                            server_send_str += "Pause" + ";"
+                    else:
+                        server_send_str += car_id + ","
+                        server_send_str += "Exit" + ";"
+                to_handler_queue.put(server_send_str)
+
+            if (simu_step+cfg.TIME_STEP)%cfg.ROUTING_PERIOD < cfg.TIME_STEP:
+                if handler_process == None or not handler_process.is_alive():
+                    handler_process, to_handler_queue, from_handler_queue = initial_server_handler(HOST, PORT)
+
+                route_data = from_handler_queue.get()
+                print(route_data)
 
             # Update the position of each car
             for car_id in all_c:
@@ -109,9 +220,19 @@ def run():
                 if not car_id in car_info:
                     car_info[car_id] = dict()
                     route = []
+
+                    # TODO: change the route
                     for i in range(20):
                         route.append(random.choice(["S", "L", "R"]))
                     car_info[car_id]["route"] = route
+
+                    car_info[car_id]["route_state"] = "NEW"
+                    src_node_idx, dst_node_idx = src_dst_dict[car_id]
+                    car_info[car_id]["src_node_idx"] = None
+                    car_info[car_id]["intersection_manager"] = None
+                    car_info[car_id]["dst_node_idx"] = dst_node_idx
+                    car_info[car_id]["enter_time"] = simu_step
+                    car_info[car_id]["car_length"] = traci.vehicle.getLength(car_id)
 
 
                 is_handled = False
@@ -124,6 +245,7 @@ def run():
                         intersection_manager.update_car(car_id, lane_id, simu_step, current_turn, next_turn)
                         is_handled = True
                         car_info[car_id]["inter_status"] = "On my lane"
+                        car_info[car_id]["intersection_manager"] = intersection_manager
 
                     elif (intersection_manager.check_in_my_region(lane_id) == "In my intersection"):
 
@@ -145,6 +267,7 @@ def run():
                         intersection_manager.update_car(car_id, lane_id, simu_step, current_turn, next_turn)
                         is_handled = True
                         car_info[car_id]["inter_status"] = "In my intersection"
+                        car_info[car_id]["intersection_manager"] = intersection_manager
 
                     else:   # The intersection doesn't have the car
                         intersection_manager.delete_car(car_id)
@@ -154,6 +277,7 @@ def run():
 
                     traci.vehicle.setSpeed(car_id, cfg.MAX_SPEED)
                     car_info[car_id]["inter_status"] = "None"
+                    car_info[car_id]["intersection_manager"] = None
 
 
             # Remove cars
@@ -212,20 +336,23 @@ if __name__ == "__main__":
     print("Usage: python code.py <arrival_rate (0~1.0)> <seed> <schedular> <grid_size n (nxn)>")
     sys.argv[4]
 
+    print("Current routing period: ", cfg.ROUTING_PERIOD)
+
+    # Initial variables
     seed = int(sys.argv[2])
     random.seed(seed)  # make tests reproducible
     numpy.random.seed(seed)
     arrival_rate = float(sys.argv[1])
     cfg.INTER_SIZE = int(sys.argv[4])
 
-    sumoBinary = checkBinary('sumo')
+    # Initial SUMO
+    sumoBinary = checkBinary('sumo-gui')
 
     # 0. Generate the intersection information files
     os.system("bash gen_intersection/gen_data.sh " + str(cfg.LANE_NUM_PER_DIRECTION))
     os.system("rm data/routes/*")
 
     # 1. Generate the route file for this simulation
-    arrival_rate = float(sys.argv[1])
     vehNr = generate_routefile_with_src_dst(cfg.INTER_SIZE, arrival_rate, seed, cfg.N_TIME_STEP)
 
     # Load from the file
@@ -234,10 +361,8 @@ if __name__ == "__main__":
         src_dst_dict = json.load(json_file)
 
 
-
     try:
-        # 3. This is the normal way of using traci. sumo is started as a subprocess and then the python script connects and runs
-
+        # 3. Start TraCi
         net_name = "lane%iby%i.net.xml" % (cfg.INTER_SIZE, cfg.INTER_SIZE)
         route_name = "%i_%s_%i.rou.xml" % (cfg.INTER_SIZE, arrival_rate, seed)
         traci.start([sumoBinary, "-c", "data/UDTA.sumocfg",
@@ -246,7 +371,10 @@ if __name__ == "__main__":
                                  "-n", "data/net/" + net_name,
                                  "-r", "data/routes/" + route_name])
 
-        # 4. Start running SUMO
-        run()
+        # 4. Echo and tell the size of the network
+        handler_process, to_handler_queue, from_handler_queue = initial_server_handler(HOST, PORT)
+
+        # 5. Start running SUMO
+        run_sumo(handler_process, to_handler_queue, from_handler_queue, src_dst_dict)
     except Exception as e:
         traceback.print_exc()

@@ -84,6 +84,86 @@ class IntersectionManager:
             else:
                 return "Not me"
 
+    def get_car_info_for_route(self, car_id):
+        time_offset = None
+        src_intersection_id = None              # After offset, which intersection/node
+        direction_of_src_intersection = None
+        position = self.car_list[car_id].position
+
+        # Not yet enter Roadrunner
+        if self.car_list[car_id].zone == None:
+            diff_pos = position - cfg.TOTAL_LEN
+            time_offset = diff_pos/cfg.MAX_SPEED
+
+            if time_offset > cfg.ROUTING_PERIOD:
+                # Get the origin intersection id
+                lane = self.car_list[car_id].lane
+                direction = lane//cfg.LANE_NUM_PER_DIRECTION
+
+                direction_of_src_intersection = (direction+2)%4
+                intersection_idx_list = self.ID.split("_")
+                if direction_of_src_intersection == 2:
+                    intersection_idx_list[1] = "00%i"%(int(intersection_idx_list[1])-1)
+                elif direction_of_src_intersection == 3:
+                    intersection_idx_list[0] = "00%i"%(int(intersection_idx_list[0])+1)
+                elif direction_of_src_intersection == 0:
+                    intersection_idx_list[1] = "00%i"%(int(intersection_idx_list[1])+1)
+                elif direction_of_src_intersection == 1:
+                    intersection_idx_list[0] = "00%i"%(int(intersection_idx_list[0])-1)
+
+                src_intersection_id = intersection_idx_list[0] + "_" + intersection_idx_list[1]
+            else:
+                time_offset = None
+
+        # 1. Not yet but about to enter the intersection region
+        # 2. Already inside the intersection region
+        if time_offset == None:
+            # Find lane of the car
+            lane = None
+            if self.car_list[car_id].zone == "AZ":
+                lane = self.car_list[car_id].desired_lane
+            else:
+                lane = self.car_list[car_id].lane
+
+            # Compute the time_offset
+            if not isinstance(self.car_list[car_id].D, float):
+                # Delay is not computed yet
+                time_offset = position/cfg.MAX_SPEED
+                # Estimate by borrowing the known delay
+                if len(self.my_road_info[lane]['car_delay_position']) > 0:
+                    time_offset += self.my_road_info[lane]['car_delay_position'][-1]['delay']
+            else:
+                # Compute with the known delay
+                time_offset = self.car_list[car_id].OT + self.car_list[car_id].D
+
+            # Add the time in the intersection
+            turning = self.car_list[car_id].current_turn
+            time_in_inter = inter_length_data.getIntertime(lane, turning)
+            time_offset += time_in_inter  # time passing intersection
+
+            # Start from next intersection
+            if time_offset <= cfg.ROUTING_PERIOD:
+                # About to exit the intersection
+                # Not allowing scheduling for a while
+                return None
+            else:
+                direction = lane//cfg.LANE_NUM_PER_DIRECTION
+                if turning == "S":
+                    direction_of_src_intersection = (direction+2)%4
+                elif turning == "L":
+                    direction_of_src_intersection = (direction-1)%4
+                elif turning == "R":
+                    direction_of_src_intersection = (direction+1)%4
+
+                src_intersection_id = self.ID
+
+        time_offset_step = int(time_offset//cfg.SCHEDULING_PERIOD+1)
+        time_offset = time_offset_step*cfg.SCHEDULING_PERIOD - time_offset
+        position_at_offset = cfg.TOTAL_LEN - time_offset*cfg.MAX_SPEED
+
+        # Might return None as well for temporary forbid of routing
+        return (position_at_offset, time_offset_step, src_intersection_id, direction_of_src_intersection)
+
     def update_path(self, car_id, car_turn, intersection_dir):
         id_data = self.ID.split('_')
         x_idx = int(id_data[0])
@@ -220,16 +300,6 @@ class IntersectionManager:
                 car.zone = "Intersection"
 
 
-        '''
-        # ===== Leaving the intersection (Reset the speed to V_max) =====
-        for car_id, car in self.leaving_cars.items():
-            lane_id = traci.vehicle.getLaneID(car_id)
-            if lane_id in self.out_lanes:
-                traci.vehicle.setSpeed(car_id, cfg.MAX_SPEED)
-                del self.leaving_cars[car_id]
-        '''
-
-
         # ===== Starting Cruise control
         to_be_deleted = []
         for car_id, car in self.pz_list.items():
@@ -290,18 +360,7 @@ class IntersectionManager:
                     if self.is_pedestrian_list[direction] == True and self.pedestrian_time_mark_list[direction] != None:
                         self.is_pedestrian_list[direction] = False
                 self.pedestrian_time_mark_list = self.get_max_AT_direction(sched_car, self.is_pedestrian_list, self.pedestrian_time_mark_list)
-                #print(self.pedestrian_time_mark_list)
 
-                '''
-                print(len(n_sched_car))
-                for car in n_sched_car:
-                    in_dir = car.in_dir
-                    out_dir = car.out_dir
-                    if self.pedestrian_time_mark_list[out_dir] != None:
-                        traci.vehicle.setColor(car.ID, (255,187,59))
-                    if self.pedestrian_time_mark_list[in_dir] != None:
-                        traci.vehicle.setColor(car.ID, (255,59,59))
-                '''
 
                 others_road_info = copy.deepcopy(self.others_road_info)
 
