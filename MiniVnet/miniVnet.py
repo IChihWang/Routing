@@ -5,6 +5,7 @@ import itertools
 import heapq
 import numpy
 import scipy.io as io
+import sys
 
 sys.path.append('./Roadrunner')
 from IntersectionManager import IntersectionManager
@@ -14,10 +15,13 @@ from elements import Intersection_point, Car
 import global_val
 
 class MiniVnet:
-    def __init__(self, N):
+    def __init__(self, N, scheduling_period, routing_period_num):
         self.is_compiled = False
         self.init_time_length = 10
         self.N = N
+
+        self.scheduling_period = scheduling_period          # Perid for Scheduling of the intersection
+        self.step_size = routing_period_num                 # Step size that the datacenter need to take
 
         self.database = self.createGridNetwork(N, 3)
 

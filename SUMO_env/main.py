@@ -66,14 +66,15 @@ def initial_server_handler(HOST, PORT):
     return (handler_process, to_handler_queue, from_handler_queue)
 
 def handler(sock, to_handler_queue, from_handler_queue):
-    is_continue = True
 
-    while(is_continue):
-        try:
+    try:
+        is_continue = True
+
+        while(is_continue):
             # Get data from SUMO part
             send_str = to_handler_queue.get()
             # ===========   Block   ================
-            if send_str == "end":
+            if send_str == "End Connection":
                 is_continue = False
                 break
 
@@ -84,47 +85,17 @@ def handler(sock, to_handler_queue, from_handler_queue):
             # Receive the result
             data = ""
             while len(data) == 0 or data[-1] != "@":
-                get_str = sock.recv(8192).decode()
-                if get_str == None:
-                    return
-                data += get_str
-
-            if data == None:
-                from_handler_queue.put("get nothing")
-                is_continue = False
-                break
+                get_str = sock.recv(8192)
+                if get_str == b'':
+                    from_handler_queue.put("End Connection")
+                    break
+                data += get_str.decode()
 
             from_handler_queue.put(data)
 
-            # Parse data to path_dict
-            '''
-            data = data[0:-2]
-            cars_data_list = data.split(";")
-            if len(data) > 0:
-
-                for car_data in cars_data_list:
-                    car_data_list = car_data.split(",")
-                    car_id = car_data_list[0]
-                    route_str = car_data_list[1][0:-1]
-                    nodes_turn = route_str.split("/")
-
-                    node_turn_dict = dict()
-
-                    if len(route_str)>0:
-                        for node_turn in nodes_turn:
-                            intersection_id, turn = node_turn.split(":")
-                            node_turn_dict[intersection_id] = turn
-
-
-                        if (car_id in car_path_dict):
-                            current_intersection = car_intersection_id_dict[car_id]
-                            if current_intersection in car_path_dict[car_id]:
-                                node_turn_dict[current_intersection] = car_path_dict[car_id][current_intersection]
-
-                        car_path_to_write[car_id] = node_turn_dict
-            '''
-        except Exception as e:
-            traceback.print_exc()
+    except Exception as e:
+        traceback.print_exc()
+        from_handler_queue.put("End Connection")
 
     sock.close()
 
@@ -159,7 +130,7 @@ def run_sumo(_handler_process, _to_handler_queue, _from_handler_queue, src_dst_d
         while traci.simulation.getMinExpectedNumber() > 0:
             # Terminate the simulation
             if (simu_step*10)//1/10.0 == cfg.N_TIME_STEP:
-                to_handler_queue.put("end")
+                to_handler_queue.put("End Connection")
                 break
 
             '''
@@ -175,9 +146,6 @@ def run_sumo(_handler_process, _to_handler_queue, _from_handler_queue, src_dst_d
             all_c = traci.vehicle.getIDList()
 
             if simu_step%cfg.ROUTING_PERIOD < cfg.TIME_STEP:
-                if handler_process == None or not handler_process.is_alive():
-                    handler_process, to_handler_queue, from_handler_queue = initial_server_handler(HOST, PORT)
-
                 server_send_str = ""
                 for car_id, car in car_info.items():
                     intersection_manager = car_info[car_id]["intersection_manager"]
@@ -205,10 +173,10 @@ def run_sumo(_handler_process, _to_handler_queue, _from_handler_queue, src_dst_d
                 to_handler_queue.put(server_send_str)
 
             if (simu_step+cfg.TIME_STEP)%cfg.ROUTING_PERIOD < cfg.TIME_STEP:
-                if handler_process == None or not handler_process.is_alive():
-                    handler_process, to_handler_queue, from_handler_queue = initial_server_handler(HOST, PORT)
-
                 route_data = from_handler_queue.get()
+
+                if route_data == "End Connection":
+                    break
                 print(route_data)
 
             # Update the position of each car
@@ -299,6 +267,7 @@ def run_sumo(_handler_process, _to_handler_queue, _from_handler_queue, src_dst_d
 
     except Exception as e:
         traceback.print_exc()
+        to_handler_queue.put("End Connection")
 
 
     #debug_t = threading.Thread(target=debug_ring)
@@ -361,6 +330,7 @@ if __name__ == "__main__":
         src_dst_dict = json.load(json_file)
 
 
+    handler_process = None
     try:
         # 3. Start TraCi
         net_name = "lane%iby%i.net.xml" % (cfg.INTER_SIZE, cfg.INTER_SIZE)
@@ -378,3 +348,6 @@ if __name__ == "__main__":
         run_sumo(handler_process, to_handler_queue, from_handler_queue, src_dst_dict)
     except Exception as e:
         traceback.print_exc()
+
+    if handler_process != None:
+        handler_process.terminate()
