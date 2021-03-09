@@ -91,7 +91,7 @@ def handler(sock, to_handler_queue, from_handler_queue):
                     break
                 data += get_str.decode()
 
-            from_handler_queue.put(data)
+            from_handler_queue.put(data[:-1])       # Remove the "@" at the end
 
     except Exception as e:
         traceback.print_exc()
