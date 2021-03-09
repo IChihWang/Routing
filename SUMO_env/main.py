@@ -28,7 +28,7 @@ import traceback
 import config as cfg
 import csv
 import json
-from gen_route import generate_routefile_with_src_dst, generate_routefile_with_src_dst_event
+from gen_route import generate_routefile_with_src_dst
 
 import socket
 import multiprocessing
@@ -126,6 +126,7 @@ def run_sumo(_handler_process, _to_handler_queue, _from_handler_queue, src_dst_d
     try:
         # Record car info
         car_info = dict()
+        to_delete_car_in_database = []
 
         while traci.simulation.getMinExpectedNumber() > 0:
             # Terminate the simulation
@@ -166,10 +167,13 @@ def run_sumo(_handler_process, _to_handler_queue, _from_handler_queue, src_dst_d
                             server_send_str += str(car["dst_node_idx"]) + ";"
                         else:
                             server_send_str += car_id + ","
-                            server_send_str += "Pause" + ";"
-                    else:
-                        server_send_str += car_id + ","
-                        server_send_str += "Exit" + ";"
+                            server_send_str += "PAUSE" + ";"
+
+                for car_id in to_delete_car_in_database:
+                    server_send_str += car_id + ","
+                    server_send_str += "EXIT" + ";"
+
+                to_delete_car_in_database = []
                 to_handler_queue.put(server_send_str)
 
             if (simu_step+cfg.TIME_STEP)%cfg.ROUTING_PERIOD < cfg.TIME_STEP:
@@ -195,10 +199,10 @@ def run_sumo(_handler_process, _to_handler_queue, _from_handler_queue, src_dst_d
                     car_info[car_id]["route"] = route
 
                     car_info[car_id]["route_state"] = "NEW"
-                    src_node_idx, dst_node_idx = src_dst_dict[car_id]
+                    src_node_idx, dst_node_idx, dst_node_str = src_dst_dict[car_id]
                     car_info[car_id]["src_node_idx"] = None
                     car_info[car_id]["intersection_manager"] = None
-                    car_info[car_id]["dst_node_idx"] = dst_node_idx
+                    car_info[car_id]["dst_node_idx"] = dst_node_str
                     car_info[car_id]["enter_time"] = simu_step
                     car_info[car_id]["car_length"] = traci.vehicle.getLength(car_id)
 
@@ -255,6 +259,7 @@ def run_sumo(_handler_process, _to_handler_queue, _from_handler_queue, src_dst_d
                     car_to_delete.append(car_id)
             for car_id in car_to_delete:
                 del car_info[car_id]
+                to_delete_car_in_database.append(car_id)
 
 
             for intersection_manager in intersection_manager_dict.values():

@@ -100,18 +100,9 @@ class IntersectionManager:
                 lane = self.car_list[car_id].lane
                 direction = lane//cfg.LANE_NUM_PER_DIRECTION
 
-                direction_of_src_intersection = (direction+2)%4
-                intersection_idx_list = self.ID.split("_")
-                if direction_of_src_intersection == 2:
-                    intersection_idx_list[1] = "00%i"%(int(intersection_idx_list[1])-1)
-                elif direction_of_src_intersection == 3:
-                    intersection_idx_list[0] = "00%i"%(int(intersection_idx_list[0])+1)
-                elif direction_of_src_intersection == 0:
-                    intersection_idx_list[1] = "00%i"%(int(intersection_idx_list[1])+1)
-                elif direction_of_src_intersection == 1:
-                    intersection_idx_list[0] = "00%i"%(int(intersection_idx_list[0])-1)
+                direction_of_src_intersection = direction
+                src_intersection_id = self.ID
 
-                src_intersection_id = intersection_idx_list[0] + "_" + intersection_idx_list[1]
             else:
                 time_offset = None
 
@@ -148,14 +139,25 @@ class IntersectionManager:
                 return None
             else:
                 direction = lane//cfg.LANE_NUM_PER_DIRECTION
-                if turning == "S":
-                    direction_of_src_intersection = (direction+2)%4
-                elif turning == "L":
-                    direction_of_src_intersection = (direction-1)%4
-                elif turning == "R":
-                    direction_of_src_intersection = (direction+1)%4
 
-                src_intersection_id = self.ID
+                if turning == 'S':
+                    direction_of_src_intersection = direction
+                elif turning == 'L':
+                    direction_of_src_intersection = (direction+1)%4
+                elif turning == 'R':
+                    direction_of_src_intersection = (direction-1)%4
+
+                intersection_idx_list = self.ID.split("_")
+                if direction_of_src_intersection == 0:
+                    intersection_idx_list[1] = "%3.3o"%(int(intersection_idx_list[1])+1)
+                elif direction_of_src_intersection == 1:
+                    intersection_idx_list[0] = "%3.3o"%(int(intersection_idx_list[0])-1)
+                elif direction_of_src_intersection == 2:
+                    intersection_idx_list[1] = "%3.3o"%(int(intersection_idx_list[1])-1)
+                elif direction_of_src_intersection == 3:
+                    intersection_idx_list[0] = "%3.3o"%(int(intersection_idx_list[0])+1)
+
+                src_intersection_id = intersection_idx_list[0] + "_" + intersection_idx_list[1]
 
         time_offset_step = int(time_offset//cfg.SCHEDULING_PERIOD+1)
         time_offset = time_offset_step*cfg.SCHEDULING_PERIOD - time_offset

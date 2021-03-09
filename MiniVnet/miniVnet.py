@@ -25,6 +25,10 @@ class MiniVnet:
 
         self.database = self.createGridNetwork(N, 3)
 
+        self.car_dict = dict()
+
+
+    #=============  Construct network functions ======================
     # Connect the intersection to prevent spillback
     def connect_intersections(self, N, intersection_map):
         for idx in range(N):
@@ -60,107 +64,28 @@ class MiniVnet:
         return database
 
 
-    # Handle routing with given car lists
-    def handle_routing(self, all_cars, handle_car, new_cars, choose_car_mode, iteration_num, thread_num):
+    #=============  Update car information from SUMO ======================
+    def update_car(self, car_id, car_length, src_intersection_id,
+                        direction_of_src_intersection, time_offset_step,
+                        position_at_offset, dst_node_id):
+        # Create Car object if it is not in dict
+        if car_id not in self.car_dict:
+            dst_coord_list = dst_node_id.split('_')
+            dst_coord = (int(dst_coord_list[0]), int(dst_coord_list[1]))
+            self.car_dict[car_id] = Car(car_id, car_length, dst_coord)
 
-        new_car_list = list(new_car.values())
-
-        route_car_id_dict = dict()
-        repeat_time_measure = 0
-
-        manager = multiprocessing.Manager()
-        lock = multiprocessing.Lock()
-        logging.basicConfig(level=logging.INFO)
-
-
-        # Repeat the routing for R times
-        for _ in range(iteration_num):
-            total_cost = 0
-            path_diff_count = 0
-
-            cars_for_threads, chosen_cars_list = self.choose_car(all_cars_dict, handle_car_dict, new_car_list, choose_car_mode)
-
-            # Record which cars are been routed
-            for car in chosen_cars_list:
-                if car.id not in route_car_id_dict:
-                    route_car_id_dict[car.id] = car
+        # Update the source
+        src_coord_list = src_intersection_id.split('_')
+        src_coord = (int(src_coord_list[0]), int(src_coord_list[1]))
+        self.car_dict[car_id].src_coord = src_coord
+        self.car_dict[car_id].direction_of_src_intersection = direction_of_src_intersection
+        self.car_dict[car_id].time_offset_step = time_offset_step
+        self.car_dict[car_id].position_at_offset = position_at_offset
 
 
-            is_repeat = True
-            while is_repeat: # in case multi-precess fail
-                threads = []
-                TiStamp1 = time.time()
-                is_repeat = False
-
-                try:
-                    #return_dict = [manager.dict() for idx in range(thread_num)]
-                    return_dict = manager.dict()
-                    print("=== 0")
-                    for thread_idx in range(thread_num):
-                        if thread_idx >= len(cars_for_threads):
-                            break
-
-                        '''
-                        return_dict = dict()
-                        t = threading.Thread(target=worker, args=(my_net, cars_for_threads[thread_idx],route_car_id_dict))
-                        #'''
-                        t = multiprocessing.Process(target=worker, args=(my_net, cars_for_threads[thread_idx],return_dict,lock,))
-                        threads.append(t)
-
-                        t.start()
-
-                    print("=== 1")
-                    for thread in threads:
-                        thread.join()
-                    print("=== 2")
-
-
-            	    #'''
-                    to_update_car = []
-                    print(len(return_dict))
-                    for car in return_dict.values():
-                        to_update_car.append(car)
-                        #saved_path = car.path_node
-
-                        #total_cost += car.traveling_time
-                        #if saved_path != car.path_node and saved_path != []:
-                        #    path_diff_count += 1
-                    print("=== 3")
-                except Exception as e:
-                    traceback.print_exc()
-                    manager = multiprocessing.Manager()
-                    lock = multiprocessing.Lock()
-                    is_repeat = True
-
-                try:
-                    for process in threads:
-                        process.terminate()
-                    del threads[:]
-                    #del manager
-                except Exception as e:
-                    traceback.print_exc()
-                    pass
-
-                TiStamp2 = time.time()
-
-                if is_repeat:
-                    # Skip update and repeat the routing
-                    repeat_time_measure += TiStamp2-TiStamp1
-                    continue
-                for car in to_update_car:
-                    my_net.update_map(car)
-                    route_car_id_dict[car.id] = car
-    	#'''
-
-            #print(path_diff_count)
-            #print("=============", total_cost/car_num)
-
-
-            #my_net.get_car_time_space_list(car_list);
-
-        return route_car_id_dict, repeat_time_measure
-
-
+    def delete_car_from_database(self, car_id):
+        # TODO: delete car from the database
+        pass
 
 
     # Choose car for routing
@@ -338,6 +263,106 @@ class MiniVnet:
         return cars_for_threads
         '''
 
+
+        # Handle routing with given car lists
+        def handle_routing(self, all_cars, handle_car, new_cars, choose_car_mode, iteration_num, thread_num):
+
+            new_car_list = list(new_car.values())
+
+            route_car_id_dict = dict()
+            repeat_time_measure = 0
+
+            manager = multiprocessing.Manager()
+            lock = multiprocessing.Lock()
+            logging.basicConfig(level=logging.INFO)
+
+
+            # Repeat the routing for R times
+            for _ in range(iteration_num):
+                total_cost = 0
+                path_diff_count = 0
+
+                cars_for_threads, chosen_cars_list = self.choose_car(all_cars_dict, handle_car_dict, new_car_list, choose_car_mode)
+
+                # Record which cars are been routed
+                for car in chosen_cars_list:
+                    if car.id not in route_car_id_dict:
+                        route_car_id_dict[car.id] = car
+
+
+                is_repeat = True
+                while is_repeat: # in case multi-precess fail
+                    threads = []
+                    TiStamp1 = time.time()
+                    is_repeat = False
+
+                    try:
+                        #return_dict = [manager.dict() for idx in range(thread_num)]
+                        return_dict = manager.dict()
+                        print("=== 0")
+                        for thread_idx in range(thread_num):
+                            if thread_idx >= len(cars_for_threads):
+                                break
+
+                            '''
+                            return_dict = dict()
+                            t = threading.Thread(target=worker, args=(my_net, cars_for_threads[thread_idx],route_car_id_dict))
+                            #'''
+                            t = multiprocessing.Process(target=worker, args=(my_net, cars_for_threads[thread_idx],return_dict,lock,))
+                            threads.append(t)
+
+                            t.start()
+
+                        print("=== 1")
+                        for thread in threads:
+                            thread.join()
+                        print("=== 2")
+
+
+                	    #'''
+                        to_update_car = []
+                        print(len(return_dict))
+                        for car in return_dict.values():
+                            to_update_car.append(car)
+                            #saved_path = car.path_node
+
+                            #total_cost += car.traveling_time
+                            #if saved_path != car.path_node and saved_path != []:
+                            #    path_diff_count += 1
+                        print("=== 3")
+                    except Exception as e:
+                        traceback.print_exc()
+                        manager = multiprocessing.Manager()
+                        lock = multiprocessing.Lock()
+                        is_repeat = True
+
+                    try:
+                        for process in threads:
+                            process.terminate()
+                        del threads[:]
+                        #del manager
+                    except Exception as e:
+                        traceback.print_exc()
+                        pass
+
+                    TiStamp2 = time.time()
+
+                    if is_repeat:
+                        # Skip update and repeat the routing
+                        repeat_time_measure += TiStamp2-TiStamp1
+                        continue
+                    for car in to_update_car:
+                        my_net.update_map(car)
+                        route_car_id_dict[car.id] = car
+        	#'''
+
+                #print(path_diff_count)
+                #print("=============", total_cost/car_num)
+
+
+                #my_net.get_car_time_space_list(car_list);
+
+            return route_car_id_dict, repeat_time_measure
 
 
 
