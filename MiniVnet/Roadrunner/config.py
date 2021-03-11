@@ -37,3 +37,8 @@ DISTANCE = 1.5 # 1.5 lane
 
 PEDESTRIAN_POSSIBILITY = 0.1 # 0~1
 PEDESTRIAN_TIME_GAP = 0 # 60 second
+
+
+SCHEDULING_PERIOD = GZ_LEN/MAX_SPEED
+ROUTING_PERIOD_NUM = int((TOTAL_LEN/MAX_SPEED/2) / (GZ_LEN/MAX_SPEED))
+ROUTING_PERIOD = float("{:.2f}".format(ROUTING_PERIOD_NUM*SCHEDULING_PERIOD))   # To tell how many step it need to take in the datacenter

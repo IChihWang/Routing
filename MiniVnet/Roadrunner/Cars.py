@@ -445,7 +445,7 @@ class Car:
 
 
         # Determine if there's stop and go
-        if speed == 0:
+        if speed < 1:
             self.CC_is_stop_n_go = True
 
 
