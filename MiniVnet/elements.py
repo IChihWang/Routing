@@ -6,6 +6,8 @@ class Intersection_point:
         self.coordinate = coordinate
         self.id = "%3.3o"%(coordinate[0]) + "_" + "%3.3o"%(coordinate[1])
         #self.manager = IntersectionManager(self.id)
+        self.scheduled_car = []
+        self.n_scheduled_car = []
 
 class Car:
     def __init__(self, id, length, dst):
@@ -22,3 +24,4 @@ class Car:
 class Car_in_database:
     def __init__(self, id):
         self.id = id
+        self.lane = None

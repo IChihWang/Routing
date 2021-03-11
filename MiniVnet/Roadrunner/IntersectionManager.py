@@ -257,26 +257,33 @@ class IntersectionManager:
             self.car_list[car_id].lane = lane
 
 
+    def advise_lane(self, target_car, sched_cars, scheduling_cars, advising_car):
+        self.lane_advisor.updateTableFromCars(sched_cars, scheduling_cars+advising_car)
+
+        # Check whether there is a spillback
+        accumulate_car_len_lane = [0]*(4*cfg.LANE_NUM_PER_DIRECTION)
+        spillback_lane_advise_avoid = [False]*(4*cfg.LANE_NUM_PER_DIRECTION)
+
+        for car in sched_cars+scheduling_cars+advising_car:
+            lane_idx = car.lane
+
+            if self.others_road_info[lane_idx] != None:
+                accumulate_car_len_lane[lane_idx] += (car.length + cfg.HEADWAY)
+
+        for lane_idx in range(4*cfg.LANE_NUM_PER_DIRECTION):
+            if self.others_road_info[lane_idx] != None:
+                if accumulate_car_len_lane[lane_idx] >= self.others_road_info[lane_idx]['avail_len']:
+                    spillback_lane_advise_avoid[lane_idx] = True
+
+        advised_lane = self.lane_advisor.adviseLane(target_car, spillback_lane_advise_avoid)
+
+
+    # Three group of cars in three zones
+    def run(self, sched_cars, scheduling_cars, advising_car):
 
 
 
-    def run(self, simu_step):
 
-        # Classify the cars for scheduler
-        sched_car = []
-        n_sched_car = []
-        advised_n_sched_car = []
-
-
-        for car_id, car in self.car_list.items():
-            if car.zone == "GZ" or car.zone == "BZ" or car.zone == "CCZ":
-                if car.zone_state == "not_scheduled":
-                    n_sched_car.append(car)
-                else:
-                    sched_car.append(car)
-                    traci.vehicle.setColor(car_id, (100,250,92))
-            elif car.zone == "PZ" or car.zone == "AZ":
-                advised_n_sched_car.append(car)
 
 
         for c_idx in range(len(n_sched_car)):

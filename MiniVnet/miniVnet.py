@@ -38,10 +38,11 @@ def routing(grid_size, cars, database):
     pass
 
 class MiniVnet:
-    def __init__(self, N, scheduling_period, routing_period_num):
+    def __init__(self, N, scheduling_period, routing_period_num, BZ_CCZ_len):
         self.is_compiled = False
         self.init_time_length = 10
         self.N = N
+        self.BZ_CCZ_len = BZ_CCZ_len
 
         self.scheduling_period = scheduling_period          # Perid for Scheduling of the intersection
         self.step_size = routing_period_num                 # Step size that the datacenter need to take
