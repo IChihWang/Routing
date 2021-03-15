@@ -12,7 +12,7 @@ data = Data()
 
 
 
-def IcaccPlus(old_cars, new_cars, advised_n_sched_car, pedestrian_time_mark_list, others_road_info, spillback_delay_record):
+def IcaccPlus(old_cars, new_cars, others_road_info, spillback_delay_record):
     # part 1: calculate OT
     for c_idx in range(len(new_cars)):
         OT = new_cars[c_idx].position/cfg.MAX_SPEED
@@ -24,14 +24,6 @@ def IcaccPlus(old_cars, new_cars, advised_n_sched_car, pedestrian_time_mark_list
     solver = pywraplp.Solver('SolveIntegerProblem',pywraplp.Solver.CBC_MIXED_INTEGER_PROGRAMMING)
 
     # part 3: claim parameters
-
-    car_count_src_dst_lane = [ [0]*len(others_road_info) for i in range(len(others_road_info))]
-    for car in advised_n_sched_car:
-        lane_idx = car.lane
-        dst_lane_idx = car.dst_lane
-        for l_idx in range(len(others_road_info)):
-            if l_idx != dst_lane_idx:
-                car_count_src_dst_lane[lane_idx][l_idx] += 1
 
     # Sort new cars
     new_car_src_dst_lane = [[[] for i in range(len(others_road_info))] for i in range(len(others_road_info))]
@@ -431,59 +423,6 @@ def IcaccPlus(old_cars, new_cars, advised_n_sched_car, pedestrian_time_mark_list
     #'''
 
 
-    # part 7: pedestrian
-    for car in new_cars:
-        in_dir = car.in_direction
-        out_dir = car.out_direction
-
-        # Set pedestrian constraint if "in" is not none
-        if pedestrian_time_mark_list[in_dir] != None:
-            avoid_start_AT = pedestrian_time_mark_list[in_dir] - car.length/car.speed_in_intersection
-            avoid_end_AT = pedestrian_time_mark_list[in_dir]+cfg.PEDESTRIAN_TIME_GAP
-
-            if avoid_start_AT - car.OT <= 0:
-                bound = avoid_end_AT - car.OT
-                tmp_conts2 = solver.Constraint(bound, solver.infinity())
-                tmp_conts2.SetCoefficient(car.D, 1)
-            else:
-                flag = solver.IntVar(0, 1, 'flag_ped_in_'+str(car.ID))
-
-                bound = avoid_end_AT - car.OT - cfg.LARGE_NUM
-                tmp_conts2 = solver.Constraint(bound, solver.infinity())
-                tmp_conts2.SetCoefficient(car.D, 1)
-                tmp_conts2.SetCoefficient(flag, -cfg.LARGE_NUM)
-
-                bound = -(avoid_start_AT - car.OT)
-                tmp_conts1 = solver.Constraint(bound, solver.infinity())
-                tmp_conts1.SetCoefficient(car.D, -1)
-                tmp_conts1.SetCoefficient(flag, cfg.LARGE_NUM)
-
-        #'''
-        # Set pedestrian constraint if "out" is not none
-        if pedestrian_time_mark_list[out_dir] != None:
-            avoid_start_AT = pedestrian_time_mark_list[out_dir] - car.length/cfg.MAX_SPEED
-            avoid_end_AT = pedestrian_time_mark_list[out_dir]+cfg.PEDESTRIAN_TIME_GAP
-
-            travel_in_inter_time = inter_length_data.getIntertime(car.lane, car.current_turn)
-
-
-            if avoid_start_AT - car.OT - travel_in_inter_time <= 0:
-                bound = avoid_end_AT - car.OT - travel_in_inter_time
-                tmp_conts2 = solver.Constraint(bound, solver.infinity())
-                tmp_conts2.SetCoefficient(car.D, 1)
-            else:
-                flag = solver.IntVar(0, 1, 'flag_ped_out_'+str(car.ID))
-
-                bound = avoid_end_AT - car.OT - travel_in_inter_time - cfg.LARGE_NUM
-                tmp_conts2 = solver.Constraint(bound, solver.infinity())
-                tmp_conts2.SetCoefficient(car.D, 1)
-                tmp_conts2.SetCoefficient(flag, -cfg.LARGE_NUM)
-
-                bound = -(avoid_start_AT - car.OT - travel_in_inter_time)
-                tmp_conts1 = solver.Constraint(bound, solver.infinity())
-                tmp_conts1.SetCoefficient(car.D, -1)
-                tmp_conts1.SetCoefficient(flag, cfg.LARGE_NUM)
-        #'''
 
 
 
