@@ -154,8 +154,8 @@ class IntersectionManager:
 
     # Three group of cars in three zones
     def run(self, target_car):
-
-        self.sched_cars+self.scheduling_cars+self.advising_car
+        # Compute the OT for the car
+        target_car.OT = target_car.position / cfg.MAX_SPEED
 
         self.scheduling_cars
         for car in self.scheduling_cars:
@@ -163,7 +163,12 @@ class IntersectionManager:
 
         IcaccPlus(self.sched_car, self.scheduling_cars+[target_car], self.others_road_info, self.spillback_delay_record)
 
-        return True
+        car_exiting_time = target_car.OT + target_car.D
+
+        turning = target_car.current_turn
+        car_exiting_time += inter_length_data.getIntertime(target_car.lane, turning)
+
+        return car_exiting_time
 
         '''
         for lane_idx in range(4*cfg.LANE_NUM_PER_DIRECTION):

@@ -184,7 +184,7 @@ if __name__ == '__main__':
 
 
         # 2. Initialize the router
-        router = MiniVnet(grid_size, scheduling_period, routing_period_num)
+        router = MiniVnet(grid_size, scheduling_period, routing_period_num, GZ_BZ_CCZ_len, HEADWAY, V_MAX)
 
         # 3. Start running SUMO
         #run_router(None, handler_process, to_handler_queue, from_handler_queue)
