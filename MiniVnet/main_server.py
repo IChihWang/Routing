@@ -97,7 +97,6 @@ def handler(sock, to_handler_queue, from_handler_queue):
 
 
 def run_router(router, _handler_process, _to_handler_queue, _from_handler_queue):
-    simu_step = 0
 
     handler_process = _handler_process
     to_handler_queue = _to_handler_queue
@@ -155,15 +154,33 @@ def run_router(router, _handler_process, _to_handler_queue, _from_handler_queue)
                 elif car_request_info_list[1] == "OLD":
                     old_car_list.append(car_id)
 
+
+        # Routing results
+        route_dict = dict()
+
+
+        # TODO: several rounds
         # Choose cars for routing
         route_groups = router.choose_car_to_thread_group(4, new_car_list, old_car_list)
 
         # Do routing
-        router.routing_with_groups(4, route_groups)
+        route_dict = router.routing_with_groups(4, route_groups, route_dict)
+
+        # Update cars into the database
+        router.update_database_after_routing(route_groups)
 
 
-        print(route_request)
 
+        # Finalize the results
+        route_result_str = ""
+        for car_id, path in route_dict.items():
+            route_result_str += car_id
+            route_result_str += ","
+            route_result_str += path
+            route_result_str += ";"
+        router.move_a_time_step()
+
+        print(route_result_str)
 
     except Exception as e:
         traceback.print_exc()

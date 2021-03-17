@@ -45,7 +45,13 @@ def decide_available_turnings(src_coord, src_intersection_direction, dst_coord, 
     return available_turnings_and_out_direction # Key: turnings, Values: out_direction
 
 
-def routing(grid_size, cars, database, GZ_BZ_CCZ_len, scheduling_period, V_MAX, TOTAL_LEN):
+def routing(miniVnet, cars):
+    grid_size = miniVnet.N
+    database = miniVnet.database
+    GZ_BZ_CCZ_len = miniVnet.GZ_BZ_CCZ_len
+    scheduling_period = miniVnet.scheduling_period
+    V_MAX = miniVnet.V_MAX
+    TOTAL_LEN = miniVnet.TOTAL_LEN
 
     route_record = dict()
     for car in cars:
@@ -80,7 +86,7 @@ def routing(grid_size, cars, database, GZ_BZ_CCZ_len, scheduling_period, V_MAX, 
                 break
 
             # Get information from database
-            intersection = database[current_arrival_time][intersection_id]
+            intersection = miniVnet.get_intersection(current_arrival_time, intersection_id)
 
             # Decide the turnings
             available_turnings_and_out_direction = decide_available_turnings(intersection_id, intersection_dir, dst_coord, 0)
@@ -90,6 +96,7 @@ def routing(grid_size, cars, database, GZ_BZ_CCZ_len, scheduling_period, V_MAX, 
                 recordings = []
 
                 out_intersection_id, out_intersection_direction = out_data
+                car.lane = intersection_dir * miniVnet.LANE_NUM_PER_DIRECTION
                 car.current_turn = turning
                 car.lane = intersection.manager.advise_lane(car)
                 car.position = position_at_offset
@@ -101,13 +108,13 @@ def routing(grid_size, cars, database, GZ_BZ_CCZ_len, scheduling_period, V_MAX, 
                     ###############################
                     car.position = position_at_offset
                     record_car_advising = car.copy_car_for_database()
-                    recordings.append( (time_in_GZ, "lane_advising", record_car_advising) )
+                    recordings.append( (time_in_GZ, intersection_id, "lane_advising", record_car_advising) )
                     ###############################
 
                     time_in_GZ += 1
                     position_at_offset -= scheduling_period*V_MAX
 
-                intersection_GZ = database[time_in_GZ][intersection_id]
+                intersection_GZ = miniVnet.get_intersection(time_in_GZ, intersection_id)
                 result = intersection_GZ.is_GZ_full(car, position_at_offset)
                 while result[0] == False:
                     # The intersection is full
@@ -116,11 +123,11 @@ def routing(grid_size, cars, database, GZ_BZ_CCZ_len, scheduling_period, V_MAX, 
                     ###############################
                     car.position = position_at_offset
                     record_car_advising = car.copy_car_for_database()
-                    recordings.append( (time_in_GZ, "lane_advising", record_car_advising) )
+                    recordings.append( (time_in_GZ, intersection_id, "lane_advising", record_car_advising) )
                     ###############################
 
                     time_in_GZ += 1
-                    intersection_GZ = database[time_in_GZ][intersection_id]
+                    intersection_GZ = miniVnet.get_intersection(time_in_GZ, intersection_id)
                     result = intersection_GZ.is_GZ_full(car, position_at_offset)
 
                 position_at_offset = result[1]
@@ -130,7 +137,7 @@ def routing(grid_size, cars, database, GZ_BZ_CCZ_len, scheduling_period, V_MAX, 
                 # Record the path for final path retrieval
                 ###############################
                 record_car_scheduling = car.copy_car_for_database()
-                recordings.append( (time_in_GZ, "scheduling", record_car_scheduling) )
+                recordings.append( (time_in_GZ, intersection_id, "scheduling", record_car_scheduling) )
                 ###############################
 
                 next_time_step = time_in_GZ + (int(car_exiting_time // scheduling_period) + 1)
@@ -147,22 +154,14 @@ def routing(grid_size, cars, database, GZ_BZ_CCZ_len, scheduling_period, V_MAX, 
         node = car.dst_node
         time, pre_node, turning, recordings = nodes_arrival_time_data[node]
         while pre_node != None:
-            path_list.insert(0, (turning, recordings))
+            path_list.insert(0, (turning, recordings, time))
+            time, pre_node, turning, recordings = nodes_arrival_time_data[pre_node]
 
         route_record[car.id] = path_list
 
-
-
-        # TODO: update the car route into the database
-
-
+        miniVnet.add_car_to_database(car, path_list)
 
     return route_record
-
-def add_car_to_database():
-    # TODO: add car to database
-    # TODO: extend database if not enough
-    pass
 
 
 class MiniVnet:
@@ -178,8 +177,9 @@ class MiniVnet:
         self.HEADWAY = HEADWAY
         self.V_MAX = V_MAX
         self.TOTAL_LEN = TOTAL_LEN
+        self.LANE_NUM_PER_DIRECTION = 3
 
-        self.database = self.create_grid_network(N, 3)
+        self.database = self.create_grid_network(self.LANE_NUM_PER_DIRECTION)
 
         self.car_dict = dict()
 
@@ -195,27 +195,85 @@ class MiniVnet:
                 if jdx <= N-2:
                     intersection_map[(idx, jdx)].connect(2, intersection_manager_dict[(idx, jdx+1)], 0)
 
+
+    # Get an intersection from database
+    def get_intersection(self, current_arrival_time, intersection_id):
+        while current_arrival_time >= len(database):
+            miniVnet.add_time_step(database)
+
+        intersection = database[current_arrival_time][intersection_id]
+        return intersection
+
+
+    def add_car_to_database(target_car, path_list):
+        recordings = [path_data[1] for path_data in path_list]
+
+        pre_record = None
+
+        for record in recordings:
+            time, intersection_id, state, car = record
+            intersection = self.get_intersection(time, intersection_id)
+
+            # See if the record change to next intersection: add scheduled cars
+            if pre_record != None and intersection_id != pre_record[1]:
+                pre_time = pre_record[0]
+                pre_car = pre_record[2]
+                for time_idx in range(pre_time+1, time):
+                    saving_car = pre_car.copy_car_for_database()
+                    saving_car.OT -= self.routing_period
+                    if saving_car.OT+saving_car.D > 0:
+                        intersection_to_save = self.get_intersection(time_idx, intersection_id)
+                        intersection_to_save.add_sched_car(saving_car)
+                        target_car.records_intersection_in_database.append( ("scheduled", intersection) )
+
+            pre_record = (time, intersection_id, car)
+
+            if state == "lane_advising":
+                intersection.add_advising_car(car)
+                target_car.records_intersection_in_database.append( ("lane_advising", intersection) )
+            elif state == "scheduling":
+                intersection.add_scheduling_cars(car)
+                target_car.records_intersection_in_database.append( ("scheduling", intersection) )
+
+        # Add the scheduled car before exiting to the database
+        exiting_time = path_list[-1][2]
+        pre_time = pre_record[0]
+        intersection_id = pre_record[1]
+        pre_car = pre_record[2]
+        for time_idx in range(pre_time+1, exiting_time):
+            saving_car = pre_car.copy_car_for_database()
+            saving_car.OT -= self.routing_period
+            if saving_car.OT+saving_car.D > 0:
+                intersection_to_save = self.get_intersection(time_idx, intersection_id)
+                intersection_to_save.add_sched_car(saving_car)
+                target_car.records_intersection_in_database.append(intersection)
+
+    # Move a time step
+    def move_a_time_step(self):
+        for idx in self.step_size:
+            self.delete_time_step()
+
+    # Delete a time step from the database
+    def delete_time_step(self):
+        del self.database[-1]
+
     # Add a time step into a database
-    def add_time_step(self, N, database):
+    def add_time_step(self, database):
         intersection_map = dict()
-        for idx in range(N):
-            for jdx in range(N):
+        for idx in range(self.N):
+            for jdx in range(self.N):
                 intersection = Intersection_point((idx, jdx), self.GZ_BZ_CCZ_len, self.HEADWAY)
                 intersection_map[(idx, jdx)] = intersection
         #self.connect_intersections(N, intersection_map)
 
         database.append(intersection_map)
 
-    # Delete a time step from the database
-    def delete_time_step(self, database):
-        del database[-1]
-
     # Create a database for a grid network
-    def create_grid_network(self, N, num_lane):
+    def create_grid_network(self, num_lane):
         database = []
 
         for time_idx in range(self.init_time_length):
-            self.add_time_step(N, database)
+            self.add_time_step(database)
 
         return database
 
@@ -239,27 +297,41 @@ class MiniVnet:
         self.car_dict[car_id].position_at_offset = position_at_offset
 
 
-    def delete_car_from_database(self, car_id):
-        # TODO: delete car from the database
-        pass
-
+    def delete_car_from_database(self, car):
+        for type, intersection in car.records_intersection_in_database:
+            intersection.delete_car_from_database(car, type)
 
     def choose_car_to_thread_group(self, process_num, new_cars_id, old_cars_id):
         # TODO: temp, route all new cars with two threads
-        # TODO: Clear cars for chosen cars
 
-        result = []
+        result = [[] for idx in process_num]
         for car_id in new_cars_id:
-            result.append(self.car_dict[car_id])
-        return [result, [], [], [], []]
+            result[0].append(self.car_dict[car_id])
+
+        for car_group in result:
+            for car in car_group:
+                self.delete_car_from_database(car)
+
+        return result
+
+    def update_database_after_routing(self, route_groups):
+        for car_group in route_groups:
+            for car in car_group:
+                self.add_car_to_database(car, car.path_data)
 
 
-
-    def routing_with_groups(self, process_num, route_groups):
+    def routing_with_groups(self, process_num, route_groups, out_route_dict):
         pool = Pool(process_num)
 
-        input_data = [(self.N, route_groups[idx], self.database, self.GZ_BZ_CCZ_len, self.scheduling_period, self.V_MAX, self.TOTAL_LEN) for idx in range(process_num)]
+        input_data = [(self, route_groups[idx]) for idx in range(process_num)]
         results = pool.starmap(routing, input_data)
 
-        print(self.car_dict)
-        # TODO: merge results
+        for result in results:
+            for car_id, path_data in result.items():
+                turnings_str = ""
+                for turning, recordings, time in path_data:
+                    turnings_str += turning
+                self.car_dict[car_id].path_data = path_data
+                out_route_dict[car_id] = turnings_str
+
+        return out_route_dict
