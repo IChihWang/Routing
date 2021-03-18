@@ -99,12 +99,6 @@ def routing(miniVnet, cars):
                 break
 
             # Get information from database
-            print('============')
-
-            print(car.id)
-            print(car.src_coord)
-            print(intersection_id)
-            print(car.dst_coord)
             intersection = miniVnet.get_intersection(current_arrival_time, intersection_id)
 
             # Decide the turnings
@@ -178,7 +172,6 @@ def routing(miniVnet, cars):
             time, pre_node, turning, recordings = nodes_arrival_time_data[pre_node]
 
         route_record[car.id] = path_list
-        print(car.id, path_list)
 
         miniVnet.add_car_to_database(car, path_list)
 
@@ -274,7 +267,7 @@ class MiniVnet:
 
     # Move a time step
     def move_a_time_step(self):
-        for idx in self.step_size:
+        for idx in range(self.step_size):
             self.delete_time_step()
 
     # Delete a time step from the database

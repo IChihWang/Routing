@@ -165,7 +165,7 @@ class IntersectionManager:
         target_car.OT = target_car.position / cfg.MAX_SPEED
 
         self.scheduling_cars
-        for car in self.scheduling_cars:
+        for car in scheduling_cars:
             car.D = None
 
         IcaccPlus(sched_cars, scheduling_cars+[target_car], self.others_road_info, self.spillback_delay_record)

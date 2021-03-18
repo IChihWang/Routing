@@ -49,7 +49,7 @@ class LaneAdviser:
             self.updateTable(car.lane, car.current_turn, car.OT+car.D, self.timeMatrix)
 
         for car in advised_n_sched_car:
-            self.updateTable(car.lane, car.turning, car.position/cfg.MAX_SPEED, self.timeMatrix)
+            self.updateTable(car.lane, car.current_turn, car.position/cfg.MAX_SPEED, self.timeMatrix)
 
         # Count car number on each lane of advised but not scheduled
         for lane_id in range(4*cfg.LANE_NUM_PER_DIRECTION):
