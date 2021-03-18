@@ -15,32 +15,44 @@ def decide_available_turnings(src_coord, src_intersection_direction, dst_coord, 
     available_turnings_and_out_direction = dict()
     if src_intersection_direction == 0:
         if dst_coord[0] - src_coord[0] > -additional_search_range:
-            available_turnings_and_out_direction['R'] = ((src_coord[0]+1,src_coord[1]), 3)
+            if src_coord[0] < grid_size or src_coord[1] == dst_coord[1]:
+                available_turnings_and_out_direction['R'] = ((src_coord[0]+1,src_coord[1]), 3)
         if src_coord[0] - dst_coord[0] > -additional_search_range:
-            available_turnings_and_out_direction['L'] = ((src_coord[0]-1,src_coord[1]), 1)
+            if src_coord[0] > 1 or src_coord[1] == dst_coord[1]:
+                available_turnings_and_out_direction['L'] = ((src_coord[0]-1,src_coord[1]), 1)
         if dst_coord[1] - src_coord[1] > -additional_search_range:
-            available_turnings_and_out_direction['S'] = ((src_coord[0],src_coord[1]+1), 0)
+            if src_coord[1] < grid_size or src_coord[0] == dst_coord[0]:
+                available_turnings_and_out_direction['S'] = ((src_coord[0],src_coord[1]+1), 0)
     elif src_intersection_direction == 1:
         if dst_coord[1] - src_coord[1] > -additional_search_range:
-            available_turnings_and_out_direction['R'] = ((src_coord[0],src_coord[1]+1), 0)
+            if src_coord[1] < grid_size or src_coord[0] == dst_coord[0]:
+                available_turnings_and_out_direction['R'] = ((src_coord[0],src_coord[1]+1), 0)
         if src_coord[1] - dst_coord[1] > -additional_search_range:
-            available_turnings_and_out_direction['L'] = ((src_coord[0],src_coord[1]-1), 2)
+            if src_coord[1] > 1 or src_coord[0] == dst_coord[0]:
+                available_turnings_and_out_direction['L'] = ((src_coord[0],src_coord[1]-1), 2)
         if src_coord[0] - dst_coord[0] > -additional_search_range:
-            available_turnings_and_out_direction['S'] = ((src_coord[0]-1,src_coord[1]), 1)
+            if src_coord[0] > 1 or src_coord[1] == dst_coord[1]:
+                available_turnings_and_out_direction['S'] = ((src_coord[0]-1,src_coord[1]), 1)
     elif src_intersection_direction == 2:
         if src_coord[0] - dst_coord[0] > -additional_search_range:
-            available_turnings_and_out_direction['R'] = ((src_coord[0]-1,src_coord[1]), 1)
+            if src_coord[0] > 1 or src_coord[1] == dst_coord[1]:
+                available_turnings_and_out_direction['R'] = ((src_coord[0]-1,src_coord[1]), 1)
         if dst_coord[0] - src_coord[0] > -additional_search_range:
-            available_turnings_and_out_direction['L'] = ((src_coord[0]+1,src_coord[1]), 3)
+            if src_coord[0] < grid_size or src_coord[1] == dst_coord[1]:
+                available_turnings_and_out_direction['L'] = ((src_coord[0]+1,src_coord[1]), 3)
         if src_coord[1] - dst_coord[1] > -additional_search_range:
-            available_turnings_and_out_direction['S'] = ((src_coord[0],src_coord[1]-1), 2)
+            if src_coord[1] > 1 or src_coord[0] == dst_coord[0]:
+                available_turnings_and_out_direction['S'] = ((src_coord[0],src_coord[1]-1), 2)
     elif src_intersection_direction == 3:
         if src_coord[1] - dst_coord[1] > -additional_search_range:
-            available_turnings_and_out_direction['R'] = ((src_coord[0],src_coord[1]-1), 2)
+            if src_coord[1] > 1 or src_coord[0] == dst_coord[0]:
+                available_turnings_and_out_direction['R'] = ((src_coord[0],src_coord[1]-1), 2)
         if dst_coord[1] - src_coord[1] > -additional_search_range:
-            available_turnings_and_out_direction['L'] = ((src_coord[0],src_coord[1]+1), 0)
+            if src_coord[1] < grid_size or src_coord[0] == dst_coord[0]:
+                available_turnings_and_out_direction['L'] = ((src_coord[0],src_coord[1]+1), 0)
         if dst_coord[0] - src_coord[0] > -additional_search_range:
-            available_turnings_and_out_direction['S'] = ((src_coord[0]+1,src_coord[1]), 3)
+            if src_coord[0] < grid_size or src_coord[1] == dst_coord[1]:
+                available_turnings_and_out_direction['S'] = ((src_coord[0]+1,src_coord[1]), 3)
 
     return available_turnings_and_out_direction # Key: turnings, Values: out_direction
 
@@ -87,6 +99,12 @@ def routing(miniVnet, cars):
                 break
 
             # Get information from database
+            print('============')
+
+            print(car.id)
+            print(car.src_coord)
+            print(intersection_id)
+            print(car.dst_coord)
             intersection = miniVnet.get_intersection(current_arrival_time, intersection_id)
 
             # Decide the turnings
@@ -210,7 +228,9 @@ class MiniVnet:
 
 
     def add_car_to_database(self, target_car, path_list):
-        recordings = [path_data[1] for path_data in path_list]
+        recordings = []
+        for path_data in path_list:
+            recordings += path_data[1]
 
         pre_record = None
 

@@ -14,14 +14,14 @@ class Intersection_point:
         self.GZ_accumulated_size = 0
         self.HEADWAY = HEADWAY
 
-    def add_sched_car(car):
+    def add_sched_car(self, car):
         self.manager.sched_cars[car.id] = car
-    def add_scheduling_cars(car):
+    def add_scheduling_cars(self, car):
         self.manager.scheduling_cars[car.id] = car
-    def add_advising_car(car):
+    def add_advising_car(self, car):
         self.manager.advising_car[car.id] = car
 
-    def delete_car_from_database(car, type):
+    def delete_car_from_database(self, car, type):
         if type == "lane_advising":
             del self.manager.advising_car[car.id]
         elif type == "scheduling":
