@@ -11,7 +11,7 @@ import config as cfg
 
 class Data:
     def __init__(self):
-        with open('inter_length_info/lane_info'+str(cfg.LANE_NUM_PER_DIRECTION)+'.json', 'r') as file:
+        with open('./Roadrunner/inter_length_info/lane_info'+str(cfg.LANE_NUM_PER_DIRECTION)+'.json', 'r') as file:
             self.length_dict = json.load(file)
 
 
@@ -20,7 +20,7 @@ class Data:
 
         test_str = str(in_lane% cfg.LANE_NUM_PER_DIRECTION) + in_turn
         length = self.length_dict[test_str]
-        
+
         time = None
         if in_turn == "S":
             time = length/cfg.MAX_SPEED
@@ -28,4 +28,3 @@ class Data:
             time = length/cfg.TURN_SPEED
 
         return time
-

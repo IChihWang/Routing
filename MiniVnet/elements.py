@@ -1,11 +1,14 @@
-#sys.path.append('./Roadrunner')
-#from IntersectionManager import IntersectionManager
+
+import sys
+sys.path.append('./Roadrunner')
+
+from IntersectionManager import IntersectionManager
 
 class Intersection_point:
     def __init__(self, coordinate, GZ_BZ_CCZ_len, HEADWAY):
         self.coordinate = coordinate
         self.id = "%3.3o"%(coordinate[0]) + "_" + "%3.3o"%(coordinate[1])
-        self.manager = IntersectionManager(self.id, V_MAX)
+        self.manager = IntersectionManager(self.id)
 
         self.GZ_BZ_CCZ_len = GZ_BZ_CCZ_len
         self.GZ_accumulated_size = 0
@@ -48,6 +51,8 @@ class Car_in_database:
         # temporary variables for routing
         self.D = None
         self.OT = None
+        self.dst_lane = None
+        self.dst_lane_changed_to = None
 
     def copy_car_for_database(self):
         car = Car_in_database(self.id, self.length)
@@ -56,8 +61,25 @@ class Car_in_database:
         car.position = self.position
         car.D = self.D
         car.OT = self.OT
+        car.dst_lane = self.dst_lane
+        car.dst_lane_changed_to = self.dst_lane_changed_to
 
         return car
+
+    def update_dst_lane(self, LANE_NUM_PER_DIRECTION):
+        in_direction = self.lane // LANE_NUM_PER_DIRECTION
+        out_direction = None
+        if self.current_turn == 'S':
+            out_direction = (in_direction+2)%4
+        elif self.current_turn == 'R':
+            out_direction = (in_direction+1)%4
+        elif self.current_turn == 'L':
+            out_direction = (in_direction-1)%4
+
+        out_sub_lane = (LANE_NUM_PER_DIRECTION-self.lane%LANE_NUM_PER_DIRECTION-1)
+        self.dst_lane = int(out_direction*LANE_NUM_PER_DIRECTION + out_sub_lane)     # Destination lane before next lane change
+        self.dst_lane_changed_to = int(out_direction*LANE_NUM_PER_DIRECTION + out_sub_lane)  # Destination lane after next lane change
+
 
 class Car(Car_in_database):
     def __init__(self, id, length, dst):

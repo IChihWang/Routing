@@ -131,13 +131,17 @@ class IntersectionManager:
 
 
     def advise_lane(self, target_car):
+        sched_cars = list(self.sched_cars.values())
+        scheduling_cars = list(self.scheduling_cars.values())
+        advising_car = list(self.advising_car.values())
+
         self.lane_advisor.updateTableFromCars(sched_cars, scheduling_cars+advising_car)
 
         # Check whether there is a spillback
         accumulate_car_len_lane = [0]*(4*cfg.LANE_NUM_PER_DIRECTION)
         spillback_lane_advise_avoid = [False]*(4*cfg.LANE_NUM_PER_DIRECTION)
 
-        for car in self.sched_cars+self.scheduling_cars+self.advising_car:
+        for car in sched_cars+scheduling_cars+advising_car:
             lane_idx = car.lane
 
             if self.others_road_info[lane_idx] != None:
@@ -154,6 +158,9 @@ class IntersectionManager:
 
     # Three group of cars in three zones
     def run(self, target_car):
+        sched_cars = list(self.sched_cars.values())
+        scheduling_cars = list(self.scheduling_cars.values())
+
         # Compute the OT for the car
         target_car.OT = target_car.position / cfg.MAX_SPEED
 
@@ -161,7 +168,7 @@ class IntersectionManager:
         for car in self.scheduling_cars:
             car.D = None
 
-        IcaccPlus(self.sched_car, self.scheduling_cars+[target_car], self.others_road_info, self.spillback_delay_record)
+        IcaccPlus(sched_cars, scheduling_cars+[target_car], self.others_road_info, self.spillback_delay_record)
 
         car_exiting_time = target_car.OT + target_car.D
 

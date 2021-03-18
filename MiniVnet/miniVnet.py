@@ -9,7 +9,7 @@ from multiprocessing import Process, Pool
 
 from elements import Intersection_point, Car
 
-def decide_available_turnings(src_coord, src_intersection_direction, dst_coord, additional_search_range):
+def decide_available_turnings(src_coord, src_intersection_direction, dst_coord, grid_size, additional_search_range):
     # additional_search_range: additional intersection number to be searched
     # Value of the dict: id of next intersection, the direction of next intersection
     available_turnings_and_out_direction = dict()
@@ -52,6 +52,7 @@ def routing(miniVnet, cars):
     scheduling_period = miniVnet.scheduling_period
     V_MAX = miniVnet.V_MAX
     TOTAL_LEN = miniVnet.TOTAL_LEN
+    LANE_NUM_PER_DIRECTION = miniVnet.LANE_NUM_PER_DIRECTION
 
     route_record = dict()
     for car in cars:
@@ -89,7 +90,7 @@ def routing(miniVnet, cars):
             intersection = miniVnet.get_intersection(current_arrival_time, intersection_id)
 
             # Decide the turnings
-            available_turnings_and_out_direction = decide_available_turnings(intersection_id, intersection_dir, dst_coord, 0)
+            available_turnings_and_out_direction = decide_available_turnings(intersection_id, intersection_dir, dst_coord, grid_size, 0)
 
             for turning, out_data in available_turnings_and_out_direction.items():
                 # Recording the states for final path
@@ -100,6 +101,7 @@ def routing(miniVnet, cars):
                 car.current_turn = turning
                 car.lane = intersection.manager.advise_lane(car)
                 car.position = position_at_offset
+                car.update_dst_lane(LANE_NUM_PER_DIRECTION)
 
                 # Determine the time arrive in Grouping Zone
                 time_in_GZ = current_arrival_time
@@ -158,6 +160,7 @@ def routing(miniVnet, cars):
             time, pre_node, turning, recordings = nodes_arrival_time_data[pre_node]
 
         route_record[car.id] = path_list
+        print(car.id, path_list)
 
         miniVnet.add_car_to_database(car, path_list)
 
@@ -187,8 +190,8 @@ class MiniVnet:
     #=============  Construct network functions ======================
     # Connect the intersection to prevent spillback
     def connect_intersections(self, N, intersection_map):
-        for idx in range(N):
-            for jdx in range(N):
+        for idx in range(1, N+1):
+            for jdx in range(1, N+1):
                 if idx <= N-2:
                     intersection_map[(idx, jdx)].connect(1, intersection_manager_dict[(idx+1, jdx)], 3)
 
@@ -198,14 +201,15 @@ class MiniVnet:
 
     # Get an intersection from database
     def get_intersection(self, current_arrival_time, intersection_id):
+        database = self.database
         while current_arrival_time >= len(database):
-            miniVnet.add_time_step(database)
+            self.add_time_step(database)
 
         intersection = database[current_arrival_time][intersection_id]
         return intersection
 
 
-    def add_car_to_database(target_car, path_list):
+    def add_car_to_database(self, target_car, path_list):
         recordings = [path_data[1] for path_data in path_list]
 
         pre_record = None
@@ -260,8 +264,8 @@ class MiniVnet:
     # Add a time step into a database
     def add_time_step(self, database):
         intersection_map = dict()
-        for idx in range(self.N):
-            for jdx in range(self.N):
+        for idx in range(1, self.N + 1):
+            for jdx in range(1, self.N + 1):
                 intersection = Intersection_point((idx, jdx), self.GZ_BZ_CCZ_len, self.HEADWAY)
                 intersection_map[(idx, jdx)] = intersection
         #self.connect_intersections(N, intersection_map)
@@ -290,7 +294,7 @@ class MiniVnet:
 
         # Update the source
         src_coord_list = src_intersection_id.split('_')
-        src_coord = (int(src_coord_list[0]), int(src_coord_list[1]))
+        src_coord = (int(src_coord_list[0]), int(src_coord_list[1]))    # Move intersection id to (0,0)
         self.car_dict[car_id].src_coord = src_coord
         self.car_dict[car_id].direction_of_src_intersection = direction_of_src_intersection
         self.car_dict[car_id].time_offset_step = time_offset_step
@@ -304,7 +308,7 @@ class MiniVnet:
     def choose_car_to_thread_group(self, process_num, new_cars_id, old_cars_id):
         # TODO: temp, route all new cars with two threads
 
-        result = [[] for idx in process_num]
+        result = [[] for idx in range(process_num)]
         for car_id in new_cars_id:
             result[0].append(self.car_dict[car_id])
 
@@ -318,6 +322,7 @@ class MiniVnet:
         for car_group in route_groups:
             for car in car_group:
                 self.add_car_to_database(car, car.path_data)
+                # TODO: update the spillback information
 
 
     def routing_with_groups(self, process_num, route_groups, out_route_dict):

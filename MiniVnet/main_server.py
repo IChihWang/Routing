@@ -119,7 +119,7 @@ def run_router(router, _handler_process, _to_handler_queue, _from_handler_queue)
             to_handler_queue.put(route_request)
         #'''
 
-        route_request = 'car_0,NEW,9.0,003_001,3,9,183.70,003_001;car_1,NEW,8.0,003_002,3,10,198.97,003_002;car_2,NEW,8.0,001_003,0,11,185.15,001_000;car_3,NEW,9.0,001_001,1,11,184.02,003_002;car_4,NEW,7.0,002_003,0,10,194.24,000_001;car_5,NEW,9.0,002_002,0,11,184.02,001_003;car_6,NEW,6.0,002_002,0,12,184.38,001_000;car_7,NEW,9.0,002_000,2,14,176.23,000_001;car_8,NEW,5.0,003_002,3,13,199.61,002_000;car_10,NEW,9.0,001_001,0,5,178.70,002_000;car_11,NEW,6.0,001_002,3,5,181.70,002_000;car_9,NEW,6.0,002_001,1,5,181.70,003_002;car_12,NEW,5.0,001_001,3,5,193.88,003_001;car_14,NEW,5.0,002_002,1,5,193.88,002_003;car_13,NEW,5.0,001_002,3,5,194.99,002_000;car_15,NEW,5.0,002_001,1,6,180.06,000_002;car_16,NEW,6.0,001_001,0,6,190.24,001_003;car_17,NEW,8.0,002_002,2,6,188.24,003_001;car_18,NEW,8.0,002_002,1,6,188.24,002_003;car_19,NEW,5.0,002_001,1,7,177.42,002_000;car_20,NEW,7.0,001_002,3,7,175.42,003_002;car_21,NEW,9.0,001_001,3,7,195.78,001_003;car_22,NEW,6.0,001_002,2,7,198.78,000_001;car_23,NEW,8.0,002_001,1,8,182.96,002_003'
+        route_request = 'car_3,NEW,9.0,001_001,1,11,184.02,003_002;car_4,NEW,7.0,002_003,0,10,194.24,000_001;car_5,NEW,9.0,002_002,0,11,184.02,001_003;car_6,NEW,6.0,002_002,0,12,184.38,001_000;car_7,NEW,9.0,002_000,2,14,176.23,000_001;car_8,NEW,5.0,003_002,3,13,199.61,002_000;car_10,NEW,9.0,001_001,0,5,178.70,002_000;car_11,NEW,6.0,001_002,3,5,181.70,002_000;car_9,NEW,6.0,002_001,1,5,181.70,003_002;car_12,NEW,5.0,001_001,3,5,193.88,003_001;car_14,NEW,5.0,002_002,1,5,193.88,002_003;car_13,NEW,5.0,001_002,3,5,194.99,002_000;car_15,NEW,5.0,002_001,1,6,180.06,000_002;car_16,NEW,6.0,001_001,0,6,190.24,001_003;car_17,NEW,8.0,002_002,2,6,188.24,003_001;car_18,NEW,8.0,002_002,1,6,188.24,002_003;car_19,NEW,5.0,002_001,1,7,177.42,002_000;car_20,NEW,7.0,001_002,3,7,175.42,003_002;car_21,NEW,9.0,001_001,3,7,195.78,001_003;car_22,NEW,6.0,001_002,2,7,198.78,000_001;car_23,NEW,8.0,002_001,1,8,182.96,002_003'
 
         # Parse the requests
         route_request = route_request[:-1]  # Remove the ';' at the end
@@ -197,11 +197,15 @@ if __name__ == '__main__':
         grid_size = 2 # temp
         scheduling_period = 2.3 # temp
         routing_period_num = 5 # temp
+        GZ_BZ_CCZ_len = 100 # temp
+        HEADWAY = 3 # temp
+        V_MAX = 11.18 # temp
+        TOTAL_LEN = 200
         #handler_process, to_handler_queue, from_handler_queue, grid_size, scheduling_period, routing_period_num = initial_server_handler(HOST, PORT)
 
 
         # 2. Initialize the router
-        router = MiniVnet(grid_size, scheduling_period, routing_period_num, GZ_BZ_CCZ_len, HEADWAY, V_MAX)
+        router = MiniVnet(grid_size, scheduling_period, routing_period_num, GZ_BZ_CCZ_len, HEADWAY, V_MAX, TOTAL_LEN)
 
         # 3. Start running SUMO
         #run_router(None, handler_process, to_handler_queue, from_handler_queue)

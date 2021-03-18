@@ -22,7 +22,7 @@ class LaneAdviser:
             self.timeMatrix = [[0]* self.num_di for i in range(self.num_di)]
 
             # Load the information of which boxes a trajectory will affect
-            with open('advise_info/advise_info'+str(cfg.LANE_NUM_PER_DIRECTION)+'.json', 'r') as file:
+            with open('./Roadrunner/advise_info/advise_info'+str(cfg.LANE_NUM_PER_DIRECTION)+'.json', 'r') as file:
                 self.lane_dict = json.load(file)
 
             # Record the lane advice on each directions and initialize
@@ -45,8 +45,8 @@ class LaneAdviser:
     def updateTableFromCars(self, sched_car, advised_n_sched_car):
         self.resetTable()
 
-        for car in n_sched_car:
-            self.updateTable(car.lane, car.current_turn, car.AT, self.timeMatrix)
+        for car in sched_car:
+            self.updateTable(car.lane, car.current_turn, car.OT+car.D, self.timeMatrix)
 
         for car in advised_n_sched_car:
             self.updateTable(car.lane, car.turning, car.position/cfg.MAX_SPEED, self.timeMatrix)
