@@ -56,6 +56,11 @@ def initial_server_handler(HOST, PORT):
     init_message = "My_grid_size:" + str(cfg.INTER_SIZE)
     init_message += ":My_schedule_period:" + "{:.2f}".format(cfg.SCHEDULING_PERIOD)
     init_message += ":My_routing_period_num:" + str(cfg.ROUTING_PERIOD_NUM)
+    init_message += ":GZ_BZ_CCZ_len:" + "{:.1f}".format(cfg.GZ_LEN+cfg.BZ_LEN+cfg.CCZ_LEN)
+    init_message += ":HEADWAY:" + str(cfg.HEADWAY)
+    init_message += ":V_MAX:" + "{:.2f}".format(cfg.MAX_SPEED)
+    init_message += ":TURN_SPEED:" + "{:.2f}".format(cfg.TURN_SPEED)
+    init_message += ":TOTAL_LEN:" + "{:.1f}".format(cfg.TOTAL_LEN)
     sock.send(init_message.encode())
     reply_message = sock.recv(1024).decode()
     print("Server replies: ", reply_message)
@@ -157,14 +162,21 @@ def run_sumo(_handler_process, _to_handler_queue, _from_handler_queue, src_dst_d
                             time_offset_step = car_data[1]
                             src_intersection_id = car_data[2]
                             direction_of_src_intersection = car_data[3]
-                            server_send_str += car_id + ","
-                            server_send_str += car["route_state"] + ","
-                            server_send_str += str(car["car_length"]) + ","
-                            server_send_str += src_intersection_id + ","
-                            server_send_str += str(direction_of_src_intersection) + ","
-                            server_send_str += str(time_offset_step) + ","      # Step that the datacenter needs to take
-                            server_send_str += "{:.2f}".format(position_at_offset) + ","    # The position at the specific time
-                            server_send_str += str(car["dst_node_idx"]) + ";"
+                            src_shift_num = car_data[4]
+                            car["src_shift_num"] = src_shift_num
+
+                            if src_intersection_id != car["dst_node_idx"]:
+                                server_send_str += car_id + ","
+                                server_send_str += car["route_state"] + ","
+                                server_send_str += str(car["car_length"]) + ","
+                                server_send_str += src_intersection_id + ","
+                                server_send_str += str(direction_of_src_intersection) + ","
+                                server_send_str += str(time_offset_step) + ","      # Step that the datacenter needs to take
+                                server_send_str += "{:.2f}".format(position_at_offset) + ","    # The position at the specific time
+                                server_send_str += car["dst_node_idx"] + ";"
+                            else:
+                                server_send_str += car_id + ","
+                                server_send_str += "LEAVING" + ";"
                         else:
                             server_send_str += car_id + ","
                             server_send_str += "PAUSE" + ";"
@@ -181,22 +193,29 @@ def run_sumo(_handler_process, _to_handler_queue, _from_handler_queue, src_dst_d
 
                 if route_data == "End Connection":
                     break
-                print(route_data)
+
+                route_data = route_data[:-1]  # Remove the ';' at the end
+                if len(route_data) > 0:
+                    route_list = route_data.split(';')
+                    for route in route_list:
+                        car_id, turnings = route.split(',')
+                        src_shift_num = car_info[car_id]["src_shift_num"]
+                        pre_route_part = car_info[car_id]["route"][:src_shift_num]
+                        car_info[car_id]["route"] = pre_route_part + turnings + "SS"  # Add "next turn" at the end
+
+                        car_info[car_id]["route_state"] = "OLD"
+
 
             # Update the position of each car
             for car_id in all_c:
 
                 lane_id = traci.vehicle.getLaneID(car_id)
 
-                # Dummy: Generate routes (turnings)
                 if not car_id in car_info:
                     car_info[car_id] = dict()
                     route = []
 
-                    # TODO: change the route
-                    for i in range(20):
-                        route.append(random.choice(["S", "L", "R"]))
-                    car_info[car_id]["route"] = route
+                    car_info[car_id]["route"] = 'SSS'        # Default, add "next turn" at the end
 
                     car_info[car_id]["route_state"] = "NEW"
                     src_node_idx, dst_node_idx, dst_node_str = src_dst_dict[car_id]
@@ -205,6 +224,7 @@ def run_sumo(_handler_process, _to_handler_queue, _from_handler_queue, src_dst_d
                     car_info[car_id]["dst_node_idx"] = dst_node_str
                     car_info[car_id]["enter_time"] = simu_step
                     car_info[car_id]["car_length"] = traci.vehicle.getLength(car_id)
+                    car_info[car_id]["src_shift_num"] = None
 
 
                 is_handled = False
@@ -223,15 +243,7 @@ def run_sumo(_handler_process, _to_handler_queue, _from_handler_queue, src_dst_d
 
                         # Check if the car enter the intersection (by changing state from "On my lane" to "in intersection")
                         if (car_info[car_id]["inter_status"] == "On my lane"):
-                            car_info[car_id]["route"].pop(0)
-
-                            # Dummy: Generate routes (turnings)
-                            if len(car_info[car_id]["route"]) == 0:
-                                route = []
-                                for i in range(20):
-                                    route.append(random.choice(["S", "L", "R"]))
-                                car_info[car_id]["route"] = route
-
+                            car_info[car_id]["route"] = car_info[car_id]["route"][1:]
 
                         current_turn = car_info[car_id]["route"][0]
                         next_turn = car_info[car_id]["route"][1]

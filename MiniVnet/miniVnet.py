@@ -65,6 +65,7 @@ def routing(miniVnet, cars):
     V_MAX = miniVnet.V_MAX
     TOTAL_LEN = miniVnet.TOTAL_LEN
     LANE_NUM_PER_DIRECTION = miniVnet.LANE_NUM_PER_DIRECTION
+    TURN_SPEED = miniVnet.TURN_SPEED
 
     route_record = dict()
     for car in cars:
@@ -78,7 +79,6 @@ def routing(miniVnet, cars):
         is_visited_nodes = []
 
         unvisited_queue = [(nodes_arrival_time_data[src_node][0], src_node, car.position_at_offset)]
-
         # Routing
         while len(unvisited_queue) > 0:
             current_arrival_time, current_node, position_at_offset = heapq.heappop(unvisited_queue)
@@ -113,7 +113,7 @@ def routing(miniVnet, cars):
                 car.current_turn = turning
                 car.lane = intersection.manager.advise_lane(car)
                 car.position = position_at_offset
-                car.update_dst_lane(LANE_NUM_PER_DIRECTION)
+                car.update_dst_lane_and_data(LANE_NUM_PER_DIRECTION, V_MAX, TURN_SPEED)
 
                 # Determine the time arrive in Grouping Zone
                 time_in_GZ = current_arrival_time
@@ -179,7 +179,7 @@ def routing(miniVnet, cars):
 
 
 class MiniVnet:
-    def __init__(self, N, scheduling_period, routing_period_num, GZ_BZ_CCZ_len, HEADWAY, V_MAX, TOTAL_LEN):
+    def __init__(self, N, scheduling_period, routing_period_num, GZ_BZ_CCZ_len, HEADWAY, V_MAX, TURN_SPEED, TOTAL_LEN):
         self.is_compiled = False
         self.init_time_length = 10
         self.N = N
@@ -190,6 +190,7 @@ class MiniVnet:
         self.routing_period = scheduling_period*routing_period_num  # Period for routing
         self.HEADWAY = HEADWAY
         self.V_MAX = V_MAX
+        self.TURN_SPEED = TURN_SPEED
         self.TOTAL_LEN = TOTAL_LEN
         self.LANE_NUM_PER_DIRECTION = 3
 
@@ -235,13 +236,14 @@ class MiniVnet:
             if pre_record != None and intersection_id != pre_record[1]:
                 pre_time = pre_record[0]
                 pre_car = pre_record[2]
+                saving_car = pre_car
                 for time_idx in range(pre_time+1, time):
-                    saving_car = pre_car.copy_car_for_database()
+                    saving_car = saving_car.copy_car_for_database()
                     saving_car.OT -= self.routing_period
                     if saving_car.OT+saving_car.D > 0:
                         intersection_to_save = self.get_intersection(time_idx, intersection_id)
                         intersection_to_save.add_sched_car(saving_car)
-                        target_car.records_intersection_in_database.append( ("scheduled", intersection) )
+                        target_car.records_intersection_in_database.append( ("scheduled", intersection_to_save) )
 
             pre_record = (time, intersection_id, car)
 
@@ -252,18 +254,22 @@ class MiniVnet:
                 intersection.add_scheduling_cars(car)
                 target_car.records_intersection_in_database.append( ("scheduling", intersection) )
 
+
         # Add the scheduled car before exiting to the database
         exiting_time = path_list[-1][2]
         pre_time = pre_record[0]
         intersection_id = pre_record[1]
         pre_car = pre_record[2]
+        saving_car = pre_car
         for time_idx in range(pre_time+1, exiting_time):
-            saving_car = pre_car.copy_car_for_database()
+            saving_car = saving_car.copy_car_for_database()
             saving_car.OT -= self.routing_period
+
             if saving_car.OT+saving_car.D > 0:
                 intersection_to_save = self.get_intersection(time_idx, intersection_id)
                 intersection_to_save.add_sched_car(saving_car)
-                target_car.records_intersection_in_database.append(intersection)
+                target_car.records_intersection_in_database.append( ("scheduled", intersection_to_save) )
+
 
     # Move a time step
     def move_a_time_step(self):
@@ -318,12 +324,20 @@ class MiniVnet:
         for type, intersection in car.records_intersection_in_database:
             intersection.delete_car_from_database(car, type)
 
+        car.records_intersection_in_database = []
+
+    def delete_car_from_database_id(self, car_id):
+        self.delete_car_from_database(self.car_dict[car_id])
+
     def choose_car_to_thread_group(self, process_num, new_cars_id, old_cars_id):
         # TODO: temp, route all new cars with two threads
 
         result = [[] for idx in range(process_num)]
+        process_idx = 0
         for car_id in new_cars_id:
-            result[0].append(self.car_dict[car_id])
+            process_idx += 1
+            process_idx %= process_num
+            result[process_idx].append(self.car_dict[car_id])
 
         for car_group in result:
             for car in car_group:
@@ -335,6 +349,7 @@ class MiniVnet:
         for car_group in route_groups:
             for car in car_group:
                 self.add_car_to_database(car, car.path_data)
+
                 # TODO: update the spillback information
 
 

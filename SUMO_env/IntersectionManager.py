@@ -88,6 +88,7 @@ class IntersectionManager:
         time_offset = None
         src_intersection_id = None              # After offset, which intersection/node
         direction_of_src_intersection = None
+        src_shift_num = 0
         position = self.car_list[car_id].position
 
         # Not yet enter Roadrunner
@@ -109,6 +110,8 @@ class IntersectionManager:
         # 1. Not yet but about to enter the intersection region
         # 2. Already inside the intersection region
         if time_offset == None:
+            src_shift_num = 1
+
             # Find lane of the car
             lane = None
             if self.car_list[car_id].zone == "AZ":
@@ -164,7 +167,7 @@ class IntersectionManager:
         position_at_offset = cfg.TOTAL_LEN - time_offset*cfg.MAX_SPEED
 
         # Might return None as well for temporary forbid of routing
-        return (position_at_offset, time_offset_step, src_intersection_id, direction_of_src_intersection)
+        return (position_at_offset, time_offset_step, src_intersection_id, direction_of_src_intersection, src_shift_num)
 
     def update_path(self, car_id, car_turn, intersection_dir):
         id_data = self.ID.split('_')
@@ -228,7 +231,9 @@ class IntersectionManager:
 
                 self.update_path(car_id, car_turn, lane_direction)
 
-            self.car_list[car_id].turn = car_turn
+            if self.car_list[car_id].current_turn != car_turn:
+                self.update_path(car_id, car_turn, lane_direction)
+            self.car_list[car_id].current_turn = car_turn
             self.car_list[car_id].next_turn = next_turn
 
             # Set the position of each cars
@@ -285,19 +290,6 @@ class IntersectionManager:
                 # Measurement
                 self.total_delays_by_sche += car.D
                 self.car_num += 1
-
-                if car.zone != "Intersection" and car.D+car.OT <= -0.3 or car.D+car.OT >= 0.3:
-                    print("DEBUG: Car didn't arrive at the intersection at right time.")
-
-                    print("ID", car.ID)
-                    print("is_spillback", car.is_spillback)
-                    print("is_spillback_strict", car.is_spillback_strict)
-                    print("OT+D", car.D+car.OT)
-                    print("lane", car.lane)
-                    print("D", car.D)
-                    print("OT", car.OT)
-                    print("=======")
-                    print("-----------------")
 
                 car.zone = "Intersection"
 

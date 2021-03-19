@@ -4,10 +4,10 @@ import os
 import sys
 k = 0
 
-length = 227.2
-attach = 186.4
+length = 227.2  # Length inside the network: actual length = length - 27.2
+attach = 236.4  # Additional length around the network: actual length = attach + 13.6
 def gen_node(x, y):
-    with open("data/lane.nod.xml", "w") as nets:
+    with open("./tmp/lane.nod.xml", "w") as nets:
         print('<nodes>', file=nets)
         for i in range(x + 2): # y-axis
             for j in range(y + 2): # x-axis 1
@@ -29,7 +29,7 @@ def gen_node(x, y):
 
 
 def gen_edge(x, y):
-    with open("data/lane.edg.xml", "w") as edges:
+    with open("./tmp/lane.edg.xml", "w") as edges:
         print('<edges>', file=edges)
 
         for j in range(1, y + 1):
@@ -54,7 +54,7 @@ def gen_edge(x, y):
         print('</edges>', file=edges)
 
 def gen_connection(x, y):
-    with open("data/lane.con.xml", "w") as cons:
+    with open("./tmp/lane.con.xml", "w") as cons:
         print('<connections>', file=cons)
 
         for j in range(1, y + 1):
@@ -97,7 +97,7 @@ def gen_connection(x, y):
         print('</connections>', file=cons)
 
 def gen_tlc(x, y):
-    with open("data/lane.tlc.xml", "w") as tlcs:
+    with open("./tmp/lane.tlc.xml", "w") as tlcs:
         for i in range(x + 2): # y-axis
             for j in range(y + 2): # x-axis 1
                 if i == 0 or i == x+1:
@@ -110,12 +110,12 @@ def gen_net(i):
     gen_node(i,i)
     gen_edge(i,i)
     gen_connection(i,i)
-for i in range(50,51):
+for i in range(2,10):
     gen_net(i)
-    node = '/Users/jacksonwang/Downloads/V2X/Roadrunner_v2_traffic_light/data/lane.nod.xml'
-    edge = '/Users/jacksonwang/Downloads/V2X/Roadrunner_v2_traffic_light/data/lane.edg.xml'
-    con = '/Users/jacksonwang/Downloads/V2X/Roadrunner_v2_traffic_light/data/lane.con.xml'
-    out = '/Users/jacksonwang/Downloads/V2X/Roadrunner_v2_traffic_light/data/lane{}by{}.net.xml'.format(i,i)
+    node = './tmp/lane.nod.xml'
+    edge = './tmp/lane.edg.xml'
+    con = './tmp/lane.con.xml'
+    out = './tmp/lane{}by{}.net.xml'.format(i,i)
 
     os.system("netconvert --node-files={} --edge-files={} --connection-files={} --output-file={}".format(node,edge,con,out))
 
