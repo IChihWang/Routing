@@ -287,7 +287,7 @@ class MiniVnet:
             for jdx in range(1, self.N + 1):
                 intersection = Intersection_point((idx, jdx), self.GZ_BZ_CCZ_len, self.HEADWAY)
                 intersection_map[(idx, jdx)] = intersection
-        #self.connect_intersections(N, intersection_map)
+        self.connect_intersections(N, intersection_map)
 
         database.append(intersection_map)
 
