@@ -1,9 +1,21 @@
 
 import sys
+import os
 import config as cfg
-import traci
 import threading
 import copy
+
+
+sys.path.append('/usr/share/sumo/tools/')
+# we need to import python modules from the $SUMO_HOME/tools directory
+if 'SUMO_HOME' in os.environ:
+    tools = os.path.join(os.environ['SUMO_HOME'], 'tools')
+    sys.path.append(tools)
+else:
+    sys.exit("please declare environment variable 'SUMO_HOME'")
+
+
+import traci
 
 
 from Cars import Car
