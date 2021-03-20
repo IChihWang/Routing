@@ -353,11 +353,10 @@ class MiniVnet:
                 # TODO: update the spillback information
 
 
-    def routing_with_groups(self, process_num, route_groups, out_route_dict):
-        pool = Pool(process_num)
+    def routing_with_groups(self, process_pool, process_num, route_groups, out_route_dict):
 
         input_data = [(self, route_groups[idx]) for idx in range(process_num)]
-        results = pool.starmap(routing, input_data)
+        results = process_pool.starmap(routing, input_data)
 
         for result in results:
             for car_id, path_data in result.items():

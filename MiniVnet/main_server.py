@@ -24,7 +24,7 @@ import csv
 
 import traceback
 import multiprocessing
-from multiprocessing import Manager, Value
+from multiprocessing import Manager, Value, Process, Pool
 import logging
 from miniVnet import MiniVnet
 
@@ -108,6 +108,9 @@ def run_router(router, _iteration_num, _handler_process, _to_handler_queue, _fro
     from_handler_queue = _from_handler_queue
     iteration_num = _iteration_num
 
+    process_num = 4
+    process_pool = Pool(process_num)
+
     try:
         is_continue = True      # Whether it should continue listen to requests
 
@@ -168,12 +171,12 @@ def run_router(router, _iteration_num, _handler_process, _to_handler_queue, _fro
                 start_time = time.time()
 
                 # Choose cars for routing
-                route_groups = router.choose_car_to_thread_group(4, new_car_list, old_car_list)
+                route_groups = router.choose_car_to_thread_group(process_num, new_car_list, old_car_list)
 
                 group_time = time.time()
 
                 # Do routing
-                route_dict = router.routing_with_groups(4, route_groups, route_dict)
+                route_dict = router.routing_with_groups(process_pool, process_num, route_groups, route_dict)
 
                 route_time = time.time()
 
