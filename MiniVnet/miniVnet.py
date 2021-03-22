@@ -62,6 +62,7 @@ def routing(miniVnet, cars):
     database = miniVnet.database
     GZ_BZ_CCZ_len = miniVnet.GZ_BZ_CCZ_len
     scheduling_period = miniVnet.scheduling_period
+    routing_period = miniVnet.routing_period
     V_MAX = miniVnet.V_MAX
     TOTAL_LEN = miniVnet.TOTAL_LEN
     LANE_NUM_PER_DIRECTION = miniVnet.LANE_NUM_PER_DIRECTION
@@ -148,14 +149,36 @@ def routing(miniVnet, cars):
                 car.position = position_at_offset
                 car_exiting_time = intersection_GZ.manager.run(car)
 
+
+                while car_exiting_time == None or result[0] == False:
+                    # The scheduling is prosponed due to spillback
+
+                    time_in_GZ += 1
+                    intersection_GZ = miniVnet.get_intersection(time_in_GZ, intersection_id)
+                    result = intersection_GZ.is_GZ_full(car, position_at_offset)
+                    position_at_offset = result[1]
+
+                    # Record the path for final path retrieval
+                    ###############################
+                    car.position = position_at_offset
+                    record_car_advising = car.copy_car_for_database()
+                    recordings.append( (time_in_GZ, intersection_id, "lane_advising", record_car_advising) )
+                    ###############################
+
+                    if result[0] == True:
+                        car_exiting_time = intersection_GZ.manager.run(car)
+
+                if car.D == None:
+                    print("HERE: ", car.id)
+
                 # Record the path for final path retrieval
                 ###############################
                 record_car_scheduling = car.copy_car_for_database()
                 recordings.append( (time_in_GZ, intersection_id, "scheduling", record_car_scheduling) )
                 ###############################
 
-                next_time_step = time_in_GZ + (int(car_exiting_time // scheduling_period) + 1)
-                next_position_at_offset = TOTAL_LEN - ((int(car_exiting_time // scheduling_period) + 1)*scheduling_period - car_exiting_time) * V_MAX
+                next_time_step = time_in_GZ + int(car_exiting_time // routing_period)
+                next_position_at_offset = TOTAL_LEN - ((int(car_exiting_time // routing_period) + 1)*routing_period - car_exiting_time) * V_MAX
 
                 next_node = (out_intersection_id, out_intersection_direction)
 
@@ -205,10 +228,10 @@ class MiniVnet:
         for idx in range(1, N+1):
             for jdx in range(1, N+1):
                 if idx <= N-2:
-                    intersection_map[(idx, jdx)].connect(1, intersection_manager_dict[(idx+1, jdx)], 3)
+                    intersection_map[(idx, jdx)].connect(1, intersection_map[(idx+1, jdx)], 3)
 
                 if jdx <= N-2:
-                    intersection_map[(idx, jdx)].connect(2, intersection_manager_dict[(idx, jdx+1)], 0)
+                    intersection_map[(idx, jdx)].connect(2, intersection_map[(idx, jdx+1)], 0)
 
 
     # Get an intersection from database
@@ -240,6 +263,8 @@ class MiniVnet:
                 for time_idx in range(pre_time+1, time):
                     saving_car = saving_car.copy_car_for_database()
                     saving_car.OT -= self.routing_period
+
+                    print(target_car.id, "getting scheduled", pre_time, saving_car.OT, saving_car.D)
                     if saving_car.OT+saving_car.D > 0:
                         intersection_to_save = self.get_intersection(time_idx, intersection_id)
                         intersection_to_save.add_sched_car(saving_car)
@@ -250,9 +275,11 @@ class MiniVnet:
             if state == "lane_advising":
                 intersection.add_advising_car(car)
                 target_car.records_intersection_in_database.append( ("lane_advising", intersection) )
+                print(target_car.id, "lane_advising", time)
             elif state == "scheduling":
                 intersection.add_scheduling_cars(car)
                 target_car.records_intersection_in_database.append( ("scheduling", intersection) )
+                print(target_car.id, "scheduling", time)
 
 
         # Add the scheduled car before exiting to the database
@@ -285,9 +312,9 @@ class MiniVnet:
         intersection_map = dict()
         for idx in range(1, self.N + 1):
             for jdx in range(1, self.N + 1):
-                intersection = Intersection_point((idx, jdx), self.GZ_BZ_CCZ_len, self.HEADWAY)
+                intersection = Intersection_point((idx, jdx), self.GZ_BZ_CCZ_len, self.HEADWAY, self.TOTAL_LEN)
                 intersection_map[(idx, jdx)] = intersection
-        self.connect_intersections(N, intersection_map)
+        self.connect_intersections(self.N, intersection_map)
 
         database.append(intersection_map)
 
@@ -330,7 +357,7 @@ class MiniVnet:
         self.delete_car_from_database(self.car_dict[car_id])
 
     def choose_car_to_thread_group(self, process_num, new_cars_id, old_cars_id):
-        # TODO: temp, route all new cars with two threads
+        # TODO: write better algorithm
 
         result = [[] for idx in range(process_num)]
         process_idx = 0
@@ -348,10 +375,8 @@ class MiniVnet:
     def update_database_after_routing(self, route_groups):
         for car_group in route_groups:
             for car in car_group:
+                # Spillback info of each intersection is updated in this function
                 self.add_car_to_database(car, car.path_data)
-
-                # TODO: update the spillback information
-
 
     def routing_with_groups(self, process_pool, process_num, route_groups, out_route_dict):
 

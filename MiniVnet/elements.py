@@ -5,29 +5,66 @@ sys.path.append('./Roadrunner')
 from IntersectionManager import IntersectionManager
 
 class Intersection_point:
-    def __init__(self, coordinate, GZ_BZ_CCZ_len, HEADWAY):
+    def __init__(self, coordinate, GZ_BZ_CCZ_len, HEADWAY, TOTAL_LEN):
         self.coordinate = coordinate
         self.id = "%3.3o"%(coordinate[0]) + "_" + "%3.3o"%(coordinate[1])
         self.manager = IntersectionManager(self.id)
 
         self.GZ_BZ_CCZ_len = GZ_BZ_CCZ_len
-        self.GZ_accumulated_size = 0
+        self.AZ_accumulated_size = 0        # Accumulated car length on AZ, PZ
+        self.GZ_accumulated_size = 0        # Accumulated car length on GZ, BZ and CCZ
         self.HEADWAY = HEADWAY
+        self.TOTAL_LEN = TOTAL_LEN
 
     def add_sched_car(self, car):
         self.manager.sched_cars[car.id] = car
+        self.GZ_accumulated_size += (car.length + self.HEADWAY)
+        self.update_my_spillback_info(car)
     def add_scheduling_cars(self, car):
         self.manager.scheduling_cars[car.id] = car
+        self.GZ_accumulated_size += (car.length + self.HEADWAY)
+        self.update_my_spillback_info(car)
     def add_advising_car(self, car):
         self.manager.advising_car[car.id] = car
+        self.AZ_accumulated_size += (car.length + self.HEADWAY)
+        self.update_my_spillback_info(car)
 
     def delete_car_from_database(self, car, type):
         if type == "lane_advising":
             del self.manager.advising_car[car.id]
+            self.AZ_accumulated_size -= (car.length + self.HEADWAY)
         elif type == "scheduling":
             del self.manager.scheduling_cars[car.id]
+            self.GZ_accumulated_size -= (car.length + self.HEADWAY)
         elif type == "scheduled":
             del self.manager.sched_cars[car.id]
+            self.GZ_accumulated_size -= (car.length + self.HEADWAY)
+
+        self.update_my_spillback_info(car)
+
+    def update_my_spillback_info(self, car):
+        lane_idx = car.lane
+        self.manager.my_road_info[lane_idx]['avail_len'] = self.TOTAL_LEN - (self.GZ_accumulated_size + self.AZ_accumulated_size + self.HEADWAY)
+
+        scheduled_car_list = []
+        for car in self.manager.sched_cars.values():
+            if car.lane == lane_idx:
+                scheduled_car_list.append(car)
+        sorted_scheduled_car_list = sorted(scheduled_car_list, key=lambda car: car.OT)
+
+        lane_car_delay_position = []
+        car_accumulate_len_lane = 7.5   # cfg.CCZ_DEC2_LEN+cfg.CCZ_ACC_LEN
+        for car in sorted_scheduled_car_list:
+            car_accumulate_len_lane += car.length + self.HEADWAY
+            lane_car_delay_position.append({"position":car_accumulate_len_lane, "delay":car.D})
+
+        self.manager.my_road_info[lane_idx]['car_delay_position'] = lane_car_delay_position
+        self.manager.my_road_info[lane_idx]['delay'] = 0
+        if len(lane_car_delay_position) > 0:
+            self.manager.my_road_info[lane_idx]['delay'] = lane_car_delay_position[-1]["delay"]
+
+    def connect(self, my_direction, intersection_point, its_direction):
+        self.manager.connect(my_direction, intersection_point.manager, its_direction)
 
 
     def is_GZ_full(self, car, position_at_offset):
@@ -54,6 +91,9 @@ class Car_in_database:
         self.dst_lane = None
         self.dst_lane_changed_to = None
         self.speed_in_intersection = None
+
+        self.is_spillback = False
+        self.is_spillback_strict = False
 
     def copy_car_for_database(self):
         car = Car_in_database(self.id, self.length)

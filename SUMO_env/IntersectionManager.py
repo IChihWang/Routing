@@ -162,8 +162,8 @@ class IntersectionManager:
 
                 src_intersection_id = intersection_idx_list[0] + "_" + intersection_idx_list[1]
 
-        time_offset_step = int(time_offset//cfg.SCHEDULING_PERIOD+1)
-        time_offset = time_offset_step*cfg.SCHEDULING_PERIOD - time_offset
+        time_offset_step = int(time_offset//cfg.ROUTING_PERIOD)
+        time_offset = (time_offset_step+1)*cfg.ROUTING_PERIOD - time_offset
         position_at_offset = cfg.TOTAL_LEN - time_offset*cfg.MAX_SPEED
 
         # Might return None as well for temporary forbid of routing

@@ -61,13 +61,11 @@ def IcaccPlus(old_cars, new_cars, advised_n_sched_car, pedestrian_time_mark_list
     head_of_line_blocking_position = [999999]*cfg.LANE_NUM_PER_DIRECTION*4
     accumulate_car_len = [-999999]*len(others_road_info)
     recorded_delay = [0]*len(others_road_info)
-    base_delay = [0]*len(others_road_info)
     max_dst_lane_idx_list = [[-999999, -1] for i in range(4)]
     for dst_lane_idx in range(len(others_road_info)):
         if others_road_info[dst_lane_idx] != None:
             accumulate_car_len[dst_lane_idx] = accumulate_car_len_lane[dst_lane_idx]-others_road_info[dst_lane_idx]['avail_len'] + cfg.CAR_MAX_LEN + cfg.HEADWAY + cfg.CCZ_ACC_LEN
             recorded_delay[dst_lane_idx] = max(others_road_info[dst_lane_idx]['delay'], spillback_delay_record[dst_lane_idx]) # To record the dispatch speed
-            base_delay[dst_lane_idx] = recorded_delay
 
 
     for car in sorted_new_cars:

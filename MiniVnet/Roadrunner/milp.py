@@ -11,7 +11,7 @@ data = Data()
 
 
 
-def IcaccPlus(old_cars, new_cars, others_road_info, spillback_delay_record):
+def IcaccPlus(old_cars, new_cars, others_road_info):
     # part 1: calculate OT
     for c_idx in range(len(new_cars)):
         OT = new_cars[c_idx].position/cfg.MAX_SPEED
@@ -42,14 +42,11 @@ def IcaccPlus(old_cars, new_cars, others_road_info, spillback_delay_record):
     sorted_new_cars = sorted(new_cars, key=lambda x: x.position, reverse=False)
     head_of_line_blocking_position = [999999]*cfg.LANE_NUM_PER_DIRECTION*4
     accumulate_car_len = [-999999]*len(others_road_info)
-    recorded_delay = [0]*len(others_road_info)
-    base_delay = [0]*len(others_road_info)
     max_dst_lane_idx_list = [[-999999, -1] for i in range(4)]
     for dst_lane_idx in range(len(others_road_info)):
         if others_road_info[dst_lane_idx] != None:
             accumulate_car_len[dst_lane_idx] = accumulate_car_len_lane[dst_lane_idx]-others_road_info[dst_lane_idx]['avail_len'] + cfg.CAR_MAX_LEN + cfg.HEADWAY + cfg.CCZ_ACC_LEN
-            recorded_delay[dst_lane_idx] = max(others_road_info[dst_lane_idx]['delay'], spillback_delay_record[dst_lane_idx]) # To record the dispatch speed
-            base_delay[dst_lane_idx] = recorded_delay
+
 
 
     for car in sorted_new_cars:
@@ -89,14 +86,11 @@ def IcaccPlus(old_cars, new_cars, others_road_info, spillback_delay_record):
                     #print(dst_car_delay_position[compare_dst_car_idx-1]["position"], back_position, accumulate_car_len[dst_lane_idx])
                     #spillback_delay_dst_lane = back_delay
 
-                    #spillback_delay_multiply_factor = accumulate_car_len[dst_lane_idx]/(cfg.CCZ_LEN)
-                    #spillback_delay_dst_lane = recorded_delay[dst_lane_idx]*(spillback_delay_multiply_factor)
 
                 car.is_spillback = True
 
-                spillback_delay_record[dst_lane_idx] = recorded_delay[dst_lane_idx]
             else:
-                spillback_delay_record[dst_lane_idx] = 0
+                pass
 
             spillback_delay = spillback_delay_dst_lane
 
@@ -132,9 +126,8 @@ def IcaccPlus(old_cars, new_cars, others_road_info, spillback_delay_record):
 
                         car.is_spillback = True
 
-                        spillback_delay_record[other_lane_idx] = recorded_delay[other_lane_idx]
                     else:
-                        spillback_delay_record[other_lane_idx] = 0
+                        pass
 
 
                     spillback_delay = max(spillback_delay, spillback_delay_dst_lane_changed_to)
@@ -156,10 +149,10 @@ def IcaccPlus(old_cars, new_cars, others_road_info, spillback_delay_record):
 
 
                 if car.current_turn == 'S':
-                    car.D = solver.NumVar(max(0+min_d_add, spillback_delay), solver.infinity(), 'd'+str(car.ID))
+                    car.D = solver.NumVar(max(0+min_d_add, spillback_delay), solver.infinity(), 'd'+str(car.id))
                 else:
                     min_d = (2*cfg.CCZ_DEC2_LEN/(cfg.MAX_SPEED+cfg.TURN_SPEED)) - (cfg.CCZ_DEC2_LEN/cfg.MAX_SPEED)
-                    car.D = solver.NumVar(max(min_d+min_d_add, spillback_delay), solver.infinity(), 'd'+str(car.ID))
+                    car.D = solver.NumVar(max(min_d+min_d_add, spillback_delay), solver.infinity(), 'd'+str(car.id))
 
         else:
             if car.position > head_of_line_blocking_position[lane_idx]:
