@@ -168,24 +168,24 @@ def run_router(router, _iteration_num, _handler_process, _to_handler_queue, _fro
 
 
             for iteration_idx in range(iteration_num):
-                start_time = time.time()
+                start_time = time.perf_counter()
 
                 # Choose cars for routing
                 route_groups = router.choose_car_to_thread_group(process_num, new_car_list, old_car_list)
 
-                group_time = time.time()
+                group_time = time.perf_counter()
 
                 # Do routing
                 route_dict = router.routing_with_groups(process_pool, process_num, route_groups, route_dict)
 
-                route_time = time.time()
+                route_time = time.perf_counter()
 
                 # Update cars into the database
                 router.update_database_after_routing(route_groups)
 
 
-                end_time = time.time()
-                print("Group time: ", group_time - start_time, "Route_num: ", route_time - group_time, "Update_num: ", end_time-route_time)
+                end_time = time.perf_counter()
+                print("Group time: ", group_time - start_time, "Route_num: ", route_time - group_time, "Update_num: ", end_time-route_time, "Car num:", len(new_car_list))
 
             # Finalize the results
             route_result_str = ""

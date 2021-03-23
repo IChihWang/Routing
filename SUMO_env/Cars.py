@@ -33,26 +33,11 @@ class Car:
         self.current_turn = turn
         self.next_turn = next_turn
 
-        self.in_direction = lane // cfg.LANE_NUM_PER_DIRECTION
+        self.in_direction = None
         self.out_direction = None
-        if turn == 'S':
-            self.out_direction = (self.in_direction+2)%4
-        elif turn == 'R':
-            self.out_direction = (self.in_direction+1)%4
-        elif turn == 'L':
-            self.out_direction = (self.in_direction-1)%4
-
-
-        # Determine the speed in the intersection
-        speed_in_intersection = cfg.TURN_SPEED
-        if turn == "S":
-            speed_in_intersection = cfg.MAX_SPEED
-        else:
-            speed_in_intersection = cfg.TURN_SPEED
-        self.speed_in_intersection = speed_in_intersection
-
-        # ======================================================================
-
+        self.dst_lane = None
+        self.dst_lane_changed_to = None
+        self.speed_in_intersection = None
 
 
         # ===== Information that might change during the simulation ============
@@ -63,17 +48,7 @@ class Car:
         self.is_spillback_strict = False
 
 
-        out_sub_lane = (cfg.LANE_NUM_PER_DIRECTION-lane%cfg.LANE_NUM_PER_DIRECTION-1)
-        self.dst_lane = int(self.out_direction*cfg.LANE_NUM_PER_DIRECTION + out_sub_lane)     # Destination lane before next lane change
-        if next_turn == 'R':
-            out_sub_lane = 0
-        elif next_turn == 'L':
-            out_sub_lane = cfg.LANE_NUM_PER_DIRECTION-1
-        elif next_turn == 'S':
-            out_sub_lane = cfg.LANE_NUM_PER_DIRECTION//2
-
-        self.dst_lane_changed_to = int(self.out_direction*cfg.LANE_NUM_PER_DIRECTION + out_sub_lane)  # Destination lane after next lane change
-
+        self.set_turning(turn, next_turn)
 
 
         # Position: how far between it and the intersection (0 at the entry of intersection)
@@ -113,6 +88,35 @@ class Car:
 
         # ======================================================================
 
+    def set_turning(self, turn, next_turn):
+        self.in_direction = self.lane // cfg.LANE_NUM_PER_DIRECTION
+        self.out_direction = None
+        if turn == 'S':
+            self.out_direction = (self.in_direction+2)%4
+        elif turn == 'R':
+            self.out_direction = (self.in_direction+1)%4
+        elif turn == 'L':
+            self.out_direction = (self.in_direction-1)%4
+
+        out_sub_lane = (cfg.LANE_NUM_PER_DIRECTION-self.lane%cfg.LANE_NUM_PER_DIRECTION-1)
+        self.dst_lane = int(self.out_direction*cfg.LANE_NUM_PER_DIRECTION + out_sub_lane)     # Destination lane before next lane change
+        if next_turn == 'R':
+            out_sub_lane = 0
+        elif next_turn == 'L':
+            out_sub_lane = cfg.LANE_NUM_PER_DIRECTION-1
+        elif next_turn == 'S':
+            out_sub_lane = cfg.LANE_NUM_PER_DIRECTION//2
+
+        self.dst_lane_changed_to = int(self.out_direction*cfg.LANE_NUM_PER_DIRECTION + out_sub_lane)  # Destination lane after next lane change
+
+        # Determine the speed in the intersection
+        speed_in_intersection = cfg.TURN_SPEED
+        if turn == "S":
+            speed_in_intersection = cfg.MAX_SPEED
+        else:
+            speed_in_intersection = cfg.TURN_SPEED
+        self.speed_in_intersection = speed_in_intersection
+        # ======================================================================
 
     def setPosition(self, pos):
         self.position = pos

@@ -169,7 +169,7 @@ class IntersectionManager:
         # Might return None as well for temporary forbid of routing
         return (position_at_offset, time_offset_step, src_intersection_id, direction_of_src_intersection, src_shift_num)
 
-    def update_path(self, car_id, car_turn, intersection_dir):
+    def update_path(self, car_id, car_turn, next_turn, intersection_dir):
         id_data = self.ID.split('_')
         x_idx = int(id_data[0])
         y_idx = int(id_data[1])
@@ -203,6 +203,9 @@ class IntersectionManager:
         traci.vehicle.setMaxSpeed(car_id, cfg.MAX_SPEED)
         traci.vehicle.setColor(car_id, (255,255,255))
 
+        # Update dst lanes and info
+        self.car_list[car_id].set_turning(car_turn, next_turn)
+
     def delete_car(self, car_id):
         if car_id in self.car_list:
             self.car_list.pop(car_id)
@@ -229,10 +232,8 @@ class IntersectionManager:
                 traci.vehicle.setMaxSpeed(car_id, cfg.MAX_SPEED)
                 traci.vehicle.setSpeed(car_id, cfg.MAX_SPEED)
 
-                self.update_path(car_id, car_turn, lane_direction)
 
-            if self.car_list[car_id].current_turn != car_turn:
-                self.update_path(car_id, car_turn, lane_direction)
+            self.update_path(car_id, car_turn, next_turn, lane_direction)
             self.car_list[car_id].current_turn = car_turn
             self.car_list[car_id].next_turn = next_turn
 
@@ -275,6 +276,14 @@ class IntersectionManager:
 
             self.total_fuel_consumption += traci.vehicle.getFuelConsumption(car_key)*cfg.TIME_STEP
             self.fuel_consumption_count += 1
+
+
+            if isinstance(self.car_list[car_key].D, float):
+                traci.vehicle.setColor(car_key, (100,250,92))
+            if self.car_list[car_key].is_spillback == True:
+                traci.vehicle.setColor(car_key, (255,153,51))
+            elif self.car_list[car_key].is_spillback_strict == True:
+                traci.vehicle.setColor(car_key, (255,59,59))
 
 
         # ===== Entering the intersection (Record the cars) =====
@@ -338,10 +347,7 @@ class IntersectionManager:
                     elif car.zone == "PZ" or car.zone == "AZ":
                         advised_n_sched_car.append(car)
 
-                    if car.is_spillback == True:
-                        traci.vehicle.setColor(car_id, (255,153,51))
-                    elif car.is_spillback_strict == True:
-                        traci.vehicle.setColor(car_id, (255,59,59))
+
 
 
                 for c_idx in range(len(n_sched_car)):
@@ -578,6 +584,7 @@ def Scheduling(lane_advisor, sched_car, n_sched_car, advised_n_sched_car, cc_lis
 
     for car in n_sched_car:
         car.zone_state = "scheduled"
+
 
     # Update the pedestrian ime list
     for direction in range(4):

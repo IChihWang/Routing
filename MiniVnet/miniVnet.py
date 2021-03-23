@@ -5,6 +5,7 @@ import itertools
 import heapq
 import numpy
 import sys
+import time as time_lib
 from multiprocessing import Process, Pool
 
 from elements import Intersection_point, Car
@@ -70,6 +71,7 @@ def routing(miniVnet, cars):
 
     route_record = dict()
     for car in cars:
+
         # Variables
         nodes_arrival_time_data = dict()         # ( node_coord, (Arrival time, last_node, recordings) )
         dst_coord = car.dst_coord           # The destination of the car
@@ -195,8 +197,6 @@ def routing(miniVnet, cars):
         route_record[car.id] = path_list
 
         miniVnet.add_car_to_database(car, path_list)
-
-
 
     return route_record
 
