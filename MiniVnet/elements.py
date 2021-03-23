@@ -31,16 +31,20 @@ class Intersection_point:
 
     def delete_car_from_database(self, car, type):
         if type == "lane_advising":
+            car_in_database = self.manager.advising_car[car.id]
             del self.manager.advising_car[car.id]
+            self.update_my_spillback_info(car_in_database)
             self.AZ_accumulated_size -= (car.length + self.HEADWAY)
         elif type == "scheduling":
+            car_in_database = self.manager.scheduling_cars[car.id]
             del self.manager.scheduling_cars[car.id]
+            self.update_my_spillback_info(car_in_database)
             self.GZ_accumulated_size -= (car.length + self.HEADWAY)
         elif type == "scheduled":
+            car_in_database = self.manager.sched_cars[car.id]
             del self.manager.sched_cars[car.id]
+            self.update_my_spillback_info(car_in_database)
             self.GZ_accumulated_size -= (car.length + self.HEADWAY)
-
-        self.update_my_spillback_info(car)
 
     def update_my_spillback_info(self, car):
         lane_idx = car.lane

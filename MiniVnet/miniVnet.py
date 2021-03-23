@@ -153,23 +153,21 @@ def routing(miniVnet, cars):
                 while car_exiting_time == None or result[0] == False:
                     # The scheduling is prosponed due to spillback
 
-                    time_in_GZ += 1
-                    intersection_GZ = miniVnet.get_intersection(time_in_GZ, intersection_id)
-                    result = intersection_GZ.is_GZ_full(car, position_at_offset)
-                    position_at_offset = result[1]
-
                     # Record the path for final path retrieval
                     ###############################
-                    car.position = position_at_offset
                     record_car_advising = car.copy_car_for_database()
                     recordings.append( (time_in_GZ, intersection_id, "lane_advising", record_car_advising) )
                     ###############################
 
+                    time_in_GZ += 1
+                    intersection_GZ = miniVnet.get_intersection(time_in_GZ, intersection_id)
+                    result = intersection_GZ.is_GZ_full(car, position_at_offset)
+
                     if result[0] == True:
+                        position_at_offset = result[1]
+                        car.position = position_at_offset
                         car_exiting_time = intersection_GZ.manager.run(car)
 
-                if car.D == None:
-                    print("HERE: ", car.id)
 
                 # Record the path for final path retrieval
                 ###############################
@@ -177,8 +175,8 @@ def routing(miniVnet, cars):
                 recordings.append( (time_in_GZ, intersection_id, "scheduling", record_car_scheduling) )
                 ###############################
 
-                next_time_step = time_in_GZ + int(car_exiting_time // routing_period)
-                next_position_at_offset = TOTAL_LEN - ((int(car_exiting_time // routing_period) + 1)*routing_period - car_exiting_time) * V_MAX
+                next_time_step = time_in_GZ + int(car_exiting_time // scheduling_period)
+                next_position_at_offset = TOTAL_LEN - ((int(car_exiting_time // scheduling_period) + 1)*scheduling_period - car_exiting_time) * V_MAX
 
                 next_node = (out_intersection_id, out_intersection_direction)
 
@@ -197,6 +195,8 @@ def routing(miniVnet, cars):
         route_record[car.id] = path_list
 
         miniVnet.add_car_to_database(car, path_list)
+
+
 
     return route_record
 
@@ -262,9 +262,9 @@ class MiniVnet:
                 saving_car = pre_car
                 for time_idx in range(pre_time+1, time):
                     saving_car = saving_car.copy_car_for_database()
-                    saving_car.OT -= self.routing_period
+                    saving_car.OT -= self.scheduling_period
 
-                    print(target_car.id, "getting scheduled", pre_time, saving_car.OT, saving_car.D)
+
                     if saving_car.OT+saving_car.D > 0:
                         intersection_to_save = self.get_intersection(time_idx, intersection_id)
                         intersection_to_save.add_sched_car(saving_car)
@@ -273,13 +273,15 @@ class MiniVnet:
             pre_record = (time, intersection_id, car)
 
             if state == "lane_advising":
-                intersection.add_advising_car(car)
+                saving_car = car.copy_car_for_database()
+                intersection.add_advising_car(saving_car)
                 target_car.records_intersection_in_database.append( ("lane_advising", intersection) )
-                print(target_car.id, "lane_advising", time)
+
             elif state == "scheduling":
-                intersection.add_scheduling_cars(car)
+                saving_car = car.copy_car_for_database()
+                intersection.add_scheduling_cars(saving_car)
                 target_car.records_intersection_in_database.append( ("scheduling", intersection) )
-                print(target_car.id, "scheduling", time)
+
 
 
         # Add the scheduled car before exiting to the database
@@ -290,7 +292,7 @@ class MiniVnet:
         saving_car = pre_car
         for time_idx in range(pre_time+1, exiting_time):
             saving_car = saving_car.copy_car_for_database()
-            saving_car.OT -= self.routing_period
+            saving_car.OT -= self.scheduling_period
 
             if saving_car.OT+saving_car.D > 0:
                 intersection_to_save = self.get_intersection(time_idx, intersection_id)
@@ -355,6 +357,7 @@ class MiniVnet:
 
     def delete_car_from_database_id(self, car_id):
         self.delete_car_from_database(self.car_dict[car_id])
+        del self.car_dict[car_id]
 
     def choose_car_to_thread_group(self, process_num, new_cars_id, old_cars_id):
         # TODO: write better algorithm
@@ -389,6 +392,7 @@ class MiniVnet:
                 for turning, recordings, time in path_data:
                     turnings_str += turning
                 self.car_dict[car_id].path_data = path_data
+
                 out_route_dict[car_id] = turnings_str
 
         return out_route_dict
