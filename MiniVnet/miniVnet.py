@@ -307,7 +307,8 @@ class MiniVnet:
 
     # Delete a time step from the database
     def delete_time_step(self):
-        del self.database[-1]
+        if len(self.database) > 0:
+            del self.database[-1]
 
     # Add a time step into a database
     def add_time_step(self, database):
