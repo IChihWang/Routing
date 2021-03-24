@@ -10,3 +10,5 @@ MiniVnet/Roadrunner/data/net/lane19by19.net.xml
 MiniVnet/Roadrunner/data/net/lane20by20.net.xml
 MiniVnet/Roadrunner/data/net/lane8by8.net.xml
 *.ini
+*.ipch
+*.db
