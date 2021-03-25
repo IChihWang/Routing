@@ -12,3 +12,8 @@ MiniVnet/Roadrunner/data/net/lane8by8.net.xml
 *.ini
 *.ipch
 *.db
+MiniVnet_cpp/.vs/
+MiniVnet_cpp/Debug/
+*.sln
+*.vcxproj
+*.filters
