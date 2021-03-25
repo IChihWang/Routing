@@ -1,7 +1,17 @@
-#include "main.h"
+#include "server.h"
 
-void initial_server_handler() {
-	cout << aaa << endl;
+using namespace std;
+
+int _grid_size;
+float _schedule_period;
+int _routing_period_num;
+float _GZ_BZ_CCZ_len;
+float _HEADWAY;
+float _V_MAX;
+float _TURN_SPEED;
+float _TOTAL_LEN;
+
+int initial_server_handler() {
 #if defined WIN32
 	WSADATA wsaData;
 	int iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
@@ -62,10 +72,8 @@ void initial_server_handler() {
 		exit(EXIT_FAILURE);
 	}
 
-	int valread;
 	char buffer[1024] = { 0 };
-	valread = recv(new_socket, buffer, 1024, 0);
-	cout << buffer << endl;
+	recv(new_socket, buffer, 1024, 0);
 
 	stringstream ss(buffer);
 	vector<float> results;
@@ -79,22 +87,23 @@ void initial_server_handler() {
 		results.push_back(tem_float);
 	}
 
-	int grid_size = results[0];
-	float schedule_period = results[1];
-	int routing_period_num = results[2];
-	float GZ_BZ_CCZ_len = results[3];
-	float HEADWAY = results[4];
-	float V_MAX = results[5];
-	float TURN_SPEED = results[6];
-	float TOTAL_LEN = results[7];
-	cout << grid_size << " " << schedule_period << " "
-		<< routing_period_num << " " << GZ_BZ_CCZ_len << " "
-		<< HEADWAY << " " << V_MAX << " "
-		<< TURN_SPEED << " " << TOTAL_LEN << endl;
+	_grid_size = int(results[0]);
+	_schedule_period = results[1];
+	_routing_period_num = int(results[2]);
+	_GZ_BZ_CCZ_len = results[3];
+	_HEADWAY = results[4];
+	_V_MAX = results[5];
+	_TURN_SPEED = results[6];
+	_TOTAL_LEN = results[7];
+	cout << _grid_size << " " << _schedule_period << " "
+		<< _routing_period_num << " " << _GZ_BZ_CCZ_len << " "
+		<< _HEADWAY << " " << _V_MAX << " "
+		<< _TURN_SPEED << " " << _TOTAL_LEN << endl;
 
-	char hello[] = "Hello from server";
+	char hello[] = "Got it ;@";
 	send(new_socket, hello, strlen(hello), 0);
-	printf("Hello message sent\n");
+
+	return new_socket;
 }
 
 void ClearWinSock() {

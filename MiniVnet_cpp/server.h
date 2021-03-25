@@ -2,6 +2,7 @@
 #include <iostream>
 #include <sstream>
 #include <vector>
+#include <thread>
 
 #if defined WIN32
 #include <winsock.h>
@@ -9,6 +10,7 @@
 typedef int socklen_t;
 
 #else
+
 #define closesocket close
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -16,10 +18,12 @@ typedef int socklen_t;
 #include <unistd.h>
 #endif
 
+#include "global.h"
+
 #define PORT 9996
 
-using namespace std;
-
-
+// Functions in server.cpp
 void ClearWinSock();
-void initial_server_handler();
+int initial_server_handler();
+
+
