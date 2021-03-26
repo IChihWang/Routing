@@ -2,7 +2,7 @@
 
 using namespace std;
 
-Intersection::Intersection(const tuple<int, int> &in_coordinate) {
+Intersection::Intersection(const Coord &in_coordinate) {
 	id = in_coordinate;
 }
 
@@ -29,7 +29,11 @@ void Intersection::delete_car_from_database(const Car& car, const string& type) 
 }
 
 void Intersection::update_my_spillback_info(Car_in_database& car_in_database) {
+	// TODO: update spillback info
+}
 
+uint8_t advise_lane(const Car& car) {
+	//TODO: advise lane
 }
 
 
@@ -66,7 +70,7 @@ void Car_in_database::update_dst_lane_and_data() {
 
 }
 
-Car::Car(const string in_id, const uint8_t in_length, const tuple<int, int> in_dst_coord) {
+Car::Car(const string in_id, const uint8_t in_length, const Coord in_dst_coord) {
 	id = in_id;
 	length = in_length;
 	dst_coord = in_dst_coord;

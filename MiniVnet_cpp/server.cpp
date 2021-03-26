@@ -2,14 +2,15 @@
 
 using namespace std;
 
-int _grid_size;
+uint8_t _grid_size;
 float _schedule_period;
-int _routing_period_num;
+uint8_t _routing_period_num;
 float _GZ_BZ_CCZ_len;
-float _HEADWAY;
+uint8_t _HEADWAY;
 float _V_MAX;
 float _TURN_SPEED;
 float _TOTAL_LEN;
+float _routing_period;
 
 int initial_server_handler() {
 #if defined WIN32
@@ -87,14 +88,16 @@ int initial_server_handler() {
 		results.push_back(tem_float);
 	}
 
-	_grid_size = int(results[0]);
+	_grid_size = uint8_t(results[0]);
 	_schedule_period = results[1];
-	_routing_period_num = int(results[2]);
+	_routing_period_num = uint8_t(results[2]);
 	_GZ_BZ_CCZ_len = results[3];
-	_HEADWAY = results[4];
+	_HEADWAY = uint8_t(results[4]);
 	_V_MAX = results[5];
 	_TURN_SPEED = results[6];
 	_TOTAL_LEN = results[7];
+	_routing_period = _schedule_period * _routing_period_num;
+
 	cout << _grid_size << " " << _schedule_period << " "
 		<< _routing_period_num << " " << _GZ_BZ_CCZ_len << " "
 		<< _HEADWAY << " " << _V_MAX << " "

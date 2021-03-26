@@ -2,11 +2,12 @@
 
 using namespace std;
 
-int _thread_num = 2;
+uint8_t _thread_num = 2;
 
 string handle_request(string &in_str);
 
 int main(int argc, char const* argv[]) {
+	testQ();
 
 	int new_socket = initial_server_handler();
 	create_grid_network();
@@ -65,7 +66,7 @@ string handle_request(string &in_str) {
 		getline(ss_car_data, car_state, ',');
 
 		if (car_state.compare("EXIT") == 0) {
-			// TODO: delete care from database
+			delete_car_from_database_id(car_id);
 		}
 		else if (car_state.compare("PAUSE") == 0) {
 			// Cannot reroute the car due to the lower lever control
@@ -103,6 +104,8 @@ string handle_request(string &in_str) {
 	for (int iter_i = 0; iter_i < 1; iter_i++) {
 		vector<vector<reference_wrapper<Car>>> route_groups;
 		route_groups = choose_car_to_thread_group(new_car_ids, old_car_ids);
+
+		routing_with_groups(route_groups, routes_dict);
 	}
 
 

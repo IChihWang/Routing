@@ -4,16 +4,20 @@
 #include <map>
 #include <tuple>
 #include <vector>
+#include <queue>
 #include <string>
 using namespace std;
+
 
 class Car;
 class Car_in_database;
 class Intersection;
 
+typedef tuple<int, int> Coord;
+
 class Intersection {
 public:
-	tuple<int, int> id;
+	Coord id;
 	uint16_t AZ_accumulated_size = 0;
 	uint16_t GZ_accumulated_size = 0;
 
@@ -22,10 +26,10 @@ public:
 	map<string, Car_in_database> advising_car;
 
 	Intersection() {}
-	Intersection(const tuple<int, int> &in_coordinate);
+	Intersection(const Coord& in_coordinate);
 	void delete_car_from_database(const Car& car, const string& type);
 	void update_my_spillback_info(Car_in_database &car_in_database);
-
+	uint8_t advise_lane(const Car& car);
 };
 
 class Car_in_database {
@@ -56,11 +60,11 @@ public:
 
 class Car : public Car_in_database {
 public:
-	tuple<int, int> dst_coord;
+	Coord dst_coord;
 	vector< tuple<string, Intersection> > records_intersection_in_database;
 	
 	// temporary variables for routing
-	tuple<int, int>src_coord;
+	Coord src_coord;
 	uint8_t direction_of_src_intersection = 0;
 	uint16_t time_offset_step = 0;
 	double position_at_offset = 0;
@@ -68,10 +72,9 @@ public:
 	double traveling_time = 0;
 
 	//self.path_data = None
-	//self.dst_node = None    # record the dst node after routing
 
 	Car() {};
-	Car(const string in_id, const uint8_t in_length, const tuple<int, int> in_dst_coord);
+	Car(const string in_id, const uint8_t in_length, const Coord in_dst_coord);
 };
 
 #endif
