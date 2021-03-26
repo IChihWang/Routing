@@ -1,8 +1,15 @@
+#ifndef ELEMENT_H
+#define ELEMENT_H
+
 #include <map>
 #include <tuple>
 #include <vector>
 #include <string>
 using namespace std;
+
+class Car;
+class Car_in_database;
+class Intersection;
 
 class Intersection {
 public:
@@ -10,8 +17,14 @@ public:
 	uint16_t AZ_accumulated_size = 0;
 	uint16_t GZ_accumulated_size = 0;
 
+	map<string, Car_in_database> sched_cars;
+	map<string, Car_in_database> scheduling_cars;
+	map<string, Car_in_database> advising_car;
+
 	Intersection() {}
-	Intersection(tuple<int, int> &in_coordinate);
+	Intersection(const tuple<int, int> &in_coordinate);
+	void delete_car_from_database(const Car& car, const string& type);
+	void update_my_spillback_info(Car_in_database &car_in_database);
 
 };
 
@@ -36,7 +49,7 @@ public:
 
 
 	Car_in_database() {};
-	Car_in_database(string in_id, uint8_t in_length);
+	Car_in_database(const string in_id, const uint8_t in_length);
 
 	void update_dst_lane_and_data();
 };
@@ -44,7 +57,7 @@ public:
 class Car : public Car_in_database {
 public:
 	tuple<int, int> dst_coord;
-	vector<string, Intersection> records_intersection_in_database;
+	vector< tuple<string, Intersection> > records_intersection_in_database;
 	
 	// temporary variables for routing
 	tuple<int, int>src_coord;
@@ -56,4 +69,9 @@ public:
 
 	//self.path_data = None
 	//self.dst_node = None    # record the dst node after routing
+
+	Car() {};
+	Car(const string in_id, const uint8_t in_length, const tuple<int, int> in_dst_coord);
 };
+
+#endif

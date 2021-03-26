@@ -17,3 +17,4 @@ MiniVnet_cpp/Debug/
 *.sln
 *.vcxproj
 *.filters
+MiniVnet_cpp/x64/
