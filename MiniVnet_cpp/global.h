@@ -1,16 +1,27 @@
+#ifndef GLOBAL_H
+#define GLOBAL_H
+
 #include <map>
 #include <tuple>
 #include <vector>
 #include <shared_mutex>	// C++ 17
 #include <algorithm>
+#include "globalConst.h"
 #include "element.h"
+#include "LaneAdviser.h"
+
 using namespace std;
-
-
-// Defined in main.cpp
 
 // Global variables
 // Defined in element.cpp
+
+// Defined in main.cpp
+extern map<string, map<string, double> > inter_info;
+void read_load_adv_data();
+void read_inter_info_data();
+void read_inter_length_data();
+string handle_request(string &in_str);
+
 
 
 // Defined in server.cpp
@@ -25,10 +36,6 @@ extern float _TURN_SPEED;
 extern float _TOTAL_LEN;
 extern float _routing_period;
 
-
-// Defined in MiniVnet.cpp
-#define DEFAULT_DATA_LENGTH 10
-#define LANE_NUM_PER_DIRECTION 3
 
 
 extern vector< map< Coord, Intersection > > _database;
@@ -53,3 +60,5 @@ void routing_with_groups(vector<vector<reference_wrapper<Car>>> route_groups, ma
 void routing(vector<reference_wrapper<Car>>& route_group);
 
 void testQ();
+
+#endif

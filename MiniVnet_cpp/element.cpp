@@ -32,9 +32,15 @@ void Intersection::update_my_spillback_info(Car_in_database& car_in_database) {
 	// TODO: update spillback info
 }
 
-uint8_t advise_lane(const Car& car) {
-	//TODO: advise lane
+uint8_t Intersection::advise_lane(const Car& car) {
+	Lane_Adviser lane_adviser;
+
+	lane_adviser.advise_lane(car);
+
+
+	return 0; //temp
 }
+
 
 
 Car_in_database::Car_in_database(const string in_id, const uint8_t in_length) {

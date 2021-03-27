@@ -8,12 +8,17 @@
 #include <string>
 using namespace std;
 
+#ifndef COORD
+#define COORD
+typedef tuple<int, int> Coord;
+#endif
+
 
 class Car;
 class Car_in_database;
 class Intersection;
+class Lane_Adviser;
 
-typedef tuple<int, int> Coord;
 
 class Intersection {
 public:
@@ -30,6 +35,7 @@ public:
 	void delete_car_from_database(const Car& car, const string& type);
 	void update_my_spillback_info(Car_in_database &car_in_database);
 	uint8_t advise_lane(const Car& car);
+
 };
 
 class Car_in_database {
@@ -38,7 +44,7 @@ public:
 	uint8_t lane = 0;
 	uint8_t length = 0;
 	char current_turn = 'S';
-	uint16_t position = 0;
+	double position = 0;
 
 
 	// temporary variables for routing
