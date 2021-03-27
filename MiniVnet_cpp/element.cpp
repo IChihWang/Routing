@@ -95,7 +95,6 @@ uint8_t Intersection::advise_lane(const Car& car) {
 
 	uint8_t advised_lane = lane_adviser.advise_lane(car, spillback_lane_advise_avoid);
 
-
 	return advised_lane;
 }
 
