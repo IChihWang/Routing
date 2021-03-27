@@ -227,10 +227,10 @@ class MiniVnet:
     def connect_intersections(self, N, intersection_map):
         for idx in range(1, N+1):
             for jdx in range(1, N+1):
-                if idx <= N-2:
+                if idx <= N-1:
                     intersection_map[(idx, jdx)].connect(1, intersection_map[(idx+1, jdx)], 3)
 
-                if jdx <= N-2:
+                if jdx <= N-1:
                     intersection_map[(idx, jdx)].connect(2, intersection_map[(idx, jdx+1)], 0)
 
 

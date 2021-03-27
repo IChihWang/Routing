@@ -8,8 +8,10 @@ Lane_Adviser::Lane_Adviser() {
 	}
 }
 
-void Lane_Adviser::advise_lane(const Car& car) {
-
+uint8_t Lane_Adviser::advise_lane(const Car& car, const bool spillback_lane_advise_avoid[]) {
+	uint8_t advise_lane = 0;
+	
+	return advise_lane;
 }
 
 void Lane_Adviser::update_Table_from_cars(const map<string, Car_in_database>& advising_car, const map<string, Car_in_database>& scheduling_cars, const map<string, Car_in_database>& sched_cars) {
@@ -33,8 +35,34 @@ void Lane_Adviser::update_Table_from_cars(const map<string, Car_in_database>& ad
 
 void Lane_Adviser::update_Table(const Car_in_database& car, double time) {
 	int direction = car.lane / LANE_NUM_PER_DIRECTION;
+	string lookup_key = to_string(car.lane% LANE_NUM_PER_DIRECTION) + car.current_turn;
 
 	if (direction == 0) {
-		
+		for (map<char, uint8_t> occupied_boxes : lane_dict[lookup_key]) {
+			if (time > timeMatrix[occupied_boxes['X']][occupied_boxes['Y']]) {
+				timeMatrix[occupied_boxes['X']][occupied_boxes['Y']] = time;
+			}
+		}
+	}
+	else if (direction == 1) {
+		for (map<char, uint8_t> occupied_boxes : lane_dict[lookup_key]) {
+			if (time > timeMatrix[LANE_ADV_NUM - 1 - occupied_boxes['Y']][occupied_boxes['X']]) {
+				timeMatrix[LANE_ADV_NUM - 1 - occupied_boxes['Y']][occupied_boxes['X']] = time;
+			}
+		}
+	}
+	else if (direction == 2) {
+		for (map<char, uint8_t> occupied_boxes : lane_dict[lookup_key]) {
+			if (time > timeMatrix[LANE_ADV_NUM - 1 - occupied_boxes['X']][occupied_boxes['Y']]) {
+				timeMatrix[LANE_ADV_NUM - 1 - occupied_boxes['X']][occupied_boxes['Y']] = time;
+			}
+		}
+	}
+	else if (direction == 3) {
+		for (map<char, uint8_t> occupied_boxes : lane_dict[lookup_key]) {
+			if (time > timeMatrix[occupied_boxes['Y']][LANE_ADV_NUM - 1 - occupied_boxes['X']]) {
+				timeMatrix[occupied_boxes['Y']][LANE_ADV_NUM - 1 - occupied_boxes['X']] = time;
+			}
+		}
 	}
 }

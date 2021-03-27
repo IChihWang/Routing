@@ -6,6 +6,7 @@
 #include <vector>
 #include <queue>
 #include <string>
+#include "globalConst.h"
 using namespace std;
 
 #ifndef COORD
@@ -19,6 +20,18 @@ class Car_in_database;
 class Intersection;
 class Lane_Adviser;
 
+class Car_Delay_Position_Record {
+public:
+	uint16_t position = 0;
+	double delay = 0;
+};
+
+class Road_Info {
+public:
+	uint16_t avail_len = _TOTAL_LEN;
+	double delay = 0;
+	vector<Car_Delay_Position_Record> car_delay_position;
+};
 
 class Intersection {
 public:
@@ -26,13 +39,19 @@ public:
 	uint16_t AZ_accumulated_size = 0;
 	uint16_t GZ_accumulated_size = 0;
 
+	// Stored cars
 	map<string, Car_in_database> sched_cars;
 	map<string, Car_in_database> scheduling_cars;
 	map<string, Car_in_database> advising_car;
 
-	Intersection() {}
+	// Spillback info
+	Road_Info my_road_info[4 * LANE_NUM_PER_DIRECTION];
+	Road_Info* others_road_info[4 * LANE_NUM_PER_DIRECTION];
+
+	Intersection();
 	Intersection(const Coord& in_coordinate);
-	void delete_car_from_database(const Car& car, const string& type);
+	void connect(const uint8_t& my_direction, Intersection& target_intersection, const uint8_t& its_direction);
+	void delete_car_from_intersection(const Car& car, const string& type);
 	void update_my_spillback_info(Car_in_database &car_in_database);
 	uint8_t advise_lane(const Car& car);
 

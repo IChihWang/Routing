@@ -13,6 +13,7 @@ shared_mutex _database_g_mutex;
 //shared_lock<shared_mutex> _database_rLock(_database_g_mutex);
 
 
+
 /* Handling database */
 
 void create_grid_network() {
@@ -30,9 +31,26 @@ void add_time_step() {
 			intersection_map[coordinate] = intersection;
 		}
 	}
+	connect_intersections(intersection_map);
 
 	// TODO: connect intersections
 	_database.push_back(intersection_map);
+}
+
+void connect_intersections(map< Coord, Intersection >& intersection_map) {
+	for (int i = 1; i <= _grid_size; i++) {
+		for (int j = 1; j <= _grid_size; j++) {
+			Coord coordinate(i, j);
+			if (i <= _grid_size - 1) {
+				Coord target_coordinate(i + 1, j);
+				intersection_map[coordinate].connect(1, intersection_map[target_coordinate], 3);
+			}
+			if (j <= _grid_size - 1) {
+				Coord target_coordinate(i, j + 1);
+				intersection_map[coordinate].connect(2, intersection_map[target_coordinate], 0);
+			}
+		}
+	}
 }
 
 void move_a_time_step() {
@@ -118,7 +136,7 @@ void delete_car_from_database(Car &car) {
 		string &type = get<0>(record);
 		Intersection &intersection = get<1>(record);
 
-		intersection.delete_car_from_database(car, type);
+		intersection.delete_car_from_intersection(car, type);
 	}
 
 	car.records_intersection_in_database.clear();

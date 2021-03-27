@@ -18,7 +18,7 @@ class Lane_Adviser {
 public:
 	Lane_Adviser();
 
-	void advise_lane(const Car& car);
+	uint8_t advise_lane(const Car& car, const bool spillback_lane_advise_avoid[]);
 	void update_Table_from_cars(const map<string, Car_in_database>& advising_car, const map<string, Car_in_database>& scheduling_cars, const map<string, Car_in_database>& scheduled_cars);
 private:
 	double timeMatrix[LANE_ADV_NUM][LANE_ADV_NUM] = {};

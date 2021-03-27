@@ -9,7 +9,7 @@ float _GZ_BZ_CCZ_len;
 uint8_t _HEADWAY;
 float _V_MAX;
 float _TURN_SPEED;
-float _TOTAL_LEN;
+uint16_t _TOTAL_LEN;
 float _routing_period;
 
 int initial_server_handler() {
@@ -95,7 +95,7 @@ int initial_server_handler() {
 	_HEADWAY = uint8_t(results[4]);
 	_V_MAX = results[5];
 	_TURN_SPEED = results[6];
-	_TOTAL_LEN = results[7];
+	_TOTAL_LEN = uint16_t(results[7]);
 	_routing_period = _schedule_period * _routing_period_num;
 
 	cout << _grid_size << " " << _schedule_period << " "
