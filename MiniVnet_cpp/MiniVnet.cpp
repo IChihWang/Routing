@@ -33,7 +33,6 @@ void add_time_step() {
 	}
 	connect_intersections(intersection_map);
 
-	// TODO: connect intersections
 	_database.push_back(intersection_map);
 }
 
@@ -253,6 +252,7 @@ void routing(vector<reference_wrapper<Car>>& route_group) {
 				car.current_turn = turning;
 				car.lane = intersection.advise_lane(car);
 				car.position = position_at_offset;
+				car.update_dst_lane_and_data();
 			}
 		}
 	}

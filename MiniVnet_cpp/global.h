@@ -17,11 +17,12 @@ using namespace std;
 
 // Defined in main.cpp
 extern map<string, map<string, double> > inter_info;
+string handle_request(string &in_str);
+
+
 void read_load_adv_data();
 void read_inter_info_data();
 void read_inter_length_data();
-string handle_request(string &in_str);
-
 
 extern vector< map< Coord, Intersection > > _database;
 extern map<string, Car> _car_dict;
@@ -46,5 +47,10 @@ void routing_with_groups(vector<vector<reference_wrapper<Car>>> route_groups, ma
 void routing(vector<reference_wrapper<Car>>& route_group);
 
 void testQ();
+
+
+// Defined in LaneAdviser.cpp
+tuple<double, double> get_Conflict_Region(Car_in_database& car1, Car_in_database& car2);
+double get_Intertime(uint8_t lane, char turn);
 
 #endif

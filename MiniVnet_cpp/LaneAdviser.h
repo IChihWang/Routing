@@ -23,6 +23,9 @@ public:
 private:
 	double timeMatrix[LANE_ADV_NUM][LANE_ADV_NUM] = {};
 	map<Trajectory_ID, uint16_t> count_advised_not_secheduled_car_num;
+	map<Trajectory_ID, uint8_t> all_default_lane;
 
 	void update_Table(const Car_in_database& car, double time);
+	double get_Max_Time(uint8_t lane, char turn, double time_matrix[][LANE_ADV_NUM]);
+	void update_Table_After_Advise(const uint8_t& lane, const char& turn, const uint8_t& car_length, double time_matrix[][LANE_ADV_NUM]);
 };

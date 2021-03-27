@@ -1,10 +1,6 @@
 #include "server.h"
 #include "global.h"
-#include "json.hpp"
-#include <fstream>
 
-using namespace std;
-using json = nlohmann::json;
 
 
 uint8_t _thread_num = 2;
@@ -121,60 +117,4 @@ string handle_request(string &in_str) {
 
 	string out_str;
 	return out_str;
-}
-
-void read_load_adv_data() {
-	ifstream file("./advise_info/advise_info" + to_string(LANE_NUM_PER_DIRECTION) + ".json");
-	json data;
-	file >> data;
-	file.close();
-
-	for (auto& elements : data.items()) {
-		string key = elements.key();
-		vector< map<char, uint8_t> > values;
-
-		for (auto& accupied_boxes : elements.value()) {
-			uint8_t x = accupied_boxes["X"];
-			uint8_t y = accupied_boxes["Y"];
-
-			map<char, uint8_t> tmp_data = { {'X', x}, {'Y', y} };
-			values.push_back(tmp_data);
-		}
-		lane_dict[key] = values;
-	}
-}
-
-void read_inter_info_data() {
-	ifstream file("./inter_info/lane_info" + to_string(LANE_NUM_PER_DIRECTION) + ".json");
-	json data;
-	file >> data;
-	file.close();
-
-	for (auto& element : data.items()) {
-		string key = element.key();
-
-		double Ym = element.value()["Ym"];
-		double Yd = element.value()["Yd"];
-		double Xd = element.value()["Xd"];
-		double Xm = element.value()["Xm"];
-
-		map<string, double> tmp_data = { {"Ym", Ym}, {"Yd", Yd}, {"Xd", Xd}, {"Xm", Xm} };
-
-		inter_info[key] = tmp_data;
-	}
-}
-
-
-void read_inter_length_data() {
-	ifstream file("./inter_length_info/lane_info" + to_string(LANE_NUM_PER_DIRECTION) + ".json");
-	json data;
-	file >> data;
-	file.close();
-
-	for (auto& element : data.items()) {
-		string key = element.key();
-		double trajectory_length = element.value();
-
-		inter_length_dict[key] = trajectory_length;
-	}
 }

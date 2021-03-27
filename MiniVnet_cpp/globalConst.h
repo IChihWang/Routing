@@ -4,6 +4,9 @@
 #define LANE_ADV_RESOLUTION 2
 #define LANE_ADV_NUM LANE_ADV_RESOLUTION*(LANE_NUM_PER_DIRECTION * 2 + 1)
 
+#define DISTANCE 1.5		// 1.5 lane
+#define LANE_WIDTH 3.2		// 3.2 meters
+
 // Defined in server.cpp
 extern uint8_t _thread_num;
 extern uint8_t _grid_size;
