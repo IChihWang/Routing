@@ -98,6 +98,19 @@ uint8_t Intersection::advise_lane(const Car& car) {
 	return advised_lane;
 }
 
+tuple<bool, double> Intersection::is_GZ_full(const Car& car, const double& position_at_offset) {
+	// Tell if the intersection is fulland the car have to wait
+	if (GZ_accumulated_size > _GZ_BZ_CCZ_len) {
+		return tuple<bool, double>(false, position_at_offset);
+	}
+	else if (position_at_offset > GZ_accumulated_size) {
+		return tuple<bool, double>(true, position_at_offset);
+	}
+	else {
+		return tuple<bool, double>(true, GZ_accumulated_size + car.length + _HEADWAY);
+	}
+}
+
 
 
 Car_in_database::Car_in_database(const string in_id, const uint8_t in_length) {

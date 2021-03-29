@@ -54,7 +54,7 @@ public:
 	void delete_car_from_intersection(const Car& car, const string& type);
 	void update_my_spillback_info(Car_in_database &car_in_database);
 	uint8_t advise_lane(const Car& car);
-
+	tuple<bool, double> is_GZ_full(const Car& car, const double& position_at_offset);
 };
 
 class Car_in_database {

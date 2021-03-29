@@ -156,13 +156,30 @@ void routing_with_groups(vector<vector<reference_wrapper<Car>>> route_groups, ma
 	// TODO: construct result (path)
 }
 
+// Record each time step on each node for updating database
+class Car_in_Node_Record {
+public:
+	uint16_t time_stamp = 0;				// "Database time" that the car arrives
+	Coord last_intersection_id = Coord(0, 0);
+	string car_state = "";
+	Car_in_database car_in_database;
+
+	Car_in_Node_Record() {}
+	Car_in_Node_Record(uint16_t in_time_stamp, Coord in_last_intersection_id, 
+						string in_car_state, Car_in_database in_car_in_database): 
+						time_stamp(in_time_stamp), last_intersection_id(in_last_intersection_id), 
+						car_state(car_state), car_in_database(car_in_database) {}
+
+};
+
+// Record info of each node during routing
 class Node_Record {
 public:
 	bool is_src = false;
 	uint16_t arrival_time_stamp = 0;		// "Database time" that the car arrives
 	Coord last_intersection_id = Coord(0,0);
 	char turning = 'S';
-	// Recordings
+	vector<Car_in_Node_Record> recordings;
 
 	Node_Record() {}
 	Node_Record(bool in_is_src, uint16_t arrival_time_stamp): is_src(in_is_src), arrival_time_stamp(arrival_time_stamp){}
@@ -248,11 +265,47 @@ void routing(vector<reference_wrapper<Car>>& route_group) {
 				char turning = data_pair.first;
 				Node_ID node_id = data_pair.second;
 
+				// Recording the states for final path
+				vector<Car_in_Node_Record> recordings;
+
 				car.lane = intersection_dir * LANE_NUM_PER_DIRECTION;
 				car.current_turn = turning;
 				car.lane = intersection.advise_lane(car);
 				car.position = position_at_offset;
 				car.update_dst_lane_and_data();
+
+				// Determine the time arrive in Grouping Zone
+				uint16_t time_in_GZ = current_arrival_time;
+				while (position_at_offset > _GZ_BZ_CCZ_len) {
+					// Record the path for final path retrieval
+					// ###############################
+					car.position = position_at_offset;
+					Car_in_database record_car_advising = car;
+					recordings.push_back( Car_in_Node_Record(time_in_GZ, intersection_id, "lane_advising", record_car_advising) );
+					// ###############################
+
+					time_in_GZ += 1;
+					position_at_offset -= (double(_schedule_period) * _V_MAX);
+				}
+
+				Intersection& intersection_GZ = get_intersection(time_in_GZ, intersection_id);
+				tuple<bool, double>result = intersection_GZ.is_GZ_full(car, position_at_offset);
+				position_at_offset = get<1>(result);
+				while (get<0>(result) == false) {
+					// The intersection is full
+
+					// Record the path for final path retrieval
+					// ###############################
+					car.position = position_at_offset;
+					Car_in_database record_car_advising = car;
+					recordings.push_back(Car_in_Node_Record(time_in_GZ, intersection_id, "lane_advising", record_car_advising));
+					// ###############################
+
+					time_in_GZ += 1;
+					intersection_GZ = get_intersection(time_in_GZ, intersection_id);
+					result = intersection_GZ.is_GZ_full(car, position_at_offset);
+					position_at_offset = get<1>(result);
+				}
 			}
 		}
 	}
