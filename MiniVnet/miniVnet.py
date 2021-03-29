@@ -133,6 +133,7 @@ def routing(miniVnet, cars):
 
                 intersection_GZ = miniVnet.get_intersection(time_in_GZ, intersection_id)
                 result = intersection_GZ.is_GZ_full(car, position_at_offset)
+                position_at_offset = result[1]
                 while result[0] == False:
                     # The intersection is full
 
@@ -146,8 +147,8 @@ def routing(miniVnet, cars):
                     time_in_GZ += 1
                     intersection_GZ = miniVnet.get_intersection(time_in_GZ, intersection_id)
                     result = intersection_GZ.is_GZ_full(car, position_at_offset)
+                    position_at_offset = result[1]
 
-                position_at_offset = result[1]
                 car.position = position_at_offset
                 car_exiting_time = intersection_GZ.manager.run(car)
 
