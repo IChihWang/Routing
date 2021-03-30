@@ -12,6 +12,8 @@
 #define SUMO_TIME_ERR 0
 #define CAR_MAX_LEN 15
 #define CCZ_ACC_LEN 5
+#define CCZ_DEC2_LEN 2.5
+#define LARGE_NUM 65535
 
 // Defined in server.cpp
 extern uint8_t _thread_num;

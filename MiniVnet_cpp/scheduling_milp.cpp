@@ -9,6 +9,7 @@ double Intersection::scheduling(Car& target_car) {
 	target_car.OT = (double)target_car.position / _V_MAX;
 	target_car.D = NOT_SCHEDULED;
 
+	// TODO: thread_safe read
 	vector<Car_in_database> copied_scheduling_cars;
 	for (const pair<string, Car_in_database>& data : scheduling_cars) {
 		Car_in_database car = data.second;
@@ -20,32 +21,35 @@ double Intersection::scheduling(Car& target_car) {
 	Roadrunner_P(copied_scheduling_cars, target_car);
 
 	// Copy copied_scheduling_cars back to scheduling_cars (Update intersection state)
-	// TODO: thread_safe
+	// TODO: thread_safe write
 	for (Car_in_database car : copied_scheduling_cars) {
-		string car_id = car.id;
-		scheduling_cars[car_id] = car;
+		if (car.id.compare(target_car.id) == 0) {
+			target_car.D = car.D;
+		}
+		else {
+			scheduling_cars[car.id].D = car.D;
+		}
 	}
 
-	// Return AT
-	return SCHEDULE_POSPONDED;	//-1
+	if (target_car.D == SCHEDULE_POSPONDED) {
+		return SCHEDULE_POSPONDED;
+	}
+	else {
+		double car_exiting_time = target_car.OT + target_car.D;
+		car_exiting_time += get_Intertime(target_car.lane, target_car.current_turn);
+
+		return car_exiting_time;
+	}
 }
 
 void Intersection::Roadrunner_P(vector<Car_in_database>& scheduling_cars, Car& target_car) {
-	// Include target_car into scheduling cars
-	vector<reference_wrapper<Car_in_database>> scheduling_cars_list;
-	scheduling_cars_list.push_back(target_car);
-	for (Car_in_database& car : scheduling_cars) {
-		scheduling_cars_list.push_back(car);
-	}
-	
-	// part 1: calculate OT
-	for (Car_in_database& car : scheduling_cars) {
-		double OT = car.position / _V_MAX;
-		car.OT = OT + SUMO_TIME_ERR;
-	}
-
-	// part 2: build the solver
+		
+	// part 1: build the solver
 	unique_ptr<MPSolver> solver(MPSolver::CreateSolver("SCIP"));
+	const double infinity = solver->infinity();
+
+	// part 2: claim variables
+	map<string, const MPVariable*> D_solver_variables;
 
 	// part 3: claim parameters
 	uint16_t pre_accumulate_car_len_lane[4 * LANE_NUM_PER_DIRECTION] = {};
@@ -60,7 +64,12 @@ void Intersection::Roadrunner_P(vector<Car_in_database>& scheduling_cars, Car& t
 		}
 	}
 
-	sort(scheduling_cars_list.begin(), scheduling_cars_list.end(), [](Car_in_database a, Car_in_database b) -> bool {return a.position < b.position; });
+	vector<reference_wrapper<Car_in_database>> sorted_scheduling_cars_list;
+	for (Car_in_database& car : scheduling_cars) {
+		sorted_scheduling_cars_list.push_back(car);
+	}
+
+	sort(sorted_scheduling_cars_list.begin(), sorted_scheduling_cars_list.end(), [](Car_in_database a, Car_in_database b) -> bool {return a.position < b.position; });
 	uint16_t head_of_line_blocking_position[4 * LANE_NUM_PER_DIRECTION];
 	fill_n(head_of_line_blocking_position, 4 * LANE_NUM_PER_DIRECTION, UINT16_MAX);
 	int32_t accumulate_car_len[4 * LANE_NUM_PER_DIRECTION];
@@ -72,7 +81,7 @@ void Intersection::Roadrunner_P(vector<Car_in_database>& scheduling_cars, Car& t
 		}
 	}
 
-	for (Car_in_database& car : scheduling_cars_list) {
+	for (Car_in_database& car : sorted_scheduling_cars_list) {
 		car.is_spillback = false;
 		car.is_spillback_strict = false;
 
@@ -86,7 +95,16 @@ void Intersection::Roadrunner_P(vector<Car_in_database>& scheduling_cars, Car& t
 				// The car is blocked by front car, whose sheduling is prosponed.
 				car.is_spillback_strict = true;
 				car.is_spillback = true;
-				scheduling_cars.erase(remove(scheduling_cars.begin(), scheduling_cars.end(), car), scheduling_cars.end());
+
+				// remove car from scheduling_cars
+				uint32_t idx_in_scheduling_cars = -1;
+				for (uint32_t idx = 0; idx < (uint32_t)scheduling_cars.size(); idx++) {
+					if (car.id.compare(scheduling_cars[idx].id) == 0) {
+						idx_in_scheduling_cars = idx;
+						break;
+					}
+				}
+				scheduling_cars.erase(scheduling_cars.begin() + idx_in_scheduling_cars);
 
 				if (car.id.compare(target_car.id) == 0) {
 					target_car.D = SCHEDULE_POSPONDED;
@@ -154,10 +172,187 @@ void Intersection::Roadrunner_P(vector<Car_in_database>& scheduling_cars, Car& t
 							spillback_delay = max(spillback_delay, spillback_delay_alter);
 						}
 					}
+				}
+			}
 
+			if (car.is_spillback_strict == true) {
+				// remove car from scheduling_cars
+				uint32_t idx_in_scheduling_cars = -1;
+				for (uint32_t idx = 0; idx < (uint32_t)scheduling_cars.size(); idx++) {
+					if (car.id.compare(scheduling_cars[idx].id) == 0) {
+						idx_in_scheduling_cars = idx;
+						break;
+					}
+				}
+				scheduling_cars.erase(scheduling_cars.begin() + idx_in_scheduling_cars);
 
+				if (car.position < head_of_line_blocking_position[lane_idx]) {
+					head_of_line_blocking_position[lane_idx] = car.position;
+				}
+
+				if (car.id.compare(target_car.id) == 0) {
+					target_car.D = SCHEDULE_POSPONDED;
+					return;
+				}
+			}
+			else {
+				if (car.current_turn == 'S') {
+					MPVariable* const temp_D = solver->MakeNumVar(spillback_delay, infinity, "d" + car.id);
+					D_solver_variables[car.id] = temp_D;
+				}
+				else {
+					double min_d = (2 * CCZ_DEC2_LEN / (double(_V_MAX) + _TURN_SPEED)) - (CCZ_DEC2_LEN / _V_MAX);
+					MPVariable* const temp_D = solver->MakeNumVar(max(min_d, spillback_delay), infinity, "d" + car.id);
+					D_solver_variables[car.id] = temp_D;
 				}
 			}
 		}
+		else {
+			if (car.position > head_of_line_blocking_position[lane_idx]) {
+				// remove car from scheduling_cars
+				uint32_t idx_in_scheduling_cars = -1;
+				for (uint32_t idx = 0; idx < (uint32_t)scheduling_cars.size(); idx++) {
+					if (car.id.compare(scheduling_cars[idx].id) == 0) {
+						idx_in_scheduling_cars = idx;
+						break;
+					}
+				}
+				scheduling_cars.erase(scheduling_cars.begin() + idx_in_scheduling_cars);
+
+				if (car.id.compare(target_car.id) == 0) {
+					target_car.D = SCHEDULE_POSPONDED;
+					return;
+				}
+			}
+			else {
+				if (car.current_turn == 'S') {
+					MPVariable* const temp_D = solver->MakeNumVar(0, infinity, "d" + car.id);
+					D_solver_variables[car.id] = temp_D;
+				}
+				else {
+					double min_d = (2 * CCZ_DEC2_LEN / (double(_V_MAX) + _TURN_SPEED)) - (CCZ_DEC2_LEN / _V_MAX);
+					MPVariable* const temp_D = solver->MakeNumVar(min_d, infinity, "d" + car.id);
+					D_solver_variables[car.id] = temp_D;
+				}
+			}
+		}
+	}
+
+	// part 4: set constrain (10) (Car on same lane, rear-end collision avoidance)
+	// (1) old car and new car
+	for (const Car_in_database& new_car : scheduling_cars) {
+		for (const pair<string, Car_in_database>& car_data : sched_cars) {
+			const Car_in_database& old_car = car_data.second;
+			
+			double bound = old_car.length / old_car.speed_in_intersection + (old_car.OT + old_car.D);
+			bound += _HEADWAY / old_car.speed_in_intersection;
+			if (new_car.current_turn == 'S' && old_car.current_turn != 'S') {
+				bound += (double(_V_MAX) - _TURN_SPEED) * (CCZ_DEC2_LEN) / (_V_MAX * (double(_V_MAX) + _TURN_SPEED));
+			}
+			bound = bound - new_car.OT;
+
+			MPConstraint* const tmp_conts = solver->MakeRowConstraint(bound, infinity);
+			tmp_conts->SetCoefficient(D_solver_variables[new_car.id], 1);
+		}
+	}
+
+	// (2) two new cars
+	for (uint32_t i = 0; i < (uint32_t)scheduling_cars.size(); i++) {
+		for (uint32_t j = i+1; j < (uint32_t)scheduling_cars.size(); j++) {
+			Car_in_database* car_a_ptr = &(scheduling_cars[i]);
+			Car_in_database* car_b_ptr = &(scheduling_cars[j]);
+			
+			// Ensure car_a_ptr->OT > car_b_ptr->OT
+			if (car_a_ptr->OT < car_b_ptr->OT) {
+				swap(car_a_ptr, car_b_ptr);
+			}
+
+			double bound = car_b_ptr->length / car_b_ptr->speed_in_intersection - car_a_ptr->OT + car_b_ptr->OT;
+			bound += _HEADWAY / car_b_ptr->speed_in_intersection;
+			if (car_a_ptr->current_turn == 'S' and car_b_ptr->current_turn != 'S') {
+				bound += (double(_V_MAX) - _TURN_SPEED) * (CCZ_DEC2_LEN) / (double(_V_MAX) * (_V_MAX + _TURN_SPEED));
+			}
+			MPConstraint* const tmp_conts = solver->MakeRowConstraint(bound, infinity);
+			tmp_conts->SetCoefficient(D_solver_variables[car_a_ptr->id], 1);
+			tmp_conts->SetCoefficient(D_solver_variables[car_b_ptr->id], -1);
+		}
+	}
+
+	// part 5: set constrain (11) (two new cars in the intersection)
+	for (uint32_t i = 0; i < (uint32_t)scheduling_cars.size(); i++) {
+		for (uint32_t j = i + 1; j < (uint32_t)scheduling_cars.size(); j++) {
+			Car_in_database& car_i = scheduling_cars[i];
+			Car_in_database& car_j = scheduling_cars[j];
+
+			if (car_i.lane == car_j.lane) {
+				continue;
+			}
+
+			tuple<double, double> conflict_region_data = get_Conflict_Region(car_i, car_j);
+			if (conflict_region_data != tuple<double, double>(0, 0)) {
+				double tau_S1_S2 = get<0>(conflict_region_data);
+				double tau_S2_S1 = get<1>(conflict_region_data);
+
+				MPVariable* const flag = solver->MakeIntVar(0, 1, string("flag_new_new_") + to_string(i) + "_" + to_string(j));
+
+				double bound_2 = -car_j.OT + car_i.OT + tau_S1_S2 - LARGE_NUM;
+				MPConstraint* const tmp_conts2 = solver->MakeRowConstraint(bound_2, infinity);
+				tmp_conts2->SetCoefficient(D_solver_variables[car_i.id], -1);
+				tmp_conts2->SetCoefficient(D_solver_variables[car_j.id], 1);
+				tmp_conts2->SetCoefficient(flag, -LARGE_NUM);
+
+				double bound_1 = -car_i.OT + car_j.OT + tau_S2_S1;
+				MPConstraint* const tmp_conts1 = solver->MakeRowConstraint(bound_1, infinity);
+				tmp_conts1->SetCoefficient(D_solver_variables[car_i.id], 1);
+				tmp_conts1->SetCoefficient(D_solver_variables[car_j.id], -1);
+				tmp_conts1->SetCoefficient(flag, LARGE_NUM);
+			}
+		}
+	}
+
+	// part 6: set constrain (12) (one new car and one old car in the intersection)
+	for (const Car_in_database& new_car : scheduling_cars) {
+		for (const pair<string, Car_in_database>& car_data : sched_cars) {
+			const Car_in_database& old_car = car_data.second;
+
+			if (new_car.lane == old_car.lane) {
+				continue;
+			}
+
+			tuple<double, double> conflict_region_data = get_Conflict_Region(old_car, new_car);
+			if (conflict_region_data != tuple<double, double>(0, 0)) {
+				double tau_S1_S2 = get<0>(conflict_region_data);
+				double tau_S2_S1 = get<1>(conflict_region_data);
+
+				MPVariable* const flag = solver->MakeIntVar(0, 1, string("flag_old_new_") + old_car.id + "_" + new_car.id);
+
+				double bound_3 = -old_car.D - old_car.OT + new_car.OT + tau_S1_S2 - LARGE_NUM;
+				MPConstraint* const tmp_conts3 = solver->MakeRowConstraint(bound_3, infinity);
+				tmp_conts3->SetCoefficient(D_solver_variables[new_car.id], -1);
+				tmp_conts3->SetCoefficient(flag, -LARGE_NUM);
+
+				double bound_4 = old_car.D + old_car.OT - new_car.OT + tau_S2_S1;
+				MPConstraint* const tmp_conts4 = solver->MakeRowConstraint(bound_3, infinity);
+				tmp_conts4->SetCoefficient(D_solver_variables[new_car.id], 1);
+				tmp_conts4->SetCoefficient(flag, LARGE_NUM);
+			}
+		}
+	}
+
+	// part 7: set objective
+	MPObjective* const objective = solver->MutableObjective();
+	for (const Car_in_database& new_car : scheduling_cars) {
+		objective->SetCoefficient(D_solver_variables[new_car.id], 1);
+	}
+	objective->SetMinimization();
+
+	// part 8: solve the problem
+	const MPSolver::ResultStatus result_status = solver->Solve();
+
+
+	// Update the delays
+	target_car.D = D_solver_variables[target_car.id]->solution_value();
+	for (Car_in_database& new_car : scheduling_cars) {
+		new_car.D = D_solver_variables[new_car.id]->solution_value();
 	}
 }

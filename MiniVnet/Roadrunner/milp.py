@@ -56,12 +56,12 @@ def IcaccPlus(old_cars, new_cars, others_road_info, target_car):
                 new_cars.remove(car)    # Blocked by the car at the front
 
                 if car == target_car:
-                    return;
+                    return None;
 
                 continue
 
             accumulate_car_len[dst_lane_idx] += (car.length + cfg.HEADWAY)
-            spillback_delay_dst_lane = 0
+            spillback_delay = 0
 
             if accumulate_car_len[dst_lane_idx] > 0:
                 dst_car_delay_position = others_road_info[dst_lane_idx]['car_delay_position']
@@ -83,14 +83,13 @@ def IcaccPlus(old_cars, new_cars, others_road_info, target_car):
                     #print(compare_dst_car_idx)
                     #print(dst_car_delay_position[compare_dst_car_idx-1]["position"], back_position, accumulate_car_len[dst_lane_idx])
                     #spillback_delay_dst_lane = back_delay
-
+                    spillback_delay = spillback_delay_dst_lane
 
                 car.is_spillback = True
 
             else:
                 pass
 
-            spillback_delay = spillback_delay_dst_lane
 
 
             for lane_i in range(cfg.LANE_NUM_PER_DIRECTION):
@@ -135,15 +134,22 @@ def IcaccPlus(old_cars, new_cars, others_road_info, target_car):
 
             if car.is_spillback_strict == True:
                 new_cars.remove(car)
+
+                if car == target_car:
+                    return None;
+
                 if car.position < head_of_line_blocking_position[lane_idx]:
                     head_of_line_blocking_position[lane_idx] = car.position
             else:
+
                 min_d_add = 0
+                ''' # This won't happen during routing
                 if car.position < cfg.CCZ_LEN:
                     min_d_add = (2*2*cfg.CCZ_ACC_LEN/(cfg.MAX_SPEED+0)) - (2*cfg.CCZ_ACC_LEN/cfg.MAX_SPEED) #Cost of fully stop
                     add_blind_car_delay = (cfg.LANE_WIDTH*cfg.LANE_NUM_PER_DIRECTION*2) - (car.position/cfg.MAX_SPEED + min_d_add)
                     add_blind_car_delay = max(0, add_blind_car_delay)
                     min_d_add += add_blind_car_delay
+                '''
 
 
                 if car.current_turn == 'S':
@@ -155,6 +161,8 @@ def IcaccPlus(old_cars, new_cars, others_road_info, target_car):
         else:
             if car.position > head_of_line_blocking_position[lane_idx]:
                 new_cars.remove(car)    # Blocked by the car at the front
+                if car == target_car:
+                    return None;
             else:
                 if car.current_turn == 'S':
                     car.D = solver.NumVar(0, solver.infinity(), 'd'+str(car.id))
@@ -168,7 +176,6 @@ def IcaccPlus(old_cars, new_cars, others_road_info, target_car):
     for c_idx in range(len(all_cars)):
         for c_jdx in range(c_idx+1, len(all_cars)):
             if (all_cars[c_idx].lane == all_cars[c_jdx].lane):
-
 
                 if (type(all_cars[c_jdx].D)==float or type(all_cars[c_idx].D)==float):
                     if (type(all_cars[c_idx].D)!=float and type(all_cars[c_jdx].D)==float):

@@ -50,7 +50,7 @@ void testQ();
 
 
 // Defined in LaneAdviser.cpp
-tuple<double, double> get_Conflict_Region(Car_in_database& car1, Car_in_database& car2);
+tuple<double, double> get_Conflict_Region(Car_in_database car1, Car_in_database car2);
 double get_Intertime(uint8_t lane, char turn);
 
 #endif

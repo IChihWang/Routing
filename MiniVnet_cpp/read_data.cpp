@@ -65,7 +65,7 @@ void read_inter_length_data() {
 	}
 }
 
-tuple<double, double> get_Conflict_Region(Car_in_database& car1, Car_in_database& car2) {
+tuple<double, double> get_Conflict_Region(Car_in_database car1, Car_in_database car2) {
 	bool reverse_flag = false;
 	Car_in_database* car1_ptr = &car1;
 	Car_in_database* car2_ptr = &car2;
