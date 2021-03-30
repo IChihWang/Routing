@@ -80,6 +80,9 @@ def IcaccPlus(old_cars, new_cars, advised_n_sched_car, pedestrian_time_mark_list
         if others_road_info[dst_lane_idx] != None:
             if car.position > head_of_line_blocking_position[lane_idx]:
                 new_cars.remove(car)    # Blocked by the car at the front
+
+                car.is_spillback = True
+                car.is_spillback_strict = True
                 continue
 
             accumulate_car_len[dst_lane_idx] += (car.length + cfg.HEADWAY)

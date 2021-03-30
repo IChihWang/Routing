@@ -59,6 +59,8 @@ def IcaccPlus(old_cars, new_cars, others_road_info):
 
         if others_road_info[dst_lane_idx] != None:
             if car.position > head_of_line_blocking_position[lane_idx]:
+                car.is_spillback = True
+                car.is_spillback_strict = True
                 new_cars.remove(car)    # Blocked by the car at the front
                 continue
 
