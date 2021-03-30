@@ -11,7 +11,7 @@ data = Data()
 
 
 
-def IcaccPlus(old_cars, new_cars, others_road_info):
+def IcaccPlus(old_cars, new_cars, others_road_info, target_car):
     # part 1: calculate OT
     for c_idx in range(len(new_cars)):
         OT = new_cars[c_idx].position/cfg.MAX_SPEED
@@ -62,6 +62,9 @@ def IcaccPlus(old_cars, new_cars, others_road_info):
                 car.is_spillback = True
                 car.is_spillback_strict = True
                 new_cars.remove(car)    # Blocked by the car at the front
+
+                if car == target_car:
+                    return None;
                 continue
 
             accumulate_car_len[dst_lane_idx] += (car.length + cfg.HEADWAY)
@@ -137,6 +140,9 @@ def IcaccPlus(old_cars, new_cars, others_road_info):
 
             if car.is_spillback_strict == True:
                 new_cars.remove(car)
+
+                if car == target_car:
+                    return None;
                 if car.position < head_of_line_blocking_position[lane_idx]:
                     head_of_line_blocking_position[lane_idx] = car.position
             else:
@@ -157,6 +163,8 @@ def IcaccPlus(old_cars, new_cars, others_road_info):
         else:
             if car.position > head_of_line_blocking_position[lane_idx]:
                 new_cars.remove(car)    # Blocked by the car at the front
+                if car == target_car:
+                    return None;
             else:
                 if car.current_turn == 'S':
                     car.D = solver.NumVar(0, solver.infinity(), 'd'+str(car.id))

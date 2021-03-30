@@ -97,7 +97,7 @@ class IntersectionManager:
         for car in scheduling_cars:
             car.D = None
 
-        IcaccPlus(sched_cars, scheduling_cars+[target_car], self.others_road_info)
+        IcaccPlus(sched_cars, scheduling_cars+[target_car], self.others_road_info, target_car)
 
         if target_car.is_spillback_strict == True or target_car.D == None:
             # Prospond the scheduling due to spillback, return None
