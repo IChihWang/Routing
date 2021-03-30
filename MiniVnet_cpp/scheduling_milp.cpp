@@ -20,17 +20,6 @@ double Intersection::scheduling(Car& target_car) {
 
 	Roadrunner_P(copied_scheduling_cars, target_car);
 
-	// Copy copied_scheduling_cars back to scheduling_cars (Update intersection state)
-	// TODO: thread_safe write
-	for (Car_in_database car : copied_scheduling_cars) {
-		if (car.id.compare(target_car.id) == 0) {
-			target_car.D = car.D;
-		}
-		else {
-			scheduling_cars[car.id].D = car.D;
-		}
-	}
-
 	if (target_car.D == SCHEDULE_POSPONDED) {
 		return SCHEDULE_POSPONDED;
 	}
