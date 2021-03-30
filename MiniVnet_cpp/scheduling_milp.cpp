@@ -70,7 +70,7 @@ void Intersection::Roadrunner_P(vector<Car_in_database>& scheduling_cars, Car& t
 	}
 
 	sort(sorted_scheduling_cars_list.begin(), sorted_scheduling_cars_list.end(), [](Car_in_database a, Car_in_database b) -> bool {return a.position < b.position; });
-	uint16_t head_of_line_blocking_position[4 * LANE_NUM_PER_DIRECTION];
+	double head_of_line_blocking_position[4 * LANE_NUM_PER_DIRECTION];
 	fill_n(head_of_line_blocking_position, 4 * LANE_NUM_PER_DIRECTION, UINT16_MAX);
 	int32_t accumulate_car_len[4 * LANE_NUM_PER_DIRECTION];
 	fill_n(accumulate_car_len, 4 * LANE_NUM_PER_DIRECTION, INT32_MIN);
