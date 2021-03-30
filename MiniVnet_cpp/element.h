@@ -55,6 +55,10 @@ public:
 	void update_my_spillback_info(Car_in_database &car_in_database);
 	uint8_t advise_lane(const Car& car);
 	tuple<bool, double> is_GZ_full(const Car& car, const double& position_at_offset);
+	double scheduling(Car& car);
+
+private:
+	void Roadrunner_P(vector<Car_in_database>& copied_scheduling_cars, Car& target_car);
 };
 
 class Car_in_database {

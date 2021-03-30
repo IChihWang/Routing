@@ -24,6 +24,6 @@ typedef int socklen_t;
 
 // Functions in server.cpp
 void ClearWinSock();
-int initial_server_handler();
+SOCKET initial_server_handler();
 
 

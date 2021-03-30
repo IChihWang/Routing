@@ -15,7 +15,7 @@ int main(int argc, char const* argv[]) {
 	read_inter_info_data();
 	read_inter_length_data();
 
-	int new_socket = initial_server_handler();
+	SOCKET new_socket = initial_server_handler();
 	create_grid_network();
 
 
@@ -42,7 +42,7 @@ int main(int argc, char const* argv[]) {
 		}
 
 		out_str += '@';
-		send(new_socket, out_str.c_str(), out_str.length(), 0);
+		send(new_socket, out_str.c_str(), (int)out_str.length(), 0);
 
 		if (out_str == "end") {
 			return 0;

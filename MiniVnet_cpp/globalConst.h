@@ -7,6 +7,12 @@
 #define DISTANCE 1.5		// 1.5 lane
 #define LANE_WIDTH 3.2		// 3.2 meters
 
+#define SCHEDULE_POSPONDED -1 // a flag
+#define NOT_SCHEDULED -2 // a flag
+#define SUMO_TIME_ERR 0
+#define CAR_MAX_LEN 15
+#define CCZ_ACC_LEN 5
+
 // Defined in server.cpp
 extern uint8_t _thread_num;
 extern uint8_t _grid_size;

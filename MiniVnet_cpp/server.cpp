@@ -12,7 +12,7 @@ float _TURN_SPEED;
 uint16_t _TOTAL_LEN;
 float _routing_period;
 
-int initial_server_handler() {
+SOCKET initial_server_handler() {
 #if defined WIN32
 	WSADATA wsaData;
 	int iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
@@ -22,7 +22,7 @@ int initial_server_handler() {
 	}
 #endif
 
-	int server_fd;
+	SOCKET server_fd;
 	server_fd = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
 	if (server_fd <= 0) {
 		cout << "socket creation failed." << endl;
@@ -62,7 +62,7 @@ int initial_server_handler() {
 	}
 
 	// Accepting connections
-	int new_socket;
+	SOCKET new_socket;
 	int addrlen = sizeof(sockAddr);
 
 	if ((new_socket = accept(server_fd, (struct sockaddr*)&sockAddr, (socklen_t*)&addrlen)) < 0)
@@ -104,7 +104,7 @@ int initial_server_handler() {
 		<< _TURN_SPEED << " " << _TOTAL_LEN << endl;
 
 	char hello[] = "Got it ;@";
-	send(new_socket, hello, strlen(hello), 0);
+	send(new_socket, hello, (int)strlen(hello), 0);
 
 	return new_socket;
 }

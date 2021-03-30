@@ -149,7 +149,6 @@ def routing(miniVnet, cars):
                     result = intersection_GZ.is_GZ_full(car, position_at_offset)
                     position_at_offset = result[1]
 
-                position_at_offset = result[1]
                 car.position = position_at_offset
                 car_exiting_time = intersection_GZ.manager.run(car)
 

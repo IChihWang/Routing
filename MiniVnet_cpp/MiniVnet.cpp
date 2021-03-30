@@ -306,6 +306,9 @@ void routing(vector<reference_wrapper<Car>>& route_group) {
 					result = intersection_GZ.is_GZ_full(car, position_at_offset);
 					position_at_offset = get<1>(result);
 				}
+
+				car.position = position_at_offset;
+				double car_exiting_time = intersection_GZ.scheduling(car);
 			}
 		}
 	}

@@ -11,7 +11,7 @@ data = Data()
 
 
 
-def IcaccPlus(old_cars, new_cars, others_road_info):
+def IcaccPlus(old_cars, new_cars, others_road_info, target_car):
     # part 1: calculate OT
     for c_idx in range(len(new_cars)):
         OT = new_cars[c_idx].position/cfg.MAX_SPEED
@@ -25,7 +25,6 @@ def IcaccPlus(old_cars, new_cars, others_road_info):
     # part 3: claim parameters
 
     accumulate_car_len_lane = [0]*(len(others_road_info))
-    last_car_delay_lane = [0]*(len(others_road_info))
     for car in old_cars:
         lane_idx = car.dst_lane
         #accumulate_car_len_lane[car.dst_lane] += (car.length + cfg.HEADWAY)
@@ -33,16 +32,9 @@ def IcaccPlus(old_cars, new_cars, others_road_info):
         for lane_i in range(cfg.LANE_NUM_PER_DIRECTION):
             accumulate_car_len_lane[lane_idx//cfg.LANE_NUM_PER_DIRECTION*cfg.LANE_NUM_PER_DIRECTION + lane_i] += (car.length + cfg.HEADWAY)
 
-
-        current_delay = (car.OT+car.D) - car.position/cfg.MAX_SPEED
-        if current_delay > last_car_delay_lane[lane_idx]:
-            last_car_delay_lane[lane_idx] = current_delay
-
-
     sorted_new_cars = sorted(new_cars, key=lambda x: x.position, reverse=False)
     head_of_line_blocking_position = [999999]*cfg.LANE_NUM_PER_DIRECTION*4
     accumulate_car_len = [-999999]*len(others_road_info)
-    max_dst_lane_idx_list = [[-999999, -1] for i in range(4)]
     for dst_lane_idx in range(len(others_road_info)):
         if others_road_info[dst_lane_idx] != None:
             accumulate_car_len[dst_lane_idx] = accumulate_car_len_lane[dst_lane_idx]-others_road_info[dst_lane_idx]['avail_len'] + cfg.CAR_MAX_LEN + cfg.HEADWAY + cfg.CCZ_ACC_LEN
@@ -59,18 +51,24 @@ def IcaccPlus(old_cars, new_cars, others_road_info):
 
         if others_road_info[dst_lane_idx] != None:
             if car.position > head_of_line_blocking_position[lane_idx]:
+                car.is_spillback_strict = True
+                car.is_spillback = True
                 new_cars.remove(car)    # Blocked by the car at the front
+
+                if car == target_car:
+                    return;
+
                 continue
 
-            dst_car_delay_position = others_road_info[dst_lane_idx]['car_delay_position']
             accumulate_car_len[dst_lane_idx] += (car.length + cfg.HEADWAY)
             spillback_delay_dst_lane = 0
 
             if accumulate_car_len[dst_lane_idx] > 0:
+                dst_car_delay_position = others_road_info[dst_lane_idx]['car_delay_position']
                 if len(dst_car_delay_position) < 1 or accumulate_car_len[dst_lane_idx]+(cfg.CAR_MAX_LEN+cfg.HEADWAY) > dst_car_delay_position[-1]["position"]:
                     car.is_spillback_strict = True
                 else:
-                    # Finde the position in the list to compare
+                    # Find the position in the list to compare
                     compare_dst_car_idx = -1
                     for dst_car_idx in range(len(dst_car_delay_position)):
                         if accumulate_car_len[dst_lane_idx] < dst_car_delay_position[dst_car_idx]["position"]:
@@ -100,7 +98,6 @@ def IcaccPlus(old_cars, new_cars, others_road_info):
 
                 if other_lane_idx != dst_lane_idx:
                     accumulate_car_len[other_lane_idx] += (car.length + cfg.HEADWAY)
-                    spillback_delay_dst_lane_changed_to = 0
                     dst_car_delay_position = others_road_info[other_lane_idx]['car_delay_position']
 
                     if accumulate_car_len[other_lane_idx] > 0:
@@ -124,13 +121,14 @@ def IcaccPlus(old_cars, new_cars, others_road_info):
                             #print(dst_car_delay_position[compare_dst_car_idx-1]["position"], back_position, accumulate_car_len[other_lane_idx])
                             #spillback_delay_dst_lane = back_delay
 
+                            spillback_delay = max(spillback_delay, spillback_delay_dst_lane)
+
                         car.is_spillback = True
 
                     else:
                         pass
 
 
-                    spillback_delay = max(spillback_delay, spillback_delay_dst_lane_changed_to)
 
 
 
