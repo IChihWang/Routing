@@ -1,3 +1,4 @@
+#pragma once
 
 #define DEFAULT_DATA_LENGTH 10
 #define LANE_NUM_PER_DIRECTION 3
@@ -26,3 +27,9 @@ extern float _V_MAX;
 extern float _TURN_SPEED;
 extern uint16_t _TOTAL_LEN;
 extern float _routing_period;
+
+#ifndef COORD
+#define COORD
+#include <tuple>
+typedef std::tuple<int, int> Coord;
+#endif

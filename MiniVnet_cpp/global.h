@@ -1,3 +1,5 @@
+#pragma once
+
 #ifndef GLOBAL_H
 #define GLOBAL_H
 
@@ -9,6 +11,7 @@
 #include "globalConst.h"
 #include "element.h"
 #include "LaneAdviser.h"
+#include "MiniVnet.h"
 
 using namespace std;
 
@@ -31,6 +34,8 @@ extern shared_mutex _database_g_mutex;
 //extern unique_lock<shared_mutex> _database_wLock;
 //extern shared_lock<shared_mutex> _database_rLock;
 
+// Defined in MiniVnet.cpp
+
 void create_grid_network();
 void add_time_step();
 void connect_intersections(map< Coord, Intersection >& intersection_map);
@@ -44,9 +49,13 @@ void delete_car_from_database(Car& car);
 void delete_car_from_database_id(string car_id);
 
 void routing_with_groups(vector<vector<reference_wrapper<Car>>> route_groups, map<string, string> routes_dict);
-void routing(vector<reference_wrapper<Car>>& route_group);
-
+map<string, vector<Node_in_Path>> routing(vector<reference_wrapper<Car>>& route_group);
+map<char, Node_ID> decide_available_turnings(Coord src_coord, uint8_t src_intersection_direction, Coord dst_coord, uint16_t additional_search_range);
+void add_car_to_database(const Car& car, map<string, const vector<Node_in_Path>>& path_list);
 void testQ();
+
+
+
 
 
 // Defined in LaneAdviser.cpp

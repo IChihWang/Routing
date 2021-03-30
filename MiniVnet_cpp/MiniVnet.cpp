@@ -156,55 +156,10 @@ void routing_with_groups(vector<vector<reference_wrapper<Car>>> route_groups, ma
 	// TODO: construct result (path)
 }
 
-// Record each time step on each node for updating database
-class Car_in_Node_Record {
-public:
-	uint16_t time_stamp = 0;				// "Database time" that the car arrives
-	Coord last_intersection_id = Coord(0, 0);
-	string car_state = "";
-	Car_in_database car_in_database;
 
-	Car_in_Node_Record() {}
-	Car_in_Node_Record(uint16_t in_time_stamp, Coord in_last_intersection_id, 
-						string in_car_state, Car_in_database in_car_in_database): 
-						time_stamp(in_time_stamp), last_intersection_id(in_last_intersection_id), 
-						car_state(car_state), car_in_database(car_in_database) {}
+map<string, vector<Node_in_Path>> routing(vector<reference_wrapper<Car>>& route_group) {
 
-};
-
-// Record info of each node during routing
-class Node_Record {
-public:
-	bool is_src = false;
-	uint16_t arrival_time_stamp = 0;		// "Database time" that the car arrives
-	Coord last_intersection_id = Coord(0,0);
-	char turning = 'S';
-	vector<Car_in_Node_Record> recordings;
-
-	Node_Record() {}
-	Node_Record(bool in_is_src, uint16_t arrival_time_stamp): is_src(in_is_src), arrival_time_stamp(arrival_time_stamp){}
-};
-
-typedef tuple<Coord, uint8_t> Node_ID;
-class Node_in_Heap {
-public:
-	uint16_t current_arrival_time = 0;
-	Node_ID current_node;
-	double position_at_offset = 0;
-
-	Node_in_Heap(){}
-	Node_in_Heap(uint16_t arrival_time, Node_ID node, double pos_offset): current_arrival_time(arrival_time), current_node(node), position_at_offset(pos_offset){}
-};
-struct Compare_AT {
-	bool operator()(Node_in_Heap const &node1, Node_in_Heap const &node2) {
-		return node1.current_arrival_time > node2.current_arrival_time;
-	}
-};
-
-map<char, Node_ID> decide_available_turnings(Coord src_coord, uint8_t src_intersection_direction, Coord dst_coord, uint16_t additional_search_range);
-
-// TODO: modify the input type here
-void routing(vector<reference_wrapper<Car>>& route_group) {
+	map<string, vector<Node_in_Path>> route_record;
 
 	for (Car& car : route_group) {
 		// Dijkstra's Algorithm
@@ -309,9 +264,64 @@ void routing(vector<reference_wrapper<Car>>& route_group) {
 
 				car.position = position_at_offset;
 				double car_exiting_time = intersection_GZ.scheduling(car);
+
+				while (car_exiting_time == SCHEDULE_POSPONDED || get<0>(result) == false) {
+					// The scheduling is prosponed due to spillback
+
+					// Record the path for final path retrieval
+					// ###############################
+					Car_in_database record_car_advising = car;
+					recordings.push_back(Car_in_Node_Record(time_in_GZ, intersection_id, "lane_advising", record_car_advising));
+					// ###############################
+
+					time_in_GZ += 1;
+					intersection_GZ = get_intersection(time_in_GZ, intersection_id);
+					result = intersection_GZ.is_GZ_full(car, position_at_offset);
+
+					if (get<0>(result) == true) {
+						car.position = get<1>(result);
+						car_exiting_time = intersection_GZ.scheduling(car);
+					}
+				}
+
+				// Record the path for final path retrieval
+				// ###############################
+				Car_in_database record_car_scheduling = car;
+				recordings.push_back(Car_in_Node_Record(time_in_GZ, intersection_id, "scheduling", record_car_scheduling));
+				// ###############################
+
+				uint16_t next_time_step = time_in_GZ + int(car_exiting_time / _schedule_period);
+				double next_position_at_offset = _TOTAL_LEN - ((floor(car_exiting_time / _schedule_period) + 1) * _schedule_period - car_exiting_time) * _V_MAX;
+
+				Node_ID next_node = node_id;
+				if (nodes_arrival_time_data.find(next_node) != nodes_arrival_time_data.end() 
+					|| nodes_arrival_time_data[next_node].arrival_time_stamp > next_time_step) {
+					Node_Record tmp_node_record(false, next_time_step);
+					tmp_node_record.turning = turning;
+					tmp_node_record.last_intersection_id = current_node;
+					tmp_node_record.recordings = recordings;
+					nodes_arrival_time_data[next_node] = tmp_node_record;
+
+					Node_in_Heap node_in_heap(next_time_step, next_node, next_position_at_offset);
+					unvisited_queue.push(node_in_heap);
+				}
 			}
 		}
+
+		// Retrieve the paths
+		vector<Node_in_Path> path_list;
+		Node_Record node_data = nodes_arrival_time_data[dst_node];
+		while (node_data.is_src == false) {
+			path_list.insert(path_list.begin(), Node_in_Path(node_data.turning, node_data.recordings, node_data.arrival_time_stamp));
+			node_data = nodes_arrival_time_data[dst_node];
+		}
+
+		route_record[car.id] = path_list;
+
+		add_car_to_database(car, path_list);
 	}
+
+	return route_record;
 }
 
 map<char, Node_ID> decide_available_turnings(Coord src_coord, uint8_t src_intersection_direction, Coord dst_coord, uint16_t additional_search_range) {
@@ -392,6 +402,48 @@ map<char, Node_ID> decide_available_turnings(Coord src_coord, uint8_t src_inters
 	return available_turnings_and_out_direction; // Key : turnings, Values : out_direction
 }
 
+void add_car_to_database(Car& target_car, const vector<Node_in_Path>& path_list) {
+	// TODO: write lock
+	
+	// Put all to-write records together
+	vector<reference_wrapper<const Car_in_Node_Record>> recordings;
+	for (const Node_in_Path& node_in_path_record : path_list) {
+		for (const Car_in_Node_Record& record : node_in_path_record.recordings) {
+			recordings.push_back(record);
+		}
+	}
+
+	const Car_in_Node_Record* pre_record = nullptr;
+
+	for (const Car_in_Node_Record& record : recordings) {
+		const uint16_t& time = record.time_stamp;
+		const Coord& intersection_id = record.last_intersection_id;
+		const string& state = record.car_state;
+		const Car_in_database& car = record.car_in_database;
+		
+		Intersection& intersection = get_intersection(time, intersection_id);
+
+		// See if the record change to next intersection: add scheduled cars
+		if (pre_record != nullptr && intersection_id != pre_record->last_intersection_id) {
+			const uint16_t& pre_time = pre_record->time_stamp;
+			Car_in_database saving_car = pre_record->car_in_database;
+
+			for (uint16_t time_idx = pre_time + 1; time_idx < time; time_idx++) {
+				saving_car.OT -= _schedule_period;
+
+				if (saving_car.OT + saving_car.D > 0) {
+					Intersection& intersection_to_save = get_intersection(time_idx, intersection_id);
+					intersection_to_save.add_sched_car(saving_car);
+					target_car.records_intersection_in_database.push_back(tuple<string, Intersection>("scheduled", intersection_to_save));
+				}
+			}
+		}
+
+		pre_record = &record;
+
+	}
+
+}
 
 void testQ() {
 

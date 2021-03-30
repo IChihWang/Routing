@@ -44,8 +44,30 @@ void Intersection::delete_car_from_intersection(const Car& car, const string& ty
 
 }
 
-void Intersection::update_my_spillback_info(Car_in_database& car_in_database) {
-	// TODO: update spillback info
+void Intersection::update_my_spillback_info(const Car_in_database& car) {
+	const uint8_t& lane_idx = car.lane;
+	my_road_info[lane_idx].avail_len = _TOTAL_LEN - (GZ_accumulated_size + AZ_accumulated_size + _HEADWAY);
+
+	// Filter out cars on the same lane
+	vector<reference_wrapper<const Car_in_database>> scheduled_car_list;
+	for (const pair<string, Car_in_database>& car_data : sched_cars) {
+		const Car_in_database& sched_car = car_data.second;
+		if (sched_car.lane == lane_idx) {
+			scheduled_car_list.push_back(sched_car);
+		}
+	}
+	sort(scheduled_car_list.begin(), scheduled_car_list.end(), [](Car_in_database a, Car_in_database b) -> bool {return a.OT < b.OT; });
+
+	// Store cars into the list
+	vector<Car_Delay_Position_Record> car_delay_position;
+	double car_accumulate_len_lane = CCZ_DEC2_LEN + CCZ_ACC_LEN;
+	for (const Car_in_database& sched_car : scheduled_car_list) {
+		car_accumulate_len_lane += double(sched_car.length) + _HEADWAY;
+		car_delay_position.push_back(Car_Delay_Position_Record(car_accumulate_len_lane, sched_car.D));
+	}
+
+	my_road_info->car_delay_position = car_delay_position;
+
 }
 
 uint8_t Intersection::advise_lane(const Car& car) {
@@ -110,6 +132,23 @@ tuple<bool, double> Intersection::is_GZ_full(const Car& car, const double& posit
 		return tuple<bool, double>(true, GZ_accumulated_size + car.length + _HEADWAY);
 	}
 }
+void Intersection::add_sched_car(const Car_in_database& car) {
+	sched_cars[car.id] = car;
+	GZ_accumulated_size += (car.length + _HEADWAY);
+	update_my_spillback_info(car);
+}
+void Intersection::add_scheduling_cars(const Car_in_database& car) {
+	scheduling_cars[car.id] = car;
+	GZ_accumulated_size += (car.length + _HEADWAY);
+	update_my_spillback_info(car);
+}
+void Intersection::add_advising_car(const Car_in_database& car) {
+	advising_car[car.id] = car;
+	AZ_accumulated_size += (car.length + _HEADWAY);
+	update_my_spillback_info(car);
+}
+
+
 
 
 

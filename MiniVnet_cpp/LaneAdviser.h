@@ -1,12 +1,9 @@
+#pragma once
+
 #include "globalConst.h"
 #include <vector>
 #include <map>
 #include <string>
-
-#ifndef COORD
-#define COORD
-typedef tuple<int, int> Coord;
-#endif
 
 // Defined in main.cpp
 extern map<string, vector< map<char, uint8_t> >> lane_dict;

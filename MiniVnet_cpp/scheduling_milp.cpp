@@ -108,7 +108,7 @@ void Intersection::Roadrunner_P(vector<Car_in_database>& scheduling_cars, Car& t
 				const vector<Car_Delay_Position_Record>& dst_car_delay_position = others_road_info[dst_lane_idx]->car_delay_position;
 
 				car.is_spillback = true;
-				if (dst_car_delay_position.size() < 1 || (accumulate_car_len[dst_lane_idx] + CAR_MAX_LEN + _HEADWAY > dst_car_delay_position.back().position)) {
+				if (dst_car_delay_position.size() < 1 || (double(accumulate_car_len[dst_lane_idx]) + CAR_MAX_LEN + _HEADWAY > dst_car_delay_position.back().position)) {
 					// Skip because no records is found
 					car.is_spillback_strict = true;
 				}
@@ -123,7 +123,7 @@ void Intersection::Roadrunner_P(vector<Car_in_database>& scheduling_cars, Car& t
 					}
 
 					double back_delay = dst_car_delay_position[compare_dst_car_idx].delay;
-					uint32_t back_position = dst_car_delay_position[compare_dst_car_idx].position;
+					double back_position = dst_car_delay_position[compare_dst_car_idx].position;
 					double spillback_delay_multiply_factor = back_delay / back_position;
 					spillback_delay = accumulate_car_len[dst_lane_idx] * spillback_delay_multiply_factor;
 				}
@@ -140,7 +140,7 @@ void Intersection::Roadrunner_P(vector<Car_in_database>& scheduling_cars, Car& t
 					if (accumulate_car_len[other_lane_idx] > 0) {
 						car.is_spillback = true;
 
-						if (dst_car_delay_position.size() < 1 || (accumulate_car_len[other_lane_idx] + CAR_MAX_LEN + _HEADWAY > dst_car_delay_position.back().position)) {
+						if (dst_car_delay_position.size() < 1 || (double(accumulate_car_len[other_lane_idx]) + double(CAR_MAX_LEN) + _HEADWAY > dst_car_delay_position.back().position)) {
 							// Skip because no records is found
 							car.is_spillback_strict = true;
 						}
@@ -155,7 +155,7 @@ void Intersection::Roadrunner_P(vector<Car_in_database>& scheduling_cars, Car& t
 							}
 
 							double back_delay = dst_car_delay_position[compare_dst_car_idx].delay;
-							uint32_t back_position = dst_car_delay_position[compare_dst_car_idx].position;
+							double back_position = dst_car_delay_position[compare_dst_car_idx].position;
 							double spillback_delay_multiply_factor = back_delay / back_position;
 							double spillback_delay_alter = accumulate_car_len[other_lane_idx] * spillback_delay_multiply_factor;
 							spillback_delay = max(spillback_delay, spillback_delay_alter);
@@ -259,7 +259,7 @@ void Intersection::Roadrunner_P(vector<Car_in_database>& scheduling_cars, Car& t
 			double bound = car_b_ptr->length / car_b_ptr->speed_in_intersection - car_a_ptr->OT + car_b_ptr->OT;
 			bound += _HEADWAY / car_b_ptr->speed_in_intersection;
 			if (car_a_ptr->current_turn == 'S' and car_b_ptr->current_turn != 'S') {
-				bound += (double(_V_MAX) - _TURN_SPEED) * (CCZ_DEC2_LEN) / (double(_V_MAX) * (_V_MAX + _TURN_SPEED));
+				bound += (double(_V_MAX) - _TURN_SPEED) * (CCZ_DEC2_LEN) / (double(_V_MAX) * (double(_V_MAX) + _TURN_SPEED));
 			}
 			MPConstraint* const tmp_conts = solver->MakeRowConstraint(bound, infinity);
 			tmp_conts->SetCoefficient(D_solver_variables[car_a_ptr->id], 1);
