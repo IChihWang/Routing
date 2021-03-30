@@ -62,11 +62,11 @@ def IcaccPlus(old_cars, new_cars, others_road_info):
                 new_cars.remove(car)    # Blocked by the car at the front
                 continue
 
-            dst_car_delay_position = others_road_info[dst_lane_idx]['car_delay_position']
             accumulate_car_len[dst_lane_idx] += (car.length + cfg.HEADWAY)
-            spillback_delay_dst_lane = 0
+            spillback_delay = 0
 
             if accumulate_car_len[dst_lane_idx] > 0:
+                dst_car_delay_position = others_road_info[dst_lane_idx]['car_delay_position']
                 if len(dst_car_delay_position) < 1 or accumulate_car_len[dst_lane_idx]+(cfg.CAR_MAX_LEN+cfg.HEADWAY) > dst_car_delay_position[-1]["position"]:
                     car.is_spillback_strict = True
                 else:
@@ -85,14 +85,12 @@ def IcaccPlus(old_cars, new_cars, others_road_info):
                     #print(compare_dst_car_idx)
                     #print(dst_car_delay_position[compare_dst_car_idx-1]["position"], back_position, accumulate_car_len[dst_lane_idx])
                     #spillback_delay_dst_lane = back_delay
-
+                    spillback_delay = spillback_delay_dst_lane
 
                 car.is_spillback = True
 
             else:
                 pass
-
-            spillback_delay = spillback_delay_dst_lane
 
 
             for lane_i in range(cfg.LANE_NUM_PER_DIRECTION):
@@ -100,7 +98,6 @@ def IcaccPlus(old_cars, new_cars, others_road_info):
 
                 if other_lane_idx != dst_lane_idx:
                     accumulate_car_len[other_lane_idx] += (car.length + cfg.HEADWAY)
-                    spillback_delay_dst_lane_changed_to = 0
                     dst_car_delay_position = others_road_info[other_lane_idx]['car_delay_position']
 
                     if accumulate_car_len[other_lane_idx] > 0:
@@ -123,6 +120,7 @@ def IcaccPlus(old_cars, new_cars, others_road_info):
                             #print(compare_dst_car_idx)
                             #print(dst_car_delay_position[compare_dst_car_idx-1]["position"], back_position, accumulate_car_len[other_lane_idx])
                             #spillback_delay_dst_lane = back_delay
+                            spillback_delay = max(spillback_delay, spillback_delay_dst_lane)
 
                         car.is_spillback = True
 
@@ -130,7 +128,7 @@ def IcaccPlus(old_cars, new_cars, others_road_info):
                         pass
 
 
-                    spillback_delay = max(spillback_delay, spillback_delay_dst_lane_changed_to)
+
 
 
 
