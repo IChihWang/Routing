@@ -8,6 +8,9 @@ map<string, map<string, double> > inter_info;
 map<string, vector< map<char, uint8_t> >> lane_dict;
 map<string, double> inter_length_dict;
 
+vector < vector<reference_wrapper<Car>>*> _route_group_ptrs;
+vector<thread> _thread_pool;
+
 
 int main(int argc, char const* argv[]) {
 	testQ();
@@ -17,6 +20,7 @@ int main(int argc, char const* argv[]) {
 
 	SOCKET new_socket = initial_server_handler();
 	create_grid_network();
+	//init_thread_pool();
 
 
 	// Receiving requests/sending replies
@@ -37,7 +41,6 @@ int main(int argc, char const* argv[]) {
 
 		string out_str = "";
 		if (in_str.length() > 0) {
-			// TODO: routing
 			out_str = handle_request(in_str);
 		}
 
@@ -112,9 +115,33 @@ string handle_request(string &in_str) {
 		route_groups = choose_car_to_thread_group(new_car_ids, old_car_ids);
 
 		routing_with_groups(route_groups, routes_dict);
+
+		// Updated during routing, so no need to update database here
+		// router.update_database_after_routing(route_groups)
 	}
 
+	// Finalize the results
+	string out_str = "";
+	for (const pair<string, string>& route_data : routes_dict) {
+		string car_id = route_data.first;
+		string path = route_data.second;
+		out_str += car_id;
+		out_str += ',';
+		out_str += path;
+		out_str += ';';
+	}
 
-	string out_str;
+	move_a_time_step();
+
 	return out_str;
+}
+
+
+void init_thread_pool() {
+	for (int i = 0; i < _thread_num; i++) {
+		vector<reference_wrapper<Car>>* route_group_ptr = nullptr;
+		_route_group_ptrs.push_back(route_group_ptr);
+		_thread_pool.push_back(thread(routing_in_thread, _route_group_ptrs[i]));
+		
+	}
 }

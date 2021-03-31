@@ -21,6 +21,7 @@ using namespace std;
 // Defined in main.cpp
 extern map<string, map<string, double> > inter_info;
 string handle_request(string &in_str);
+void init_thread_pool();
 
 
 void read_load_adv_data();
@@ -48,18 +49,19 @@ vector<vector<reference_wrapper<Car>>> choose_car_to_thread_group(vector<string>
 void delete_car_from_database(Car& car);
 void delete_car_from_database_id(string car_id);
 
-void routing_with_groups(vector<vector<reference_wrapper<Car>>> route_groups, map<string, string> routes_dict);
-map<string, vector<Node_in_Path>> routing(vector<reference_wrapper<Car>>& route_group);
+map<string, string>& routing_with_groups(const vector<vector<reference_wrapper<Car>>>& route_groups, map<string, string>& routes_dict);
+map<string, vector<Node_in_Path>> routing(const vector<reference_wrapper<Car>>& route_group);
+void routing_in_thread(vector<reference_wrapper<Car>>* route_group_ptr);
 map<char, Node_ID> decide_available_turnings(Coord src_coord, uint8_t src_intersection_direction, Coord dst_coord, uint16_t additional_search_range);
-void add_car_to_database(const Car& car, map<string, const vector<Node_in_Path>>& path_list);
+void add_car_to_database(Car& target_car, const vector<Node_in_Path>& path_list);
 void testQ();
-
-
-
 
 
 // Defined in LaneAdviser.cpp
 tuple<double, double> get_Conflict_Region(Car_in_database car1, Car_in_database car2);
 double get_Intertime(uint8_t lane, char turn);
+
+extern vector < vector<reference_wrapper<Car>>*> _route_group_ptrs;
+extern vector<thread> _thread_pool;
 
 #endif

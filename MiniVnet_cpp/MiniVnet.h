@@ -57,3 +57,4 @@ public:
 	Node_in_Path(char in_turning, vector<Car_in_Node_Record> in_recordings, uint16_t in_time)
 		: turning(in_turning), recordings(in_recordings), time(in_time) {}
 };
+

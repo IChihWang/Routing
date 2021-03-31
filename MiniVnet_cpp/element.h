@@ -94,6 +94,7 @@ public:
 	void update_dst_lane_and_data();
 };
 
+class Node_in_Path;
 class Car : public Car_in_database {
 public:
 	Coord dst_coord;
@@ -107,7 +108,7 @@ public:
 
 	double traveling_time = 0;
 
-	//self.path_data = None
+	vector<Node_in_Path> path_data;
 
 	Car() {};
 	Car(const string in_id, const uint8_t in_length, const Coord in_dst_coord);

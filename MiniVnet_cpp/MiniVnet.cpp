@@ -147,17 +147,30 @@ void delete_car_from_database_id(string car_id) {
 	_car_dict.erase(car_id);
 }
 
-void routing_with_groups(vector<vector<reference_wrapper<Car>>> route_groups, map<string, string> routes_dict) {
-	
-	for (vector<reference_wrapper<Car>> &route_group : route_groups) {
-		routing(route_group);
+map<string, string>& routing_with_groups(const vector<vector<reference_wrapper<Car>>>& route_groups, map<string, string>& routes_dict) {
+	// TODO: threading
+	for (const vector<reference_wrapper<Car>> &route_group : route_groups) {
+		map<string, vector<Node_in_Path>> result = routing(route_group);
+
+		for (const pair < string, vector<Node_in_Path>>& result_data : result) {
+			const string& car_id = result_data.first;
+			const vector<Node_in_Path>& path_data = result_data.second;
+
+			string turning_str = "";
+			for (Node_in_Path node_in_path_data : path_data) {
+				turning_str += node_in_path_data.turning;
+			}
+			_car_dict[car_id].path_data = path_data;
+
+			routes_dict[car_id] = turning_str;
+		}
 	}
 
-	// TODO: construct result (path)
+	return routes_dict;
 }
 
 
-map<string, vector<Node_in_Path>> routing(vector<reference_wrapper<Car>>& route_group) {
+map<string, vector<Node_in_Path>> routing(const vector<reference_wrapper<Car>>& route_group) {
 
 	map<string, vector<Node_in_Path>> route_record;
 
@@ -324,6 +337,10 @@ map<string, vector<Node_in_Path>> routing(vector<reference_wrapper<Car>>& route_
 	return route_record;
 }
 
+void routing_in_thread(vector<reference_wrapper<Car>>* route_group_ptr) {
+	routing(*route_group_ptr);
+}
+
 map<char, Node_ID> decide_available_turnings(Coord src_coord, uint8_t src_intersection_direction, Coord dst_coord, uint16_t additional_search_range) {
 	// additional_search_range : additional intersection number to be searched
 	// Value of the dict : id of next intersection, the direction of next intersection
@@ -423,6 +440,15 @@ void add_car_to_database(Car& target_car, const vector<Node_in_Path>& path_list)
 		
 		Intersection& intersection = get_intersection(time, intersection_id);
 
+		if (state.compare("lane_advising")) {
+			intersection.add_advising_car(car);
+			target_car.records_intersection_in_database.push_back(tuple<string, Intersection>("lane_advising", intersection));
+		}
+		else if (state.compare("lane_advising")) {
+			intersection.add_scheduling_cars(car);
+			target_car.records_intersection_in_database.push_back(tuple<string, Intersection>("scheduling", intersection));
+		}
+
 		// See if the record change to next intersection: add scheduled cars
 		if (pre_record != nullptr && intersection_id != pre_record->last_intersection_id) {
 			const uint16_t& pre_time = pre_record->time_stamp;
@@ -438,9 +464,23 @@ void add_car_to_database(Car& target_car, const vector<Node_in_Path>& path_list)
 				}
 			}
 		}
-
 		pre_record = &record;
+	}
 
+	// Add the scheduled car before exiting to the database
+	const uint16_t& exiting_time = path_list.back().time;
+	const uint16_t& pre_time = pre_record->time_stamp;
+	const Coord& intersection_id = pre_record->last_intersection_id;
+	Car_in_database saving_car = pre_record->car_in_database;
+
+	for (uint16_t time_idx = pre_time + 1; exiting_time; time_idx++) {
+		saving_car.OT -= _schedule_period;
+
+		if (saving_car.OT + saving_car.D > 0) {
+			Intersection& intersection_to_save = get_intersection(time_idx, intersection_id);
+			intersection_to_save.add_sched_car(saving_car);
+			target_car.records_intersection_in_database.push_back(tuple<string, Intersection>("scheduled", intersection_to_save));
+		}
 	}
 
 }
