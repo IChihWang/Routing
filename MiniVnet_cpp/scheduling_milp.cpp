@@ -32,6 +32,13 @@ double Intersection::scheduling(Car& target_car) {
 }
 
 void Intersection::Roadrunner_P(vector<Car_in_database>& scheduling_cars, Car& target_car) {
+
+	cout << "===========" << endl;
+	for (const Car_in_database& carrr : scheduling_cars) {
+		if (carrr.id.compare(target_car.id) == 0) {
+			cout << carrr.id << " found " << endl;
+		}
+	}
 		
 	// part 1: build the solver
 	MPSolver solver("Linearptr", MPSolver::GLOP_LINEAR_PROGRAMMING);
@@ -93,9 +100,10 @@ void Intersection::Roadrunner_P(vector<Car_in_database>& scheduling_cars, Car& t
 						break;
 					}
 				}
+				string deleted_car_id = car.id;
 				scheduling_cars.erase(scheduling_cars.begin() + idx_in_scheduling_cars);
 
-				if (car.id.compare(target_car.id) == 0) {
+				if (deleted_car_id.compare(target_car.id) == 0) {
 					target_car.D = SCHEDULE_POSPONDED;
 					return;
 				}
@@ -108,6 +116,7 @@ void Intersection::Roadrunner_P(vector<Car_in_database>& scheduling_cars, Car& t
 				const vector<Car_Delay_Position_Record>& dst_car_delay_position = others_road_info[dst_lane_idx]->car_delay_position;
 
 				car.is_spillback = true;
+				cout << car.id << " size " << target_car.id << " " << (int)car.dst_lane << "  ; " << get<0>(id) << "," << get<1>(id) << " " << others_road_info[dst_lane_idx] << "  " << (int)dst_car_delay_position.size() << endl;
 				if (dst_car_delay_position.size() < 1 || (double(accumulate_car_len[dst_lane_idx]) + CAR_MAX_LEN + _HEADWAY > dst_car_delay_position.back().position)) {
 					// Skip because no records is found
 					car.is_spillback_strict = true;
@@ -173,13 +182,15 @@ void Intersection::Roadrunner_P(vector<Car_in_database>& scheduling_cars, Car& t
 						break;
 					}
 				}
+
+				string deleted_car_id = car.id;
 				scheduling_cars.erase(scheduling_cars.begin() + idx_in_scheduling_cars);
 
 				if (car.position < head_of_line_blocking_position[lane_idx]) {
 					head_of_line_blocking_position[lane_idx] = car.position;
 				}
 
-				if (car.id.compare(target_car.id) == 0) {
+				if (deleted_car_id.compare(target_car.id) == 0) {
 					target_car.D = SCHEDULE_POSPONDED;
 					return;
 				}
@@ -206,9 +217,11 @@ void Intersection::Roadrunner_P(vector<Car_in_database>& scheduling_cars, Car& t
 						break;
 					}
 				}
+
+				string deleted_car_id = car.id;
 				scheduling_cars.erase(scheduling_cars.begin() + idx_in_scheduling_cars);
 
-				if (car.id.compare(target_car.id) == 0) {
+				if (deleted_car_id.compare(target_car.id) == 0) {
 					target_car.D = SCHEDULE_POSPONDED;
 					return;
 				}
@@ -225,6 +238,10 @@ void Intersection::Roadrunner_P(vector<Car_in_database>& scheduling_cars, Car& t
 				}
 			}
 		}
+	}
+
+	if (D_solver_variables.find(target_car.id) == D_solver_variables.end()) {
+		cout << target_car.id << "  1 no variable in D ?????" << endl;
 	}
 
 	// part 4: set constrain (10) (Car on same lane, rear-end collision avoidance)
@@ -258,7 +275,7 @@ void Intersection::Roadrunner_P(vector<Car_in_database>& scheduling_cars, Car& t
 
 			double bound = car_b_ptr->length / car_b_ptr->speed_in_intersection - car_a_ptr->OT + car_b_ptr->OT;
 			bound += _HEADWAY / car_b_ptr->speed_in_intersection;
-			if (car_a_ptr->current_turn == 'S' and car_b_ptr->current_turn != 'S') {
+			if (car_a_ptr->current_turn == 'S' && car_b_ptr->current_turn != 'S') {
 				bound += (double(_V_MAX) - _TURN_SPEED) * (CCZ_DEC2_LEN) / (double(_V_MAX) * (double(_V_MAX) + _TURN_SPEED));
 			}
 			MPConstraint* const tmp_conts = solver.MakeRowConstraint(bound, infinity);
@@ -332,17 +349,20 @@ void Intersection::Roadrunner_P(vector<Car_in_database>& scheduling_cars, Car& t
 	MPObjective* const objective = solver.MutableObjective();
 	for (const Car_in_database& new_car : scheduling_cars) {
 		objective->SetCoefficient(D_solver_variables[new_car.id], 1);
-		cout << new_car.id << endl;
 	}
 	objective->SetMinimization();
 
 	// part 8: solve the problem
 	const MPSolver::ResultStatus result_status = solver.Solve();
 
+	// Check that the problem has an optimal solution.
+	if (result_status != MPSolver::FEASIBLE && result_status != MPSolver::OPTIMAL) {
+		cout << "The problem has no solution!" << endl;
+	}
 
 	// Update the delays
-	target_car.D = D_solver_variables[target_car.id]->solution_value();
-	for (Car_in_database& new_car : scheduling_cars) {
-		new_car.D = D_solver_variables[new_car.id]->solution_value();
+	if (D_solver_variables.find(target_car.id) == D_solver_variables.end()) {
+		cout << target_car.id << "  no variable in D ?????" << endl;
 	}
+	target_car.D = D_solver_variables[target_car.id]->solution_value();
 }

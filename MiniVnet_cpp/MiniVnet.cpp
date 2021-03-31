@@ -180,7 +180,6 @@ map<string, vector<Node_in_Path>> routing(const vector<reference_wrapper<Car>>& 
 		// Variables
 		map<Node_ID, Node_Record> nodes_arrival_time_data;
 		const Coord& dst_coord = car.dst_coord;
-
 		// Initualization
 		Node_ID src_node(car.src_coord, car.direction_of_src_intersection);
 		Node_Record src_record(true, (0 + car.time_offset_step));
@@ -215,7 +214,7 @@ map<string, vector<Node_in_Path>> routing(const vector<reference_wrapper<Car>>& 
 
 			Coord intersection_id = get<0>(current_node);
 			uint8_t intersection_dir = get<1>(current_node);
-
+			
 			// Terminate when finding shortest path
 			if (intersection_id == car.dst_coord) {
 				car.traveling_time = double(current_arrival_time) * _schedule_period + position_at_offset / _V_MAX + double(_TOTAL_LEN) / _V_MAX; // additional time for car to leave sumo
@@ -307,8 +306,9 @@ map<string, vector<Node_in_Path>> routing(const vector<reference_wrapper<Car>>& 
 				double next_position_at_offset = _TOTAL_LEN - ((floor(car_exiting_time / _schedule_period) + 1) * _schedule_period - car_exiting_time) * _V_MAX;
 
 				Node_ID next_node = node_id;
-				if (nodes_arrival_time_data.find(next_node) != nodes_arrival_time_data.end() 
-					|| nodes_arrival_time_data[next_node].arrival_time_stamp > next_time_step) {
+
+				if ( (nodes_arrival_time_data.find(next_node) == nodes_arrival_time_data.end()) 
+					|| (nodes_arrival_time_data[next_node].arrival_time_stamp > next_time_step)) {
 					Node_Record tmp_node_record(false, next_time_step);
 					tmp_node_record.turning = turning;
 					tmp_node_record.last_intersection_id = current_node;
@@ -322,11 +322,13 @@ map<string, vector<Node_in_Path>> routing(const vector<reference_wrapper<Car>>& 
 		}
 
 		// Retrieve the paths
+		
 		vector<Node_in_Path> path_list;
 		Node_Record node_data = nodes_arrival_time_data[dst_node];
 		while (node_data.is_src == false) {
 			path_list.insert(path_list.begin(), Node_in_Path(node_data.turning, node_data.recordings, node_data.arrival_time_stamp));
-			node_data = nodes_arrival_time_data[dst_node];
+			node_data = nodes_arrival_time_data[node_data.last_intersection_id];
+			cout << car.id << endl;
 		}
 
 		route_record[car.id] = path_list;
@@ -347,71 +349,71 @@ map<char, Node_ID> decide_available_turnings(Coord src_coord, uint8_t src_inters
 	map<char, Node_ID> available_turnings_and_out_direction;
 	if (src_intersection_direction == 0) {
 		if (get<0>(dst_coord) - get<0>(src_coord) > -additional_search_range) {
-			if (get<0>(src_coord) < _grid_size or get<1>(src_coord) == get<1>(dst_coord)) {
+			if (get<0>(src_coord) < _grid_size || get<1>(src_coord) == get<1>(dst_coord)) {
 				available_turnings_and_out_direction['R'] = Node_ID(Coord(get<0>(src_coord) + 1, get<1>(src_coord)), 3);
 			}
 		}
 
 		if (get<0>(src_coord) - get<0>(dst_coord) > -additional_search_range) {
-			if (get<0>(src_coord) > 1 or get<1>(src_coord) == get<1>(dst_coord)) {
+			if (get<0>(src_coord) > 1 || get<1>(src_coord) == get<1>(dst_coord)) {
 				available_turnings_and_out_direction['L'] = Node_ID(Coord(get<0>(src_coord) - 1, get<1>(src_coord)), 1);
 			}
 		}
 
 		if (get<1>(dst_coord) - get<1>(src_coord) > -additional_search_range) {
-			if (get<1>(src_coord) < _grid_size or get<0>(src_coord) == get<0>(dst_coord)) {
+			if (get<1>(src_coord) < _grid_size || get<0>(src_coord) == get<0>(dst_coord)) {
 				available_turnings_and_out_direction['S'] = Node_ID(Coord(get<0>(src_coord), get<1>(src_coord) + 1), 0);
 			}
 		}
 	}
 	else if (src_intersection_direction == 1) {
 		if (get<1>(dst_coord) - get<1>(src_coord) > -additional_search_range) {
-			if (get<1>(src_coord) < _grid_size or get<0>(src_coord) == get<0>(dst_coord)) {
+			if (get<1>(src_coord) < _grid_size || get<0>(src_coord) == get<0>(dst_coord)) {
 				available_turnings_and_out_direction['R'] = Node_ID(Coord(get<0>(src_coord), get<1>(src_coord) + 1), 0);
 			}
 		}
 		if (get<1>(src_coord) - get<1>(dst_coord) > -additional_search_range) {
-			if (get<1>(src_coord) > 1 or get<0>(src_coord) == get<0>(dst_coord)) {
+			if (get<1>(src_coord) > 1 || get<0>(src_coord) == get<0>(dst_coord)) {
 				available_turnings_and_out_direction['L'] = Node_ID(Coord(get<0>(src_coord), get<1>(src_coord) - 1), 2);
 			}
 		}
 		if (get<0>(src_coord) - get<0>(dst_coord) > -additional_search_range) {
-			if (get<0>(src_coord) > 1 or get<1>(src_coord) == get<1>(dst_coord)) {
+			if (get<0>(src_coord) > 1 || get<1>(src_coord) == get<1>(dst_coord)) {
 				available_turnings_and_out_direction['S'] = Node_ID(Coord(get<0>(src_coord) - 1, get<1>(src_coord)), 1);
 			}
 		}
 	}
 	else if (src_intersection_direction == 2) {
 		if (get<0>(src_coord) - get<0>(dst_coord) > -additional_search_range) {
-			if (get<0>(src_coord) > 1 or get<1>(src_coord) == get<1>(dst_coord)) {
+			if (get<0>(src_coord) > 1 || get<1>(src_coord) == get<1>(dst_coord)) {
 				available_turnings_and_out_direction['R'] = Node_ID(Coord(get<0>(src_coord) - 1, get<1>(src_coord)), 1);
 			}
 		}
 		if (get<0>(dst_coord) - get<0>(src_coord) > -additional_search_range) {
-			if (get<0>(src_coord) < _grid_size or get<1>(src_coord) == get<1>(dst_coord)) {
+			if (get<0>(src_coord) < _grid_size || get<1>(src_coord) == get<1>(dst_coord)) {
 				available_turnings_and_out_direction['L'] = Node_ID(Coord(get<0>(src_coord) + 1, get<1>(src_coord)), 3);
 			}
 		}
 		if (get<1>(src_coord) - get<1>(dst_coord) > -additional_search_range) {
-			if (get<1>(src_coord) > 1 or get<0>(src_coord) == get<0>(dst_coord)) {
+			if (get<1>(src_coord) > 1 || get<0>(src_coord) == get<0>(dst_coord)) {
 				available_turnings_and_out_direction['S'] = Node_ID(Coord(get<0>(src_coord), get<1>(src_coord) - 1), 2);
 			}
 		}
-		else if (src_intersection_direction == 3) {
-			if (get<1>(src_coord) - get<1>(dst_coord) > -additional_search_range) {
-				if (get<1>(src_coord) > 1 or get<0>(src_coord) == get<0>(dst_coord)) {
-					available_turnings_and_out_direction['R'] = Node_ID(Coord(get<0>(src_coord), get<1>(src_coord) - 1), 2);
-				}
+	}
+	else if (src_intersection_direction == 3) {
+		if (get<1>(src_coord) - get<1>(dst_coord) > -additional_search_range) {
+			if (get<1>(src_coord) > 1 || get<0>(src_coord) == get<0>(dst_coord)) {
+				available_turnings_and_out_direction['R'] = Node_ID(Coord(get<0>(src_coord), get<1>(src_coord) - 1), 2);
 			}
-			if (get<1>(dst_coord) - get<1>(src_coord) > -additional_search_range) {
-				if (get<1>(src_coord) < _grid_size or get<0>(src_coord) == get<0>(dst_coord)) {
-					available_turnings_and_out_direction['L'] = Node_ID(Coord(get<0>(src_coord), get<1>(src_coord) + 1), 0);
-				}
+		}
+		if (get<1>(dst_coord) - get<1>(src_coord) > -additional_search_range) {
+			if (get<1>(src_coord) < _grid_size || get<0>(src_coord) == get<0>(dst_coord)) {
+				available_turnings_and_out_direction['L'] = Node_ID(Coord(get<0>(src_coord), get<1>(src_coord) + 1), 0);
 			}
-			if (get<0>(dst_coord) - get<0>(src_coord) > -additional_search_range) {
-				if (get<0>(src_coord) < _grid_size or get<1>(src_coord) == get<1>(dst_coord)) {
-					available_turnings_and_out_direction['S'] = Node_ID(Coord(get<0>(src_coord) + 1, get<1>(src_coord)), 3);
-				}
+		}
+		if (get<0>(dst_coord) - get<0>(src_coord) > -additional_search_range) {
+			if (get<0>(src_coord) < _grid_size || get<1>(src_coord) == get<1>(dst_coord)) {
+				available_turnings_and_out_direction['S'] = Node_ID(Coord(get<0>(src_coord) + 1, get<1>(src_coord)), 3);
 			}
 		}
 	}
@@ -473,7 +475,7 @@ void add_car_to_database(Car& target_car, const vector<Node_in_Path>& path_list)
 	const Coord& intersection_id = pre_record->last_intersection_id;
 	Car_in_database saving_car = pre_record->car_in_database;
 
-	for (uint16_t time_idx = pre_time + 1; exiting_time; time_idx++) {
+	for (uint16_t time_idx = pre_time + 1; time_idx < exiting_time; time_idx++) {
 		saving_car.OT -= _schedule_period;
 
 		if (saving_car.OT + saving_car.D > 0) {

@@ -28,7 +28,7 @@ int main(int argc, char const* argv[]) {
 
 		string in_str = "";
 
-		while (in_str.length() == 0 or in_str.back() != '@') {
+		while (in_str.length() == 0 || in_str.back() != '@') {
 			char buffer[1024] = { 0 };
 			int n_recv = recv(new_socket, buffer, 1023, 0);
 			if (n_recv <= 0) {
@@ -67,7 +67,6 @@ string handle_request(string &in_str) {
 		string car_str;
 		getline(ss_car, car_str, ';');
 		stringstream ss_car_data(car_str);
-		cout << car_str << endl;
 
 		string car_id;
 		getline(ss_car_data, car_id, ',');
@@ -80,7 +79,7 @@ string handle_request(string &in_str) {
 		else if (car_state.compare("PAUSE") == 0) {
 			// Cannot reroute the car due to the lower lever control
 		}
-		else if (car_state.compare("NEW") == 0 or car_state.compare("OLD") == 0) {
+		else if (car_state.compare("NEW") == 0 || car_state.compare("OLD") == 0) {
 			string car_data;
 			getline(ss_car_data, car_data, ',');
 			uint8_t car_length = stoi(car_data);
