@@ -33,10 +33,8 @@ double Intersection::scheduling(Car& target_car) {
 
 void Intersection::Roadrunner_P(vector<Car_in_database>& scheduling_cars, Car& target_car) {
 
-	cout << "===========" << endl;
 	for (const Car_in_database& carrr : scheduling_cars) {
 		if (carrr.id.compare(target_car.id) == 0) {
-			cout << carrr.id << " found " << endl;
 		}
 	}
 		
@@ -116,7 +114,6 @@ void Intersection::Roadrunner_P(vector<Car_in_database>& scheduling_cars, Car& t
 				const vector<Car_Delay_Position_Record>& dst_car_delay_position = (*(others_road_info[dst_lane_idx]))->car_delay_position;
 
 				car.is_spillback = true;
-				cout << car.id << " size " << target_car.id << " " << (int)car.dst_lane << "  ; " << get<0>(id) << "," << get<1>(id) << " " << others_road_info[dst_lane_idx] << "  " << (int)dst_car_delay_position.size() << endl;
 				if (dst_car_delay_position.size() < 1 || (double(accumulate_car_len[dst_lane_idx]) + CAR_MAX_LEN + _HEADWAY > dst_car_delay_position.back().position)) {
 					// Skip because no records is found
 					car.is_spillback_strict = true;
@@ -240,9 +237,6 @@ void Intersection::Roadrunner_P(vector<Car_in_database>& scheduling_cars, Car& t
 		}
 	}
 
-	if (D_solver_variables.find(target_car.id) == D_solver_variables.end()) {
-		cout << target_car.id << "  1 no variable in D ?????" << endl;
-	}
 
 	// part 4: set constrain (10) (Car on same lane, rear-end collision avoidance)
 	// (1) old car and new car
@@ -359,8 +353,5 @@ void Intersection::Roadrunner_P(vector<Car_in_database>& scheduling_cars, Car& t
 	}
 
 	// Update the delays
-	if (D_solver_variables.find(target_car.id) == D_solver_variables.end()) {
-		cout << target_car.id << "  no variable in D ?????" << endl;
-	}
 	target_car.D = D_solver_variables[target_car.id]->solution_value();
 }

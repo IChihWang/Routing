@@ -56,7 +56,6 @@ int main(int argc, char const* argv[]) {
 }
 
 string handle_request(string &in_str) {
-	cout << "=========== Request =============" << endl;
 	in_str.pop_back();	// Remove the ";" at the end
 	stringstream ss_car(in_str);
 	vector<string> new_car_ids;
@@ -130,9 +129,8 @@ string handle_request(string &in_str) {
 		out_str += ';';
 	}
 
-	cout << "=========== bbb =============" << endl;
+
 	move_a_time_step();
-	cout << "=========== ccc =============" << endl;
 
 	return out_str;
 }
