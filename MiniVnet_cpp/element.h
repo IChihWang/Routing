@@ -46,7 +46,7 @@ public:
 	map<string, Car_in_database>* scheduling_cars;
 	map<string, Car_in_database>* advising_car;
 
-	map<string, Car*> stored_cars;
+	map<string, Car*>* stored_cars;
 
 	// Spillback info
 	Road_Info* my_road_info[4 * LANE_NUM_PER_DIRECTION];
@@ -54,6 +54,7 @@ public:
 
 	Intersection();
 	Intersection(const Coord& in_coordinate);
+	Intersection(const Intersection& in_intersection);
 	~Intersection();		// Don't use!
 	void my_own_destructure();	// Build this because "vector" copy/reallocate memory and call ~Intersection
 	void connect(const uint8_t& my_direction, Intersection& target_intersection, const uint8_t& its_direction);
@@ -94,6 +95,7 @@ public:
 
 	Car_in_database() {};
 	Car_in_database(const string in_id, const uint8_t in_length);
+	Car_in_database(const Car_in_database& car);
 	~Car_in_database() {};
 
 	void update_dst_lane_and_data();

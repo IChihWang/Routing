@@ -17,7 +17,8 @@ public:
 	Car_in_Node_Record(uint16_t in_time_stamp, Coord in_last_intersection_id,
 		string in_car_state, Car_in_database in_car_in_database) :
 		time_stamp(in_time_stamp), last_intersection_id(in_last_intersection_id),
-		car_state(car_state), car_in_database(car_in_database) {}
+		car_state(in_car_state), car_in_database(in_car_in_database) {}
+	Car_in_Node_Record(const Car_in_Node_Record& car);
 	~Car_in_Node_Record() {}
 };
 // Record info of each node during routing
