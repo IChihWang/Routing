@@ -44,6 +44,7 @@ void move_a_time_step();
 void update_car(const string& car_id, const uint8_t& car_length, const string& src_intersection_id,
 	const uint8_t& direction_of_src_intersection, const uint16_t& time_offset_step,
 	const double& position_at_offset, const string& dst_node_id);
+Intersection& get_intersection(const int current_arrival_time, const Coord& intersection_id);
 
 vector<vector<reference_wrapper<Car>>> choose_car_to_thread_group(vector<string> &new_car_ids, vector<string> &old_car_ids);
 void delete_car_from_database(Car& car);

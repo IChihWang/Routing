@@ -1,4 +1,5 @@
 #include "global.h"
+#include <cassert>
 
 using namespace std;
 
@@ -40,7 +41,8 @@ void Intersection::delete_car_from_intersection(const Car& car, const string& ty
 		update_my_spillback_info(car_in_database);
 		GZ_accumulated_size -= (car.length + _HEADWAY);
 	}
-
+	assert(AZ_accumulated_size >= 0);
+	assert(GZ_accumulated_size >= 0);
 }
 
 void Intersection::update_my_spillback_info(const Car_in_database& car) {

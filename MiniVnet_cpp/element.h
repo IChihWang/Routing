@@ -38,8 +38,8 @@ public:
 class Intersection {
 public:
 	Coord id;
-	uint16_t AZ_accumulated_size = 0;
-	uint16_t GZ_accumulated_size = 0;
+	int32_t AZ_accumulated_size = 0;
+	int32_t GZ_accumulated_size = 0;
 
 	// Stored cars
 	map<string, Car_in_database> sched_cars;
@@ -98,7 +98,7 @@ class Node_in_Path;
 class Car : public Car_in_database {
 public:
 	Coord dst_coord;
-	vector< tuple<string, Intersection> > records_intersection_in_database;
+	vector< tuple<string, reference_wrapper<Intersection>> > records_intersection_in_database;
 	
 	// temporary variables for routing
 	Coord src_coord;

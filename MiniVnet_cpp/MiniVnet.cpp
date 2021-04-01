@@ -53,11 +53,14 @@ void connect_intersections(map< Coord, Intersection >& intersection_map) {
 }
 
 void move_a_time_step() {
+	
 	if (int(_database.size()) <= _routing_period_num) {
 		_database.clear();
 	}
 	else {
+		cout << "    " << int(_database.size()) << "  a|  " << (int)_routing_period_num << endl;
 		_database.erase(_database.begin(), _database.begin()+_routing_period_num);
+		cout << "    " << int(_database.size()) << "  b|  " << (int)_routing_period_num << endl;
 	}
 }
 
@@ -65,8 +68,10 @@ Intersection& get_intersection(const int current_arrival_time, const Coord &inte
 	while (current_arrival_time >= int(_database.size())) {
 		add_time_step();
 	}
-
-	return _database[current_arrival_time][intersection_id];
+	_database[current_arrival_time];
+	cout << _database[current_arrival_time][intersection_id].AZ_accumulated_size << endl;
+	Intersection& intersection = _database[current_arrival_time][intersection_id];
+	return intersection;
 }
 
 
@@ -131,7 +136,7 @@ vector<vector<reference_wrapper<Car>>> choose_car_to_thread_group(vector<string>
 
 void delete_car_from_database(Car &car) {
 
-	for ( tuple<string, Intersection> &record : car.records_intersection_in_database) {
+	for (tuple<string, reference_wrapper<Intersection>>&record : car.records_intersection_in_database) {
 		string &type = get<0>(record);
 		Intersection &intersection = get<1>(record);
 
@@ -444,11 +449,13 @@ void add_car_to_database(Car& target_car, const vector<Node_in_Path>& path_list)
 
 		if (state.compare("lane_advising")) {
 			intersection.add_advising_car(car);
-			target_car.records_intersection_in_database.push_back(tuple<string, Intersection>("lane_advising", intersection));
+			tuple<string, reference_wrapper<Intersection>> to_save_tuple("lane_advising", intersection);
+			target_car.records_intersection_in_database.push_back(to_save_tuple);
 		}
 		else if (state.compare("lane_advising")) {
 			intersection.add_scheduling_cars(car);
-			target_car.records_intersection_in_database.push_back(tuple<string, Intersection>("scheduling", intersection));
+			tuple<string, reference_wrapper<Intersection>> to_save_tuple("scheduling", intersection);
+			target_car.records_intersection_in_database.push_back(to_save_tuple);
 		}
 
 		// See if the record change to next intersection: add scheduled cars
@@ -462,7 +469,8 @@ void add_car_to_database(Car& target_car, const vector<Node_in_Path>& path_list)
 				if (saving_car.OT + saving_car.D > 0) {
 					Intersection& intersection_to_save = get_intersection(time_idx, intersection_id);
 					intersection_to_save.add_sched_car(saving_car);
-					target_car.records_intersection_in_database.push_back(tuple<string, Intersection>("scheduled", intersection_to_save));
+					tuple<string, reference_wrapper<Intersection>> to_save_tuple("scheduled", intersection_to_save);
+					target_car.records_intersection_in_database.push_back(to_save_tuple);
 				}
 			}
 		}
@@ -471,7 +479,7 @@ void add_car_to_database(Car& target_car, const vector<Node_in_Path>& path_list)
 
 	// Add the scheduled car before exiting to the database
 	const uint16_t& exiting_time = path_list.back().time;
-	const uint16_t& pre_time = pre_record->time_stamp;
+	const uint16_t& pre_time = (pre_record->time_stamp);
 	const Coord& intersection_id = pre_record->last_intersection_id;
 	Car_in_database saving_car = pre_record->car_in_database;
 
@@ -481,7 +489,8 @@ void add_car_to_database(Car& target_car, const vector<Node_in_Path>& path_list)
 		if (saving_car.OT + saving_car.D > 0) {
 			Intersection& intersection_to_save = get_intersection(time_idx, intersection_id);
 			intersection_to_save.add_sched_car(saving_car);
-			target_car.records_intersection_in_database.push_back(tuple<string, Intersection>("scheduled", intersection_to_save));
+			tuple<string, reference_wrapper<Intersection>> to_save_tuple("scheduled", intersection_to_save);
+			target_car.records_intersection_in_database.push_back(to_save_tuple);
 		}
 	}
 
