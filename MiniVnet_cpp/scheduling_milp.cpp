@@ -11,7 +11,7 @@ double Intersection::scheduling(Car& target_car) {
 
 	// TODO: thread_safe read
 	vector<Car_in_database> copied_scheduling_cars;
-	for (const pair<string, Car_in_database>& data : scheduling_cars) {
+	for (const pair<string, Car_in_database>& data : *scheduling_cars) {
 		Car_in_database car = data.second;
 		car.D = NOT_SCHEDULED;
 		copied_scheduling_cars.push_back(car);
@@ -51,8 +51,8 @@ void Intersection::Roadrunner_P(vector<Car_in_database>& scheduling_cars, Car& t
 	uint16_t pre_accumulate_car_len_lane[4 * LANE_NUM_PER_DIRECTION] = {};
 
 	// Compute accumulated car len
-	for (const pair<string, Car_in_database>& old_car_data : sched_cars) {
-		const Car_in_database& old_car = old_car_data.second;
+	map<string, Car_in_database>& my_sched_cars = (*sched_cars);
+	for (const auto& [car_id, old_car] : my_sched_cars) {
 		uint8_t lane_base_idx = old_car.dst_lane / LANE_NUM_PER_DIRECTION * LANE_NUM_PER_DIRECTION;
 
 		for (uint8_t i = 0; i < LANE_NUM_PER_DIRECTION; i++) {
@@ -61,7 +61,7 @@ void Intersection::Roadrunner_P(vector<Car_in_database>& scheduling_cars, Car& t
 	}
 
 	vector<reference_wrapper<Car_in_database>> sorted_scheduling_cars_list;
-	for (Car_in_database& car : scheduling_cars) {
+	for (auto& car : scheduling_cars) {
 		sorted_scheduling_cars_list.push_back(car);
 	}
 
@@ -73,7 +73,7 @@ void Intersection::Roadrunner_P(vector<Car_in_database>& scheduling_cars, Car& t
 
 	for (uint8_t i = 0; i < 4 * LANE_NUM_PER_DIRECTION; i++) {
 		if (others_road_info[i] != nullptr) {
-			accumulate_car_len[i] = pre_accumulate_car_len_lane[i] - others_road_info[i]->avail_len + CAR_MAX_LEN + _HEADWAY + CCZ_ACC_LEN;
+			accumulate_car_len[i] = pre_accumulate_car_len_lane[i] - (*(others_road_info[i]))->avail_len + CAR_MAX_LEN + _HEADWAY + CCZ_ACC_LEN;
 		}
 	}
 
@@ -113,7 +113,7 @@ void Intersection::Roadrunner_P(vector<Car_in_database>& scheduling_cars, Car& t
 
 			accumulate_car_len[dst_lane_idx] += (car.length + _HEADWAY);
 			if (accumulate_car_len[dst_lane_idx] > 0) {
-				const vector<Car_Delay_Position_Record>& dst_car_delay_position = others_road_info[dst_lane_idx]->car_delay_position;
+				const vector<Car_Delay_Position_Record>& dst_car_delay_position = (*(others_road_info[dst_lane_idx]))->car_delay_position;
 
 				car.is_spillback = true;
 				cout << car.id << " size " << target_car.id << " " << (int)car.dst_lane << "  ; " << get<0>(id) << "," << get<1>(id) << " " << others_road_info[dst_lane_idx] << "  " << (int)dst_car_delay_position.size() << endl;
@@ -144,7 +144,7 @@ void Intersection::Roadrunner_P(vector<Car_in_database>& scheduling_cars, Car& t
 				if (other_lane_idx != dst_lane_idx) {
 					accumulate_car_len[other_lane_idx] += (car.length + _HEADWAY);
 					double spillback_delay_dst_lane_changed_to = 0;
-					const vector<Car_Delay_Position_Record>& dst_car_delay_position = others_road_info[other_lane_idx]->car_delay_position;
+					const vector<Car_Delay_Position_Record>& dst_car_delay_position = (*(others_road_info[other_lane_idx]))->car_delay_position;
 
 					if (accumulate_car_len[other_lane_idx] > 0) {
 						car.is_spillback = true;
@@ -247,8 +247,7 @@ void Intersection::Roadrunner_P(vector<Car_in_database>& scheduling_cars, Car& t
 	// part 4: set constrain (10) (Car on same lane, rear-end collision avoidance)
 	// (1) old car and new car
 	for (const Car_in_database& new_car : scheduling_cars) {
-		for (const pair<string, Car_in_database>& car_data : sched_cars) {
-			const Car_in_database& old_car = car_data.second;
+		for (const auto& [car_id, old_car] : *sched_cars) {
 			
 			double bound = old_car.length / old_car.speed_in_intersection + (old_car.OT + old_car.D);
 			bound += _HEADWAY / old_car.speed_in_intersection;
@@ -318,8 +317,7 @@ void Intersection::Roadrunner_P(vector<Car_in_database>& scheduling_cars, Car& t
 
 	// part 6: set constrain (12) (one new car and one old car in the intersection)
 	for (const Car_in_database& new_car : scheduling_cars) {
-		for (const pair<string, Car_in_database>& car_data : sched_cars) {
-			const Car_in_database& old_car = car_data.second;
+		for (const auto& [car_id, old_car] : *sched_cars) {
 
 			if (new_car.lane == old_car.lane) {
 				continue;

@@ -28,14 +28,14 @@ void read_load_adv_data();
 void read_inter_info_data();
 void read_inter_length_data();
 
-extern vector< map< Coord, Intersection > > _database;
-extern map<string, Car> _car_dict;
 
 extern shared_mutex _database_g_mutex;
 //extern unique_lock<shared_mutex> _database_wLock;
 //extern shared_lock<shared_mutex> _database_rLock;
 
 // Defined in MiniVnet.cpp
+extern vector< reference_wrapper<map< Coord, Intersection >> > _database;
+extern map<string, Car> _car_dict;
 
 void create_grid_network();
 void add_time_step();

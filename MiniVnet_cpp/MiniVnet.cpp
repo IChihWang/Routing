@@ -5,7 +5,7 @@
 #include <iostream>
 
 
-std::vector< std::map< std::tuple<int, int>, Intersection > > _database;
+vector< reference_wrapper<map< Coord, Intersection >> >  _database;
 map<string, Car> _car_dict;
 
 shared_mutex _database_g_mutex;
@@ -23,17 +23,19 @@ void create_grid_network() {
 }
 
 void add_time_step() {
-	map< Coord, Intersection > intersection_map;
+	map< Coord, Intersection >* intersection_map = new map< Coord, Intersection >;
 	for (int i = 1; i <= _grid_size; i++) {
 		for (int j = 1; j <= _grid_size; j++) {
 			Coord coordinate(i, j);
 			Intersection intersection(coordinate);
-			intersection_map[coordinate] = intersection;
+			(*intersection_map)[coordinate] = intersection;
 		}
 	}
-	connect_intersections(intersection_map);
+	_database.push_back(*intersection_map);
 
-	_database.push_back(intersection_map);
+	// Connect the intersections
+	map< Coord, Intersection >& map_in_database = _database.back();
+	connect_intersections(map_in_database);
 }
 
 void connect_intersections(map< Coord, Intersection >& intersection_map) {
@@ -53,14 +55,13 @@ void connect_intersections(map< Coord, Intersection >& intersection_map) {
 }
 
 void move_a_time_step() {
-	
-	if (int(_database.size()) <= _routing_period_num) {
-		_database.clear();
-	}
-	else {
-		cout << "    " << int(_database.size()) << "  a|  " << (int)_routing_period_num << endl;
-		_database.erase(_database.begin(), _database.begin()+_routing_period_num);
-		cout << "    " << int(_database.size()) << "  b|  " << (int)_routing_period_num << endl;
+	for (uint16_t i = 0; i < _routing_period_num; i++) {
+		map< Coord, Intersection >& intersection_map = _database[0];
+		for (auto& [intersection_id, intersection] : intersection_map) {
+			intersection.my_own_destructure();
+		}
+		delete &(intersection_map);
+		_database.erase(_database.begin());
 	}
 }
 
@@ -68,9 +69,10 @@ Intersection& get_intersection(const int current_arrival_time, const Coord &inte
 	while (current_arrival_time >= int(_database.size())) {
 		add_time_step();
 	}
-	_database[current_arrival_time];
-	cout << _database[current_arrival_time][intersection_id].AZ_accumulated_size << endl;
-	Intersection& intersection = _database[current_arrival_time][intersection_id];
+
+	//cout << _database[current_arrival_time][intersection_id].AZ_accumulated_size << endl;
+	map< Coord, Intersection >& intersection_map = _database[current_arrival_time];
+	Intersection& intersection = intersection_map[intersection_id];
 	return intersection;
 }
 
@@ -135,15 +137,17 @@ vector<vector<reference_wrapper<Car>>> choose_car_to_thread_group(vector<string>
 }
 
 void delete_car_from_database(Car &car) {
-
-	for (tuple<string, reference_wrapper<Intersection>>&record : car.records_intersection_in_database) {
-		string &type = get<0>(record);
-		Intersection &intersection = get<1>(record);
-
-		intersection.delete_car_from_intersection(car, type);
+	vector<tuple<Intersection*, string>> record_to_delete;
+	for (const pair<Intersection*, string>& record : car.records_intersection_in_database) {
+		record_to_delete.push_back(tuple<Intersection*, string>(record.first, record.second));
 	}
 
-	car.records_intersection_in_database.clear();
+	for (const tuple<Intersection*, string>& record : record_to_delete) {
+		const string &type = get<1>(record);
+		Intersection* intersection = get<0>(record);
+
+		intersection->delete_car_from_intersection(car, type);
+	}
 }
 
 void delete_car_from_database_id(string car_id) {
@@ -243,6 +247,7 @@ map<string, vector<Node_in_Path>> routing(const vector<reference_wrapper<Car>>& 
 				car.lane = intersection_dir * LANE_NUM_PER_DIRECTION;
 				car.current_turn = turning;
 				car.lane = intersection.advise_lane(car);
+				cout << car.id << " advised with lane: " << (int)car.lane << " with " << intersection_dir * LANE_NUM_PER_DIRECTION << endl;
 				car.position = position_at_offset;
 				car.update_dst_lane_and_data();
 
@@ -253,7 +258,10 @@ map<string, vector<Node_in_Path>> routing(const vector<reference_wrapper<Car>>& 
 					// ###############################
 					car.position = position_at_offset;
 					Car_in_database record_car_advising = car;
-					recordings.push_back( Car_in_Node_Record(time_in_GZ, intersection_id, "lane_advising", record_car_advising) );
+					Car_in_Node_Record tmp_record(time_in_GZ, intersection_id, "lane_advising", record_car_advising);
+					cout << "????? " << tmp_record.car_in_database.id << endl;
+					recordings.push_back(tmp_record);
+					cout << "??? " << recordings.back().car_in_database.id << endl;
 					// ###############################
 
 					time_in_GZ += 1;
@@ -270,7 +278,10 @@ map<string, vector<Node_in_Path>> routing(const vector<reference_wrapper<Car>>& 
 					// ###############################
 					car.position = position_at_offset;
 					Car_in_database record_car_advising = car;
-					recordings.push_back(Car_in_Node_Record(time_in_GZ, intersection_id, "lane_advising", record_car_advising));
+					Car_in_Node_Record tmp_record(time_in_GZ, intersection_id, "lane_advising", record_car_advising);
+					cout << "????? " << tmp_record.car_in_database.id << endl;
+					recordings.push_back(tmp_record);
+					cout << "??? " << recordings.back().car_in_database.id << endl;
 					// ###############################
 
 					time_in_GZ += 1;
@@ -288,7 +299,10 @@ map<string, vector<Node_in_Path>> routing(const vector<reference_wrapper<Car>>& 
 					// Record the path for final path retrieval
 					// ###############################
 					Car_in_database record_car_advising = car;
-					recordings.push_back(Car_in_Node_Record(time_in_GZ, intersection_id, "lane_advising", record_car_advising));
+					Car_in_Node_Record tmp_record(time_in_GZ, intersection_id, "lane_advising", record_car_advising);
+					cout << "????? " << tmp_record.car_in_database.id << endl;
+					recordings.push_back(tmp_record);
+					cout << "??? " << recordings.back().car_in_database.id << endl;
 					// ###############################
 
 					time_in_GZ += 1;
@@ -304,7 +318,10 @@ map<string, vector<Node_in_Path>> routing(const vector<reference_wrapper<Car>>& 
 				// Record the path for final path retrieval
 				// ###############################
 				Car_in_database record_car_scheduling = car;
-				recordings.push_back(Car_in_Node_Record(time_in_GZ, intersection_id, "scheduling", record_car_scheduling));
+				Car_in_Node_Record tmp_record(time_in_GZ, intersection_id, "scheduling", record_car_scheduling);
+				cout << "????? " << tmp_record.car_in_database.id << endl;
+				recordings.push_back(tmp_record);
+				cout << "??? " << recordings.back().car_in_database.id << endl;
 				// ###############################
 
 				uint16_t next_time_step = time_in_GZ + int(car_exiting_time / _schedule_period);
@@ -448,14 +465,14 @@ void add_car_to_database(Car& target_car, const vector<Node_in_Path>& path_list)
 		Intersection& intersection = get_intersection(time, intersection_id);
 
 		if (state.compare("lane_advising")) {
-			intersection.add_advising_car(car);
-			tuple<string, reference_wrapper<Intersection>> to_save_tuple("lane_advising", intersection);
-			target_car.records_intersection_in_database.push_back(to_save_tuple);
+			intersection.add_advising_car(car, target_car);
+			Node_in_Car to_save_key(time, intersection_id);
+			target_car.records_intersection_in_database[&intersection] = "lane_advising";
 		}
 		else if (state.compare("lane_advising")) {
-			intersection.add_scheduling_cars(car);
-			tuple<string, reference_wrapper<Intersection>> to_save_tuple("scheduling", intersection);
-			target_car.records_intersection_in_database.push_back(to_save_tuple);
+			intersection.add_scheduling_cars(car, target_car);
+			Node_in_Car to_save_key(time, intersection_id);
+			target_car.records_intersection_in_database[&intersection] = "scheduling";
 		}
 
 		// See if the record change to next intersection: add scheduled cars
@@ -468,9 +485,9 @@ void add_car_to_database(Car& target_car, const vector<Node_in_Path>& path_list)
 
 				if (saving_car.OT + saving_car.D > 0) {
 					Intersection& intersection_to_save = get_intersection(time_idx, intersection_id);
-					intersection_to_save.add_sched_car(saving_car);
-					tuple<string, reference_wrapper<Intersection>> to_save_tuple("scheduled", intersection_to_save);
-					target_car.records_intersection_in_database.push_back(to_save_tuple);
+					intersection_to_save.add_sched_car(saving_car, target_car);
+					Node_in_Car to_save_key(time_idx, intersection_id);
+					target_car.records_intersection_in_database[&intersection_to_save] = "scheduled";
 				}
 			}
 		}
@@ -488,9 +505,9 @@ void add_car_to_database(Car& target_car, const vector<Node_in_Path>& path_list)
 
 		if (saving_car.OT + saving_car.D > 0) {
 			Intersection& intersection_to_save = get_intersection(time_idx, intersection_id);
-			intersection_to_save.add_sched_car(saving_car);
-			tuple<string, reference_wrapper<Intersection>> to_save_tuple("scheduled", intersection_to_save);
-			target_car.records_intersection_in_database.push_back(to_save_tuple);
+			intersection_to_save.add_sched_car(saving_car, target_car);
+			Node_in_Car to_save_key(time_idx, intersection_id);
+			target_car.records_intersection_in_database[&intersection_to_save] = "scheduled";
 		}
 	}
 

@@ -144,18 +144,15 @@ uint8_t Lane_Adviser::advise_lane(const Car& car, const bool spillback_lane_advi
 }
 
 void Lane_Adviser::update_Table_from_cars(const map<string, Car_in_database>& advising_car, const map<string, Car_in_database>& scheduling_cars, const map<string, Car_in_database>& sched_cars) {
-	for (pair<string, Car_in_database> const& data_pair : sched_cars) {
-		const Car_in_database &car = data_pair.second;
+	for (const auto& [car_id, car] : sched_cars) {
 		update_Table(car, car.OT+car.D);
 	}
-	for (pair<string, Car_in_database> const& data_pair : scheduling_cars) {
-		const Car_in_database& car = data_pair.second;
+	for (const auto& [car_id, car] : scheduling_cars) {
 		update_Table(car, car.position/_V_MAX);
 
 		count_advised_not_secheduled_car_num[Trajectory_ID(car.lane, car.current_turn)] += 1;
 	}
-	for (pair<string, Car_in_database> const& data_pair : advising_car) {
-		const Car_in_database& car = data_pair.second;
+	for (const auto& [car_id, car] : advising_car) {
 		update_Table(car, car.position / _V_MAX);
 
 		count_advised_not_secheduled_car_num[Trajectory_ID(car.lane, car.current_turn)] += 1;

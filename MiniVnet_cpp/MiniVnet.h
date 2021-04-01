@@ -18,7 +18,7 @@ public:
 		string in_car_state, Car_in_database in_car_in_database) :
 		time_stamp(in_time_stamp), last_intersection_id(in_last_intersection_id),
 		car_state(car_state), car_in_database(car_in_database) {}
-
+	~Car_in_Node_Record() {}
 };
 // Record info of each node during routing
 typedef tuple<Coord, uint8_t> Node_ID;
@@ -56,5 +56,14 @@ public:
 	Node_in_Path() {}
 	Node_in_Path(char in_turning, vector<Car_in_Node_Record> in_recordings, uint16_t in_time)
 		: turning(in_turning), recordings(in_recordings), time(in_time) {}
+	~Node_in_Path() {}
 };
 
+class Node_in_Car {
+public:
+	uint16_t arrival_time = 0;
+	Coord intersection_id;
+
+	Node_in_Car() {}
+	Node_in_Car(uint16_t arrival_time, Coord intersection_id) : arrival_time(arrival_time), intersection_id(intersection_id) {}
+};

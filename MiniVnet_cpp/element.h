@@ -42,30 +42,35 @@ public:
 	int32_t GZ_accumulated_size = 0;
 
 	// Stored cars
-	map<string, Car_in_database> sched_cars;
-	map<string, Car_in_database> scheduling_cars;
-	map<string, Car_in_database> advising_car;
+	map<string, Car_in_database>* sched_cars;
+	map<string, Car_in_database>* scheduling_cars;
+	map<string, Car_in_database>* advising_car;
+
+	map<string, Car*> stored_cars;
 
 	// Spillback info
-	Road_Info my_road_info[4 * LANE_NUM_PER_DIRECTION];
-	Road_Info* others_road_info[4 * LANE_NUM_PER_DIRECTION];
+	Road_Info* my_road_info[4 * LANE_NUM_PER_DIRECTION];
+	Road_Info** others_road_info[4 * LANE_NUM_PER_DIRECTION];
 
 	Intersection();
 	Intersection(const Coord& in_coordinate);
+	~Intersection();		// Don't use!
+	void my_own_destructure();	// Build this because "vector" copy/reallocate memory and call ~Intersection
 	void connect(const uint8_t& my_direction, Intersection& target_intersection, const uint8_t& its_direction);
 	uint8_t advise_lane(const Car& car);
 	tuple<bool, double> is_GZ_full(const Car& car, const double& position_at_offset);
 	double scheduling(Car& car);
 
 	// Thread Critical
-	void add_sched_car(const Car_in_database& car);
-	void add_scheduling_cars(const Car_in_database& car);
-	void add_advising_car(const Car_in_database& car);
-	void delete_car_from_intersection(const Car& car, const string& type);
+	void add_sched_car(Car_in_database car, Car& target_car);
+	void add_scheduling_cars(Car_in_database car, Car& target_car);
+	void add_advising_car(Car_in_database car, Car& target_car);
+	void delete_car_from_intersection(Car& car, const string& type);
 	void update_my_spillback_info(const Car_in_database& car);
 
 private:
 	void Roadrunner_P(vector<Car_in_database>& copied_scheduling_cars, Car& target_car);
+	void delete_myself_from_car_record(Car& car);
 };
 
 class Car_in_database {
@@ -87,18 +92,19 @@ public:
 	bool is_spillback = false;
 	bool is_spillback_strict = false;
 
-
 	Car_in_database() {};
 	Car_in_database(const string in_id, const uint8_t in_length);
+	~Car_in_database() {};
 
 	void update_dst_lane_and_data();
 };
 
 class Node_in_Path;
+class Node_in_Car;
 class Car : public Car_in_database {
 public:
 	Coord dst_coord;
-	vector< tuple<string, reference_wrapper<Intersection>> > records_intersection_in_database;
+	map<Intersection*, string> records_intersection_in_database;
 	
 	// temporary variables for routing
 	Coord src_coord;
