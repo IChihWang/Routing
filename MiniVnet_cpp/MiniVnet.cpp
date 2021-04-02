@@ -5,7 +5,7 @@
 #include <iostream>
 
 
-vector< reference_wrapper<map< Coord, Intersection >> >  _database;
+vector < map< Coord, Intersection* >* > _database;
 map<string, Car> _car_dict;
 
 shared_mutex _database_g_mutex;
@@ -23,46 +23,45 @@ void create_grid_network() {
 }
 
 void add_time_step() {
-	map< Coord, Intersection >* intersection_map = new map< Coord, Intersection >;
+	map< Coord, Intersection* >* intersection_map = new map< Coord, Intersection* >;
 	for (int i = 1; i <= _grid_size; i++) {
 		for (int j = 1; j <= _grid_size; j++) {
 			Coord coordinate(i, j);
-			Intersection intersection(coordinate);
+			Intersection* intersection = new Intersection(coordinate);
 			(*intersection_map)[coordinate] = intersection;
-			cout << "create  " << &((*intersection_map)[coordinate]) << endl;
 		}
 	}
-	_database.push_back(*intersection_map);
+	_database.push_back(intersection_map);
 
 	// Connect the intersections
-	map< Coord, Intersection >& map_in_database = _database.back();
-	connect_intersections(map_in_database);
+	map< Coord, Intersection* >* map_in_database = _database.back();
+	connect_intersections(*map_in_database);
 }
 
-void connect_intersections(map< Coord, Intersection >& intersection_map) {
+void connect_intersections(map< Coord, Intersection* >& intersection_map) {
 	for (int i = 1; i <= _grid_size; i++) {
 		for (int j = 1; j <= _grid_size; j++) {
 			Coord coordinate(i, j);
 			if (i <= _grid_size - 1) {
 				Coord target_coordinate(i + 1, j);
-				intersection_map[coordinate].connect(1, intersection_map[target_coordinate], 3);
+				(*(intersection_map[coordinate])).connect(1, (*(intersection_map[target_coordinate])), 3);
 			}
 			if (j <= _grid_size - 1) {
 				Coord target_coordinate(i, j + 1);
-				intersection_map[coordinate].connect(2, intersection_map[target_coordinate], 0);
+				(*(intersection_map[coordinate])).connect(2, (*(intersection_map[target_coordinate])), 0);
 			}
 		}
 	}
 }
 
 void move_a_time_step() {
-	cout << (int)_routing_period_num << "  ;  " << (int)_database.size() << endl;
 	for (uint16_t i = 0; i < _routing_period_num; i++) {
-		map< Coord, Intersection >& intersection_map = _database[0];
-		for (auto& [intersection_id, intersection] : intersection_map) {
-			intersection.my_own_destructure();
+		map< Coord, Intersection* >* intersection_map = _database[0];
+		for (auto& [intersection_id, intersection_ptr] : (*intersection_map)) {
+			intersection_ptr->my_own_destructure();
+			delete intersection_ptr;
 		}
-		delete &(intersection_map);
+		delete intersection_map;
 		_database.erase(_database.begin());
 	}
 }
@@ -72,9 +71,9 @@ Intersection& get_intersection(const int current_arrival_time, const Coord &inte
 		add_time_step();
 	}
 
-	map< Coord, Intersection >& intersection_map = _database[current_arrival_time];
-	Intersection& intersection = intersection_map[intersection_id];
-	return intersection;
+	map< Coord, Intersection* >* intersection_map = _database[current_arrival_time];
+	Intersection* intersection = (*intersection_map)[intersection_id];
+	return *intersection;
 }
 
 Car_in_Node_Record::Car_in_Node_Record(const Car_in_Node_Record& target_car) {
@@ -145,6 +144,7 @@ vector<vector<reference_wrapper<Car>>> choose_car_to_thread_group(vector<string>
 }
 
 void delete_car_from_database(Car &car) {
+
 	vector<tuple<Intersection*, string>> record_to_delete;
 	for (const pair<Intersection*, string>& record : car.records_intersection_in_database) {
 		record_to_delete.push_back(tuple<Intersection*, string>(record.first, record.second));
@@ -153,7 +153,6 @@ void delete_car_from_database(Car &car) {
 	for (const tuple<Intersection*, string>& record : record_to_delete) {
 		const string& type = get<1>(record);
 		Intersection* intersection = get<0>(record);
-
 		intersection->delete_car_from_intersection(car, type);
 	}
 }
@@ -273,8 +272,8 @@ map<string, vector<Node_in_Path>> routing(const vector<reference_wrapper<Car>>& 
 					position_at_offset -= (double(_schedule_period) * _V_MAX);
 				}
 
-				Intersection& intersection_GZ = get_intersection(time_in_GZ, intersection_id);
-				tuple<bool, double>result = intersection_GZ.is_GZ_full(car, position_at_offset);
+				Intersection* intersection_GZ_ptr = &(get_intersection(time_in_GZ, intersection_id));
+				tuple<bool, double>result = intersection_GZ_ptr->is_GZ_full(car, position_at_offset);
 				position_at_offset = get<1>(result);
 				while (get<0>(result) == false) {
 					// The intersection is full
@@ -288,13 +287,13 @@ map<string, vector<Node_in_Path>> routing(const vector<reference_wrapper<Car>>& 
 					// ###############################
 
 					time_in_GZ += 1;
-					intersection_GZ = get_intersection(time_in_GZ, intersection_id);
-					result = intersection_GZ.is_GZ_full(car, position_at_offset);
+					intersection_GZ_ptr = &(get_intersection(time_in_GZ, intersection_id));
+					result = intersection_GZ_ptr->is_GZ_full(car, position_at_offset);
 					position_at_offset = get<1>(result);
 				}
 
 				car.position = position_at_offset;
-				double car_exiting_time = intersection_GZ.scheduling(car);
+				double car_exiting_time = intersection_GZ_ptr->scheduling(car);
 
 				while (car_exiting_time == SCHEDULE_POSPONDED || get<0>(result) == false) {
 					// The scheduling is prosponed due to spillback
@@ -307,7 +306,7 @@ map<string, vector<Node_in_Path>> routing(const vector<reference_wrapper<Car>>& 
 					// ###############################
 
 					time_in_GZ += 1;
-					intersection_GZ = get_intersection(time_in_GZ, intersection_id);
+					Intersection& intersection_GZ = get_intersection(time_in_GZ, intersection_id);
 					result = intersection_GZ.is_GZ_full(car, position_at_offset);
 
 					if (get<0>(result) == true) {

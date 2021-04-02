@@ -34,12 +34,12 @@ extern shared_mutex _database_g_mutex;
 //extern shared_lock<shared_mutex> _database_rLock;
 
 // Defined in MiniVnet.cpp
-extern vector< reference_wrapper<map< Coord, Intersection >> > _database;
+extern vector< map< Coord, Intersection* >* > _database;
 extern map<string, Car> _car_dict;
 
 void create_grid_network();
 void add_time_step();
-void connect_intersections(map< Coord, Intersection >& intersection_map);
+void connect_intersections(map< Coord, Intersection* >& intersection_map);
 void move_a_time_step();
 void update_car(const string& car_id, const uint8_t& car_length, const string& src_intersection_id,
 	const uint8_t& direction_of_src_intersection, const uint16_t& time_offset_step,

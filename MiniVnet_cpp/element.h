@@ -41,6 +41,8 @@ public:
 	int32_t AZ_accumulated_size = 0;
 	int32_t GZ_accumulated_size = 0;
 
+	int debug_tag;
+
 	// Stored cars
 	map<string, Car_in_database>* sched_cars;
 	map<string, Car_in_database>* scheduling_cars;

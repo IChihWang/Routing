@@ -49,7 +49,7 @@ void Intersection::Roadrunner_P(vector<Car_in_database>& scheduling_cars, Car& t
 	uint16_t pre_accumulate_car_len_lane[4 * LANE_NUM_PER_DIRECTION] = {};
 
 	// Compute accumulated car len
-	map<string, Car_in_database>& my_sched_cars = (*sched_cars);
+	const map<string, Car_in_database>& my_sched_cars = (*sched_cars);
 	for (const auto& [car_id, old_car] : my_sched_cars) {
 		uint8_t lane_base_idx = old_car.dst_lane / LANE_NUM_PER_DIRECTION * LANE_NUM_PER_DIRECTION;
 

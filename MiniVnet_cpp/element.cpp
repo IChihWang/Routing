@@ -4,11 +4,12 @@
 
 using namespace std;
 
+
 Intersection::Intersection() : others_road_info() {
 	sched_cars = new map<string, Car_in_database>;
 	scheduling_cars = new map<string, Car_in_database>;
 	advising_car = new map<string, Car_in_database>;
-
+	
 	stored_cars = new map<string, Car*>;
 
 	for (uint8_t i = 0; i < 4 * LANE_NUM_PER_DIRECTION; i++) {
@@ -16,6 +17,7 @@ Intersection::Intersection() : others_road_info() {
 	}
 }
 Intersection::Intersection(const Coord &in_coordinate) : others_road_info() {
+
 	sched_cars = new map<string, Car_in_database>;
 	scheduling_cars = new map<string, Car_in_database>;
 	advising_car = new map<string, Car_in_database>;
@@ -28,6 +30,7 @@ Intersection::Intersection(const Coord &in_coordinate) : others_road_info() {
 
 	id = in_coordinate;
 }
+
 Intersection::Intersection(const Intersection& in_intersection) {
 	id = in_intersection.id;
 	AZ_accumulated_size = in_intersection.AZ_accumulated_size;
@@ -50,15 +53,10 @@ Intersection::~Intersection() {
 }
 
 void Intersection::my_own_destructure() {
+
 	for (const pair<string, Car*>& car_data : *stored_cars) {
 		Car* car_ptr = car_data.second;
 		delete_myself_from_car_record(*car_ptr);
-	}
-	cout << "Delete intersection: " << this << "  " << sched_cars->size() << endl;
-	if (sched_cars->size() > 0) {
-		for (const auto& [car_id, car] : *sched_cars) {
-			cout << car.id << endl;
-		}
 	}
 
 
@@ -66,6 +64,7 @@ void Intersection::my_own_destructure() {
 	delete advising_car;
 	delete scheduling_cars;
 	delete stored_cars;
+
 	for (uint8_t i = 0; i < 4 * LANE_NUM_PER_DIRECTION; i++) {
 		delete my_road_info[i];
 	}
@@ -86,6 +85,7 @@ void Intersection::connect(const uint8_t& my_direction, Intersection& target_int
 }
 
 void Intersection::delete_car_from_intersection(Car& car, const string& type) {
+
 	if (type.compare("lane_advising") == 0){
 		Car_in_database car_in_database = (*advising_car)[car.id];
 		advising_car->erase(car.id);
@@ -117,6 +117,7 @@ void Intersection::delete_myself_from_car_record(Car& car) {
 }
 
 void Intersection::update_my_spillback_info(const Car_in_database& car) {
+
 	const uint8_t& lane_idx = car.lane;
 	(my_road_info[lane_idx])->avail_len = _TOTAL_LEN - (GZ_accumulated_size + AZ_accumulated_size + _HEADWAY);
 
@@ -139,7 +140,6 @@ void Intersection::update_my_spillback_info(const Car_in_database& car) {
 	}
 
 	(my_road_info[lane_idx])->car_delay_position = car_delay_position;
-
 }
 
 uint8_t Intersection::advise_lane(const Car& car) {
@@ -192,7 +192,9 @@ uint8_t Intersection::advise_lane(const Car& car) {
 	return advised_lane;
 }
 
+
 tuple<bool, double> Intersection::is_GZ_full(const Car& car, const double& position_at_offset) {
+
 	// Tell if the intersection is fulland the car have to wait
 	if (GZ_accumulated_size > _GZ_BZ_CCZ_len) {
 		return tuple<bool, double>(false, position_at_offset);
@@ -205,6 +207,7 @@ tuple<bool, double> Intersection::is_GZ_full(const Car& car, const double& posit
 	}
 }
 void Intersection::add_sched_car(Car_in_database car, Car& target_car) {
+
 	(*sched_cars)[car.id] = car;
 	(*stored_cars)[car.id] = &target_car;
 	GZ_accumulated_size += (car.length + _HEADWAY);
@@ -215,13 +218,14 @@ void Intersection::add_scheduling_cars(Car_in_database car, Car& target_car) {
 	(*stored_cars)[car.id] = &target_car;
 	GZ_accumulated_size += (car.length + _HEADWAY);
 	update_my_spillback_info(car);
+
 }
 void Intersection::add_advising_car(Car_in_database car, Car& target_car) {
 	(*advising_car)[car.id] = car;
-	cout << "  ??   " << (*advising_car)[car.id].id << endl;
 	(*stored_cars)[car.id] = &target_car;
 	AZ_accumulated_size += (car.length + _HEADWAY);
 	update_my_spillback_info(car);
+
 }
 
 

@@ -1,7 +1,9 @@
+
 #include "server.h"
 #include "global.h"
 
-
+#include <chrono>
+using namespace std::chrono;
 
 uint8_t _thread_num = 2;
 map<string, map<string, double> > inter_info;
@@ -13,15 +15,14 @@ vector<thread> _thread_pool;
 
 
 int main(int argc, char const* argv[]) {
-	testQ();
 	read_load_adv_data();
 	read_inter_info_data();
 	read_inter_length_data();
+	cout << "Done initialization, waiting for sumo..." << endl;
 
 	SOCKET new_socket = initial_server_handler();
 	create_grid_network();
 	//init_thread_pool();
-
 
 	// Receiving requests/sending replies
 	while (true) {
@@ -112,7 +113,12 @@ string handle_request(string &in_str) {
 		vector<vector<reference_wrapper<Car>>> route_groups;
 		route_groups = choose_car_to_thread_group(new_car_ids, old_car_ids);
 
+		auto begin = high_resolution_clock::now();
 		routing_with_groups(route_groups, routes_dict);
+		auto end = high_resolution_clock::now();
+
+		auto route_time = duration<double>(end - begin);
+		cout << "Route_time: " << route_time.count() << " seconds" << endl;
 
 		// Updated during routing, so no need to update database here
 		// router.update_database_after_routing(route_groups)
