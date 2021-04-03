@@ -6,6 +6,8 @@
 #include <vector>
 #include <queue>
 #include <string>
+#include <mutex>
+#include <shared_mutex>
 #include "globalConst.h"
 using namespace std;
 
@@ -54,26 +56,32 @@ public:
 	Road_Info* my_road_info[4 * LANE_NUM_PER_DIRECTION];
 	Road_Info** others_road_info[4 * LANE_NUM_PER_DIRECTION];
 
+	// Thread safe parameters
+	shared_mutex rwlock_mutex;
+
 	Intersection();
 	Intersection(const Coord& in_coordinate);
 	Intersection(const Intersection& in_intersection);
 	~Intersection();		// Don't use!
 	void my_own_destructure();	// Build this because "vector" copy/reallocate memory and call ~Intersection
 	void connect(const uint8_t& my_direction, Intersection& target_intersection, const uint8_t& its_direction);
+
+	// Thread Critical
+	// read lock:
 	uint8_t advise_lane(const Car& car);
 	tuple<bool, double> is_GZ_full(const Car& car, const double& position_at_offset);
 	double scheduling(Car& car);
 
-	// Thread Critical
+	// write lock:
 	void add_sched_car(Car_in_database car, Car& target_car);
 	void add_scheduling_cars(Car_in_database car, Car& target_car);
 	void add_advising_car(Car_in_database car, Car& target_car);
 	void delete_car_from_intersection(Car& car, const string& type);
-	void update_my_spillback_info(const Car_in_database& car);
 
 private:
 	void Roadrunner_P(vector<Car_in_database>& copied_scheduling_cars, Car& target_car);
 	void delete_myself_from_car_record(Car& car);
+	void update_my_spillback_info(const Car_in_database& car);
 };
 
 class Car_in_database {

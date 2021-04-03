@@ -27,8 +27,10 @@ int main(int argc, char const* argv[]) {
 	cout << "Done initialization, waiting for sumo..." << endl;
 
 	SOCKET new_socket = initial_server_handler();
+
+	// Initializations done after getting infos from SUMO
 	create_grid_network();
-	//init_thread_pool();
+	init_thread_pool();
 
 	// Receiving requests/sending replies
 	while (true) {
@@ -58,6 +60,8 @@ int main(int argc, char const* argv[]) {
 			return 0;
 		}
 	}
+
+	terminate_thread_pool();
 
 	return 0;
 }
@@ -120,7 +124,8 @@ string handle_request(string &in_str) {
 		route_groups = choose_car_to_thread_group(new_car_ids, old_car_ids);
 
 		auto begin = high_resolution_clock::now();
-		routing_with_groups(route_groups, routes_dict);
+		// routing_with_groups(route_groups, routes_dict);
+		routing_with_groups_thread(route_groups, routes_dict);
 		auto end = high_resolution_clock::now();
 
 		auto route_time = duration<double>(end - begin);

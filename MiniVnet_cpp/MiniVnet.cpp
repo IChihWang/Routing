@@ -8,10 +8,6 @@
 vector < map< Coord, Intersection* >* > _database;
 map<string, Car> _car_dict;
 
-shared_mutex _database_g_mutex;
-//unique_lock<shared_mutex> _database_wLock(_database_g_mutex);
-//shared_lock<shared_mutex> _database_rLock(_database_g_mutex);
-
 
 
 /* Handling database */
@@ -121,6 +117,7 @@ void update_car(const string& car_id, const uint8_t& car_length, const string& s
 // Choose car for reroute (Called only by main thread)
 vector<vector<reference_wrapper<Car>>> choose_car_to_thread_group(vector<string>& new_car_ids, vector<string>& old_car_ids) {
 	vector<vector<reference_wrapper<Car>>> results;
+	// Important: a car shouldn't appear in two different groups at the same time!!!!!!!!!!!!
 
 	// Dummy allocation  TODO: change
 	for (int i = 0; i < _thread_num; i++) {
@@ -164,7 +161,6 @@ void delete_car_from_database_id(string car_id) {
 }
 
 map<string, string>& routing_with_groups(const vector<vector<reference_wrapper<Car>>>& route_groups, map<string, string>& routes_dict) {
-	// TODO: threading
 	for (const vector<reference_wrapper<Car>> &route_group : route_groups) {
 		map<string, vector<Node_in_Path>> result = routing(route_group);
 

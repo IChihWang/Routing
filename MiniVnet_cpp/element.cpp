@@ -85,6 +85,7 @@ void Intersection::connect(const uint8_t& my_direction, Intersection& target_int
 }
 
 void Intersection::delete_car_from_intersection(Car& car, const string& type) {
+	lock_guard<shared_mutex> wLock(rwlock_mutex);
 
 	if (type.compare("lane_advising") == 0){
 		Car_in_database car_in_database = (*advising_car)[car.id];
@@ -143,6 +144,7 @@ void Intersection::update_my_spillback_info(const Car_in_database& car) {
 }
 
 uint8_t Intersection::advise_lane(const Car& car) {
+	shared_lock<shared_mutex> rLock(rwlock_mutex);
 	Lane_Adviser lane_adviser;
 
 	// Update advising table with existing cars
@@ -194,6 +196,7 @@ uint8_t Intersection::advise_lane(const Car& car) {
 
 
 tuple<bool, double> Intersection::is_GZ_full(const Car& car, const double& position_at_offset) {
+	shared_lock<shared_mutex> rLock(rwlock_mutex);
 
 	// Tell if the intersection is fulland the car have to wait
 	if (GZ_accumulated_size > _GZ_BZ_CCZ_len) {
@@ -207,13 +210,14 @@ tuple<bool, double> Intersection::is_GZ_full(const Car& car, const double& posit
 	}
 }
 void Intersection::add_sched_car(Car_in_database car, Car& target_car) {
-
+	lock_guard<shared_mutex> wLock(rwlock_mutex);
 	(*sched_cars)[car.id] = car;
 	(*stored_cars)[car.id] = &target_car;
 	GZ_accumulated_size += (car.length + _HEADWAY);
 	update_my_spillback_info(car);
 }
 void Intersection::add_scheduling_cars(Car_in_database car, Car& target_car) {
+	lock_guard<shared_mutex> wLock(rwlock_mutex);
 	(*scheduling_cars)[car.id] = car;
 	(*stored_cars)[car.id] = &target_car;
 	GZ_accumulated_size += (car.length + _HEADWAY);
@@ -221,6 +225,7 @@ void Intersection::add_scheduling_cars(Car_in_database car, Car& target_car) {
 
 }
 void Intersection::add_advising_car(Car_in_database car, Car& target_car) {
+	lock_guard<shared_mutex> wLock(rwlock_mutex);
 	(*advising_car)[car.id] = car;
 	(*stored_cars)[car.id] = &target_car;
 	AZ_accumulated_size += (car.length + _HEADWAY);

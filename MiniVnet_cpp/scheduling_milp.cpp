@@ -5,6 +5,7 @@
 using namespace operations_research;
 
 double Intersection::scheduling(Car& target_car) {
+	shared_lock<shared_mutex> rLock(rwlock_mutex);
 
 	target_car.OT = (double)target_car.position / _V_MAX;
 	target_car.D = NOT_SCHEDULED;
