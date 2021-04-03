@@ -358,10 +358,6 @@ map<string, vector<Node_in_Path>> routing(const vector<reference_wrapper<Car>>& 
 	return route_record;
 }
 
-void routing_in_thread(vector<reference_wrapper<Car>>* route_group_ptr) {
-	routing(*route_group_ptr);
-}
-
 map<char, Node_ID> decide_available_turnings(Coord src_coord, uint8_t src_intersection_direction, Coord dst_coord, uint16_t additional_search_range) {
 	// additional_search_range : additional intersection number to be searched
 	// Value of the dict : id of next intersection, the direction of next intersection

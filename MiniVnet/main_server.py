@@ -36,6 +36,10 @@ update_lock = threading.Lock()
 # Initial the client
 HOST, PORT = "localhost", 9996
 
+route_result_python_name = 'result/route_result_python.csv'
+route_result_python =  open(route_result_python_name, 'w', newline='')
+route_result_python_writer = csv.writer(route_result_python, dialect='excel-tab', quoting=csv.QUOTE_MINIMAL, delimiter = ',')
+
 def initial_server_handler(HOST, PORT):
     server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_sock.bind((HOST, PORT))
@@ -194,6 +198,9 @@ def run_router(router, _iteration_num, _handler_process, _to_handler_queue, _fro
                 route_result_str += ","
                 route_result_str += path
                 route_result_str += ";"
+
+                route_result_python_writer.writerow([car_id, path])
+
             router.move_a_time_step()
 
             to_handler_queue.put(route_result_str)

@@ -2,7 +2,10 @@
 #include "server.h"
 #include "global.h"
 
-#include <chrono>
+#include <chrono>	// Measure runtime
+
+#include <fstream>
+using namespace std;
 using namespace std::chrono;
 
 uint8_t _thread_num = 2;
@@ -10,11 +13,14 @@ map<string, map<string, double> > inter_info;
 map<string, vector< map<char, uint8_t> >> lane_dict;
 map<string, double> inter_length_dict;
 
-vector < vector<reference_wrapper<Car>>*> _route_group_ptrs;
-vector<thread> _thread_pool;
+
+
+ofstream route_result_file;
 
 
 int main(int argc, char const* argv[]) {
+
+	route_result_file.open("result/route_result.csv");
 	read_load_adv_data();
 	read_inter_info_data();
 	read_inter_length_data();
@@ -124,6 +130,7 @@ string handle_request(string &in_str) {
 		// router.update_database_after_routing(route_groups)
 	}
 
+
 	// Finalize the results
 	string out_str = "";
 	for (const pair<string, string>& route_data : routes_dict) {
@@ -133,6 +140,7 @@ string handle_request(string &in_str) {
 		out_str += ',';
 		out_str += path;
 		out_str += ';';
+		route_result_file << car_id << ',' << path << endl;
 	}
 
 
@@ -141,12 +149,3 @@ string handle_request(string &in_str) {
 	return out_str;
 }
 
-
-void init_thread_pool() {
-	for (int i = 0; i < _thread_num; i++) {
-		vector<reference_wrapper<Car>>* route_group_ptr = nullptr;
-		_route_group_ptrs.push_back(route_group_ptr);
-		_thread_pool.push_back(thread(routing_in_thread, _route_group_ptrs[i]));
-		
-	}
-}
