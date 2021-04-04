@@ -3,6 +3,8 @@
 #include <sstream>
 #include <cstdlib>
 #include <iostream>
+#include <cassert>
+using namespace std;
 
 
 vector < map< Coord, Intersection* >* > _database;
@@ -62,8 +64,10 @@ void move_a_time_step() {
 	}
 }
 
+shared_mutex database_mutex;
 Intersection& get_intersection(const int current_arrival_time, const Coord &intersection_id) {
 	while (current_arrival_time >= int(_database.size())) {
+		lock_guard<shared_mutex> database_write_lock(database_mutex);
 		add_time_step();
 	}
 
@@ -338,7 +342,6 @@ map<string, vector<Node_in_Path>> routing(const vector<reference_wrapper<Car>>& 
 		}
 
 		// Retrieve the paths
-		
 		vector<Node_in_Path> path_list;
 		Node_Record node_data = nodes_arrival_time_data[dst_node];
 		while (node_data.is_src == false) {

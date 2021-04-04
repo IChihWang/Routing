@@ -22,7 +22,7 @@ using namespace std;
 // Defined in thread_worker.cpp
 class Thread_Worker;
 extern vector<Thread_Worker*> _thread_pool;
-void routing_in_thread(Thread_Worker* thread_worker);
+void routing_in_thread(Thread_Worker* thread_i);
 void init_thread_pool();
 void terminate_thread_pool();
 

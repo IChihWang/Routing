@@ -2,6 +2,7 @@
 
 #include <mutex>
 #include <condition_variable>
+#include <atomic>
 
 #include"global.h"
 
@@ -18,7 +19,7 @@ public:
 	map<string, string> routes_dict;
 	static mutex request_worker_mutex;
 	static condition_variable request_worker_condition_variable;
-	static bool request_worker_ready;	// Initialize with "false" in thread_worker.cpp
+	bool request_worker_ready = false;
 
 	thread* worker_ptr;
 
