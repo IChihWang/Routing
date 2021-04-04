@@ -205,7 +205,6 @@ def run_sumo(_handler_process, _to_handler_queue, _from_handler_queue, src_dst_d
 
                         car_info[car_id]["route_state"] = "OLD"
 
-
             # Update the position of each car
             for car_id in all_c:
 

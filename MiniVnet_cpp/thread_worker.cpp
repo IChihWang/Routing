@@ -79,17 +79,18 @@ map<string, string>& routing_with_groups_thread(const vector<vector<reference_wr
 		Thread_Worker::routing_done_condition_variable.wait(main_thread_lock, check_all_thread_done);
 	}
 
-	for (uint8_t thread_i = 0; thread_i < _thread_num; thread_i++) {
-		(*(_thread_pool[thread_i])).route_group_ptr = nullptr;
-		(*(_thread_pool[thread_i])).allow_main_continue = false;
-		(*(_thread_pool[thread_i])).routes_dict.clear();
-	}
-
 	// Get results (copy the results from threads to routes_dict)
 	for (const auto& worker_ptr: _thread_pool) {
 		for (const auto& [car_id, turning_str] : worker_ptr->routes_dict) {
 			routes_dict[car_id] = turning_str;
 		}
+	}
+
+	// Clean up the thread
+	for (uint8_t thread_i = 0; thread_i < _thread_num; thread_i++) {
+		(*(_thread_pool[thread_i])).route_group_ptr = nullptr;
+		(*(_thread_pool[thread_i])).allow_main_continue = false;
+		(*(_thread_pool[thread_i])).routes_dict.clear();
 	}
 
 	return routes_dict;
