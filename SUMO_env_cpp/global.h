@@ -1,0 +1,47 @@
+#pragma once
+#include "traci_lib/TraCIAPI.h"
+#include "thread_worker.h"
+using namespace std;
+
+#define V_MAX 11.18
+#define TURN_SPEED 10.0
+#define LANE_NUM_PER_DIRECTION 3
+#define SUMO_TIME_ERR 0
+
+#define AZ_LEN 75.0
+#define PZ_LEN 25.0
+#define GZ_LEN 25.0
+#define BZ_LEN 25.0
+#define CCZ_LEN 50.0
+#define TOTAL_LEN AZ_LEN+PZ_LEN+GZ_LEN+BZ_LEN+CCZ_LEN
+
+#define LANE_WIDTH 3.2
+#define HEADWAY 3
+#define CCZ_ACC_LEN 5.0
+#define CCZ_DEC2_LEN 2.5
+#define MAX_ACC (V_MAX*V_MAX)/(2*CCZ_ACC_LEN)
+#define CCZ_CATCHUP_MIN_SPEED 3
+
+#define CAR_MAX_LEN 15
+#define CAR_MIN_LEN 5
+#define CAR_AVG_LEN (CAR_MAX_LEN+CAR_MIN_LEN)/2
+#define DISTANCE 1.5
+
+#define SCHEDULING_PERIOD GZ_LEN/V_MAX
+#define ROUTING_PERIOD_NUM int((TOTAL_LEN/V_MAX/2) / SCHEDULING_PERIOD) - 1
+#define ROUTING_PERIOD ROUTING_PERIOD_NUM*SCHEDULING_PERIOD
+
+
+
+class SUMO_Traci : public TraCIAPI {
+public:
+    SUMO_Traci() {};
+    ~SUMO_Traci() {};
+};
+
+extern uint8_t _grid_size;
+extern uint16_t _N_TIME_STEP;
+extern float _TIME_STEP;
+
+// Claim in main.cpp
+extern SUMO_Traci traci;

@@ -18,3 +18,7 @@ MiniVnet_cpp/Debug/
 *.vcxproj
 *.filters
 MiniVnet_cpp/x64/
+*.lastbuildstate
+SUMO_env_cpp/Debug/
+SUMO_env_cpp/.vs/
+*.user

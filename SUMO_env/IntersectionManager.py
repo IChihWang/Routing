@@ -364,8 +364,9 @@ class IntersectionManager:
 
                 others_road_info = copy.deepcopy(self.others_road_info)
 
-                self.scheduling_thread = threading.Thread(target = Scheduling, args = (self.lane_advisor, sched_car, n_sched_car, advised_n_sched_car, self.cc_list, self.car_list, self.pedestrian_time_mark_list, self.schedule_period_count, others_road_info, self.spillback_delay_record))
-                self.scheduling_thread.start()
+                # self.scheduling_thread = threading.Thread(target = Scheduling, args = (self.lane_advisor, sched_car, n_sched_car, advised_n_sched_car, self.cc_list, self.car_list, self.pedestrian_time_mark_list, self.schedule_period_count, others_road_info, self.spillback_delay_record))
+                # self.scheduling_thread.start()
+                Scheduling(self.lane_advisor, sched_car, n_sched_car, advised_n_sched_car, self.cc_list, self.car_list, self.pedestrian_time_mark_list, self.schedule_period_count, others_road_info, self.spillback_delay_record)
 
 
                 self.schedule_period_count = 0
