@@ -1,4 +1,3 @@
-#pragma once
 
 #include <cstdlib>
 #include <iostream>
@@ -6,7 +5,6 @@
 #include <vector>
 #include <thread>
 
-#define WIN32
 #if defined WIN32
 #include <winsock.h>
 # pragma comment(lib,"ws2_32.lib") //Winsock Library

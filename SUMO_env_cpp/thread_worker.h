@@ -7,6 +7,9 @@
 
 using namespace std;
 
+class Thread_Worker;
+void call_routing_thread(Thread_Worker* thread_worker);
+
 class Thread_Worker {
 public:
 
