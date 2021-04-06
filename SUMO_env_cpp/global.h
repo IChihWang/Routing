@@ -58,3 +58,7 @@ extern float _TIME_STEP;
 
 // Claim in main.cpp
 extern SUMO_Traci traci;
+
+
+// Defined in server.cpp
+string get_string_from_double(double num, uint8_t percision);

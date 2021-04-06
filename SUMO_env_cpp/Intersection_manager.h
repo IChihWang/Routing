@@ -26,9 +26,18 @@ public:
 class Car_Info_In_Intersection {
 public:
 	bool is_skip_car = false;
+	double position_at_offset = 0;
+	uint16_t time_offset_step = 0;
+	string src_intersection_id = "";
+	uint8_t direction_of_src_intersection = 0;
+	uint8_t src_shift_num = 0;
 
 	Car_Info_In_Intersection(){}
 	Car_Info_In_Intersection(bool is_skip_car):is_skip_car(is_skip_car){}
+	Car_Info_In_Intersection(double position_at_offset, uint16_t time_offset_step, 
+		string src_intersection_id, uint8_t direction_of_src_intersection, uint8_t src_shift_num) :
+		is_skip_car(false), position_at_offset(position_at_offset), time_offset_step(time_offset_step), 
+		src_intersection_id(src_intersection_id), direction_of_src_intersection(direction_of_src_intersection), src_shift_num(src_shift_num) {}
 };
 
 class IntersectionManager {

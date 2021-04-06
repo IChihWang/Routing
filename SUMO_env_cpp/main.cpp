@@ -118,7 +118,8 @@ void run_sumo(Thread_Worker& router_thread) {
         }
     }
 
-    map<string, Car_Info> car_info_dict; // Record car states
+    map<string, Car_Info> car_info_dict;            // Record car states
+    vector<string> to_delete_car_in_database;     // Car exit the network
 
     // Start simulation
     while (traci.simulation.getMinExpectedNumber() > 0) {
@@ -139,45 +140,48 @@ void run_sumo(Thread_Worker& router_thread) {
         // Send route requests
         if (fmod(simu_step, ROUTING_PERIOD) < _TIME_STEP) {
             string server_send_str = "";
-            for (const auto& [car_id, car_info] : car_info_dict) {
+            for (auto& [car_id, car_info] : car_info_dict) {
                 IntersectionManager* intersection_manager_ptr = car_info.intersection_manager_ptr;
                 if (intersection_manager_ptr != nullptr) {
                     IntersectionManager& intersection_manager = *intersection_manager_ptr;
-                    car_data = intersection_manager.get_car_info_for_route(car_id);
-                        if car_data != None :
-                    position_at_offset = car_data[0]
-                        time_offset_step = car_data[1]
-                        src_intersection_id = car_data[2]
-                        direction_of_src_intersection = car_data[3]
-                        src_shift_num = car_data[4]
-                        car["src_shift_num"] = src_shift_num
+                    Car_Info_In_Intersection car_data = intersection_manager.get_car_info_for_route(car_id);
+                    if (car_data.is_skip_car == false) {
+                        double position_at_offset = car_data.position_at_offset;
+                        uint16_t time_offset_step = car_data.time_offset_step;
+                        string src_intersection_id = car_data.src_intersection_id;
+                        uint8_t direction_of_src_intersection = car_data.direction_of_src_intersection;
+                        uint8_t src_shift_num = car_data.src_shift_num;
+                        car_info.src_shift_num = src_shift_num;
 
-                        if src_intersection_id != car["dst_node_idx"]:
-                    server_send_str += car_id + ","
-                        server_send_str += car["route_state"] + ","
-                        server_send_str += str(car["car_length"]) + ","
-                        server_send_str += src_intersection_id + ","
-                        server_send_str += str(direction_of_src_intersection) + ","
-                        server_send_str += str(time_offset_step) + ","      # Step that the datacenter needs to take
-                        server_send_str += "{:.2f}".format(position_at_offset) + ","    # The position at the specific time
-                        server_send_str += car["dst_node_idx"] + ";"
-                        else:
-                    server_send_str += car_id + ","
-                        server_send_str += "LEAVING" + ";"
-                        else:
-                    server_send_str += car_id + ","
-                        server_send_str += "PAUSE" + ";"
-
+                        if (src_intersection_id.compare(car_info.dst_node_idx) != 0) {
+                            server_send_str += car_id + ",";
+                            server_send_str += car_info.route_state + ",";
+                            server_send_str += to_string(car_info.car_length) + ",";
+                            server_send_str += src_intersection_id + ",";
+                            server_send_str += to_string(direction_of_src_intersection) + ",";
+                            server_send_str += to_string(time_offset_step) + ",";               // Step that the datacenter needs to take
+                            server_send_str += get_string_from_double(position_at_offset, 2) + ",";       // The position at the specific time
+                            server_send_str += car_info.dst_node_idx + ";";
+                        }
+                        else {
+                            server_send_str += car_id + ",";
+                            server_send_str += string("LEAVING") + ";";
+                        }
+                    }
+                    else {
+                        server_send_str += car_id + ",";
+                        server_send_str += string("PAUSE") + ";";
+                    }
                 }
-                        for car_id in to_delete_car_in_database :
-                server_send_str += car_id + ","
-                    server_send_str += "EXIT" + ";"
-
-                    to_delete_car_in_database = []
-                    to_handler_queue.put(server_send_str)
-
-
             }
+
+            for (const auto& car_id : to_delete_car_in_database) {
+                server_send_str += car_id + ",";
+                server_send_str += string("EXIT") + ";";
+            }
+
+                to_delete_car_in_database = []
+                to_handler_queue.put(server_send_str)
         }
 
 

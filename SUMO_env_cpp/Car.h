@@ -59,5 +59,9 @@ private:
 
 class Car_Info {
 public:
-	IntersectionManager* intersection_manager_ptr;
+	IntersectionManager* intersection_manager_ptr = nullptr;
+	uint8_t src_shift_num = 0;
+	string dst_node_idx = "";
+	string route_state = "";
+	uint8_t car_length = 0;
 };

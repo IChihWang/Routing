@@ -129,19 +129,42 @@ Car_Info_In_Intersection IntersectionManager::get_car_info_for_route(const strin
 
 			string x = "";
 			string y = "";
+
+			stringstream ss;
+			ss << std::setw(3) << std::setfill('0') << get<0>(id);
+			x = ss.str();
+			ss.str("");
+			ss << std::setw(3) << std::setfill('0') << get<1>(id);
+			y = ss.str();
+
 			if (direction_of_src_intersection == 0) {
-				intersection_idx_list[1] = "%3.3o" % (int(intersection_idx_list[1]) + 1)
+				stringstream sss;
+				sss << std::setw(3) << std::setfill('0') << (get<1>(id) + 1);
+				y = sss.str();
 			}
-					elif direction_of_src_intersection == 1 :
-				intersection_idx_list[0] = "%3.3o" % (int(intersection_idx_list[0]) - 1)
-					elif direction_of_src_intersection == 2 :
-					intersection_idx_list[1] = "%3.3o" % (int(intersection_idx_list[1]) - 1)
-					elif direction_of_src_intersection == 3 :
-					intersection_idx_list[0] = "%3.3o" % (int(intersection_idx_list[0]) + 1)
+			else if (direction_of_src_intersection == 1) {
+				stringstream sss;
+				sss << std::setw(3) << std::setfill('0') << (get<0>(id) - 1);
+				x = sss.str();
+			}
+			else if (direction_of_src_intersection == 2) {
+				stringstream sss;
+				sss << std::setw(3) << std::setfill('0') << (get<1>(id) - 1);
+				y = sss.str();
+			}
+			else if (direction_of_src_intersection == 3) {
+				stringstream sss;
+				sss << std::setw(3) << std::setfill('0') << (get<0>(id) + 1);
+				x = sss.str();
+			}
 
-					src_intersection_id = intersection_idx_list[0] + "_" + intersection_idx_list[1]
+			src_intersection_id = x + "_" + y;
 		}
-
 	}
 
+	uint16_t time_offset_step = int(time_offset / SCHEDULING_PERIOD);
+	time_offset = double(time_offset_step + 1) * SCHEDULING_PERIOD - time_offset;
+	double position_at_offset = TOTAL_LEN - time_offset * V_MAX;
+
+	return Car_Info_In_Intersection(position_at_offset, time_offset_step, src_intersection_id, direction_of_src_intersection, src_shift_num);
 }
