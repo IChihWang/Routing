@@ -34,6 +34,17 @@ using namespace std;
 #define ROUTING_PERIOD ROUTING_PERIOD_NUM*SCHEDULING_PERIOD
 
 
+extern map<string, vector< map<char, uint8_t> >> lane_dict;
+extern map<string, double> inter_length_dict;
+extern map<string, map<string, double> > inter_info;
+
+class Car;
+
+void read_load_adv_data();
+void read_inter_info_data();
+void read_inter_length_data();
+tuple<double, double> get_Conflict_Region(Car car1, Car car2);
+double get_Intertime(uint8_t lane, char turn);
 
 class SUMO_Traci : public TraCIAPI {
 public:

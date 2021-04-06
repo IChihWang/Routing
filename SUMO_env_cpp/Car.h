@@ -28,6 +28,7 @@ public:
 
 
 	// Variables for Scheduling
+	bool is_scheduled = false;
 	double D = 0;
 	double OT = 0;
 	double Enter_T = 0;
@@ -53,5 +54,10 @@ public:
 	Car(string car_id, uint8_t length, uint8_t lane, char turn, char next_turn);
 
 private:
-	set_turning(char turn, char next_turn);
+	void set_turning(char turn, char next_turn);
+};
+
+class Car_Info {
+public:
+	IntersectionManager* intersection_manager_ptr;
 };

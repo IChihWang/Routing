@@ -2,7 +2,9 @@
 #include <sstream>
 #include <string>
 #include <fstream>
-#include "global.h"
+#include <cmath>
+#include "LaneAdviser.h"
+#include "Intersection_manager.h"
 #include "server.h"
 #include "json.hpp"
 
@@ -18,7 +20,7 @@ map<string, string> src_dst_dict;
 
 void initial_sumo();
 void read_src_dst_file(string src_dst_file_name);
-void run_sumo();
+void run_sumo(Thread_Worker& router_thread);
 
 int main(int argc, char* argv[])
 {
@@ -43,13 +45,17 @@ int main(int argc, char* argv[])
     initial_client_handler();
     initial_sumo();
 
+    read_load_adv_data();
+    read_inter_info_data();
+    read_inter_length_data();
+
     Thread_Worker router_thread;     // New thread to send/receive routing requests/results  (do this after initial_client_handler();)
 
     // Run sumo simulation (run_sumo in python version)
     traci.simulationStep(5);
 
     // SUMO simulation
-    run_sumo();
+    run_sumo(router_thread);
 
 
     // TODO: get result from router first before updating the str
@@ -84,9 +90,104 @@ void read_src_dst_file(string src_dst_file_name) {
     }
 }
 
-void run_sumo() {
-    uint64_t simu_step = 0;
+void run_sumo(Thread_Worker& router_thread) {
+    double simu_step = 0;
 
     // Create a list with intersection managers
+    map<Coord, IntersectionManager*> intersection_map;
+    for (uint16_t i = 1; i <= _grid_size; i++) {
+        for (uint16_t j = 1; j <= _grid_size; j++) {
+            Coord coordinate(i, j);
+            IntersectionManager* intersection = new IntersectionManager(coordinate);
+            intersection_map[coordinate] = intersection;
+        }
+    }
 
+    // Connect intersections for spillback prevention
+    for (uint16_t i = 1; i <= _grid_size; i++) {
+        for (uint16_t j = 1; j <= _grid_size; j++) {
+            Coord coordinate(i, j);
+            if (i <= _grid_size - 1) {
+                Coord target_coordinate(i + 1, j);
+                (*(intersection_map[coordinate])).connect(1, (*(intersection_map[target_coordinate])), 3);
+            }
+            if (j <= _grid_size - 1) {
+                Coord target_coordinate(i, j + 1);
+                (*(intersection_map[coordinate])).connect(2, (*(intersection_map[target_coordinate])), 0);
+            }
+        }
+    }
+
+    map<string, Car_Info> car_info_dict; // Record car states
+
+    // Start simulation
+    while (traci.simulation.getMinExpectedNumber() > 0) {
+        // Early terminate the simulation
+        if (int(simu_step * 10) / 10.0 >= _N_TIME_STEP) {
+            router_thread.route_request = "End Connection";
+            // Start workers
+            {
+                unique_lock<mutex> worker_lock(router_thread.request_worker_mutex);
+                router_thread.request_worker_condition_variable.notify_all();
+            }
+            break;
+        }
+
+        traci.simulationStep();
+        vector<string> all_c = traci.vehicle.getIDList();
+
+        // Send route requests
+        if (fmod(simu_step, ROUTING_PERIOD) < _TIME_STEP) {
+            string server_send_str = "";
+            for (const auto& [car_id, car_info] : car_info_dict) {
+                IntersectionManager* intersection_manager_ptr = car_info.intersection_manager_ptr;
+                if (intersection_manager_ptr != nullptr) {
+                    IntersectionManager& intersection_manager = *intersection_manager_ptr;
+                    car_data = intersection_manager.get_car_info_for_route(car_id);
+                        if car_data != None :
+                    position_at_offset = car_data[0]
+                        time_offset_step = car_data[1]
+                        src_intersection_id = car_data[2]
+                        direction_of_src_intersection = car_data[3]
+                        src_shift_num = car_data[4]
+                        car["src_shift_num"] = src_shift_num
+
+                        if src_intersection_id != car["dst_node_idx"]:
+                    server_send_str += car_id + ","
+                        server_send_str += car["route_state"] + ","
+                        server_send_str += str(car["car_length"]) + ","
+                        server_send_str += src_intersection_id + ","
+                        server_send_str += str(direction_of_src_intersection) + ","
+                        server_send_str += str(time_offset_step) + ","      # Step that the datacenter needs to take
+                        server_send_str += "{:.2f}".format(position_at_offset) + ","    # The position at the specific time
+                        server_send_str += car["dst_node_idx"] + ";"
+                        else:
+                    server_send_str += car_id + ","
+                        server_send_str += "LEAVING" + ";"
+                        else:
+                    server_send_str += car_id + ","
+                        server_send_str += "PAUSE" + ";"
+
+                }
+                        for car_id in to_delete_car_in_database :
+                server_send_str += car_id + ","
+                    server_send_str += "EXIT" + ";"
+
+                    to_delete_car_in_database = []
+                    to_handler_queue.put(server_send_str)
+
+
+            }
+        }
+
+
+
+        // TODO: add is_scheduled
+
+    }
+
+    // Delete the intersection manager
+    for (const auto& [intersection_id, manager_ptr] : intersection_map) {
+        delete manager_ptr;
+    }
 }
