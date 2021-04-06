@@ -44,5 +44,5 @@ int main(int argc, char* argv[])
 
 // Initial SUMO
 void initial_sumo() {
-    traci.connect("localhost", PORT);
+    traci.connect("localhost", SUMO_PORT);
 }

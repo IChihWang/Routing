@@ -20,7 +20,8 @@ typedef int socklen_t;
 
 #include "global.h"
 
-#define PORT 9997
+#define SUMO_PORT 9997
+#define ROUTER_PORT 9996
 #define IP_ADDR "127.0.0.1"
 
 extern SOCKET client_sock;
