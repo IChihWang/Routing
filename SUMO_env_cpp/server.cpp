@@ -36,7 +36,7 @@ SOCKET initial_client_handler() {
 	struct sockaddr_in sockAddr;
 	sockAddr.sin_family = AF_INET;
 	sockAddr.sin_addr.s_addr = inet_addr(IP_ADDR);
-	sockAddr.sin_port = htons(PORT);
+	sockAddr.sin_port = htons(ROUTER_PORT);
 
 	// Connect socket to the port
 	if (connect(client_sock, (SOCKADDR*)&sockAddr, sizeof(sockAddr)) < 0) {
