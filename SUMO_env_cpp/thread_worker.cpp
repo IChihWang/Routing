@@ -33,6 +33,8 @@ void call_routing_thread(Thread_Worker* thread_worker) {
 		}
 		in_str.pop_back();
 
+		thread_worker->route_result = in_str;
+
 		// Done task, notify main thread
 		thread_worker->allow_main_continue = true;
 		thread_worker->routing_done_condition_variable.notify_all();

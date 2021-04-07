@@ -17,6 +17,7 @@ public:
 	mutex routing_done_mutex;
 	condition_variable routing_done_condition_variable;
 	bool allow_main_continue = false;
+	string route_result = "";
 
 	// Variables to tell worker to do the job
 	string route_request = "";			// Clean up after the data is read

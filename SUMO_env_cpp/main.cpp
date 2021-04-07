@@ -180,10 +180,80 @@ void run_sumo(Thread_Worker& router_thread) {
                 server_send_str += string("EXIT") + ";";
             }
 
-                to_delete_car_in_database = []
-                to_handler_queue.put(server_send_str)
+            to_delete_car_in_database.clear();
+            router_thread.route_request = server_send_str;
+            // Send route request
+            {
+                unique_lock<mutex> worker_lock(router_thread.request_worker_mutex);
+                router_thread.request_worker_condition_variable.notify_all();
+            }
         }
 
+        if (fmod(simu_step+ _TIME_STEP, ROUTING_PERIOD) < _TIME_STEP) {
+            // Wait for results
+            {
+                unique_lock<mutex> main_thread_lock(router_thread.routing_done_mutex);
+                Thread_Worker* router_thread_ptr = &router_thread;
+                router_thread.routing_done_condition_variable.wait(main_thread_lock, [router_thread_ptr] {return router_thread_ptr->allow_main_continue; });
+            }
+            // Get result
+            string route_result = router_thread.route_result;
+            route_result.pop_back();    // Remove the ";" at the end
+            stringstream ss_car(route_result);
+            while (ss_car.good()) {
+                string car_str;
+                getline(ss_car, car_str, ';');
+                stringstream ss_car_data(car_str);
+                string car_id;
+                getline(ss_car_data, car_id, ',');
+                string car_path;
+                getline(ss_car_data, car_path, ',');
+
+                // Update the path
+                uint8_t src_shift_num = car_info_dict[car_id].src_shift_num;
+                string pre_route_part = "";
+                if (car_info_dict[car_id].route.length() > src_shift_num) {
+                    pre_route_part = car_info_dict[car_id].route.substr(0, src_shift_num);
+                }
+                car_info_dict[car_id].route = pre_route_part + car_path + "SS";     //Add "next turn" at the end
+
+                car_info_dict[car_id].route_state = "OLD";
+            }
+        }
+
+        // Update the position of each car
+        for (const string& car_id : all_c) {
+
+            string lane_id = traci.vehicle.getLaneID(car_id);
+
+            // No record of the car
+            if (car_info_dict.find(car_id) == car_info_dict.end()) {
+                car_info_dict[car_id].route = "SSS";        // Default, add "next turn" at the end
+                car_info_dict[car_id].route_state = "NEW";
+                string dst_node_str = src_dst_dict[car_id];
+                car_info_dict[car_id].intersection_manager_ptr = nullptr;
+                car_info_dict[car_id].dst_node_idx = dst_node_str;
+                car_info_dict[car_id].enter_time = simu_step;
+                car_info_dict[car_id].car_length = uint8_t(traci.vehicle.getLength(car_id));
+                car_info_dict[car_id].src_shift_num = 0;
+            }
+
+            // Hnadle the car in each intersection
+            bool is_handled = false;
+            for (auto& [intersection_id, intersection_ptr] : intersection_map) {
+                if (intersection_ptr->check_in_my_region(lane_id).compare("On my lane") == 0) {
+
+                    char current_turn = car_info_dict[car_id].route[0];
+                    char next_turn = car_info_dict[car_id].route[1];
+
+                    intersection_ptr->update_car(car_id, lane_id, simu_step, current_turn, next_turn);
+                    is_handled = true;
+                    car_info_dict[car_id].inter_status = "On my lane";
+                    car_info_dict[car_id].intersection_manager_ptr = intersection_ptr;
+                }
+            }
+
+        }
 
 
         // TODO: add is_scheduled

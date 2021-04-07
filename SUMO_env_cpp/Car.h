@@ -63,5 +63,9 @@ public:
 	uint8_t src_shift_num = 0;
 	string dst_node_idx = "";
 	string route_state = "";
+	string inter_status = "";
 	uint8_t car_length = 0;
+	string route = "";
+	
+	double enter_time = 0;
 };

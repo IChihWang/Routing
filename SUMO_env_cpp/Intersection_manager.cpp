@@ -1,6 +1,9 @@
 #include "intersection_manager.h"
 #include <sstream>
 #include <iomanip>
+#include <algorithm>
+#include <string>
+#include <sstream>
 using namespace std;
 
 IntersectionManager::IntersectionManager() {
@@ -167,4 +170,106 @@ Car_Info_In_Intersection IntersectionManager::get_car_info_for_route(const strin
 	double position_at_offset = TOTAL_LEN - time_offset * V_MAX;
 
 	return Car_Info_In_Intersection(position_at_offset, time_offset_step, src_intersection_id, direction_of_src_intersection, src_shift_num);
+}
+
+string IntersectionManager::check_in_my_region(string lane_id) {
+	if (find(in_lanes.begin(), in_lanes.end(), lane_id) != in_lanes.end()) {
+		return "On my lane";
+	}
+	else {
+		stringstream ss_car(lane_id);
+		string x;
+		getline(ss_car, x, '_');
+		string y;
+		getline(ss_car, y, '_');
+		string lane_id_short = x + '_' + y;
+
+		if (lane_id_short.compare(string(":") + id_str) == 0) {
+			return "In my intersection";
+		}
+		else {
+			return "Not me";
+		}
+	}
+}
+
+void IntersectionManager::update_car(string car_id, string lane_id, double simu_step, char current_turn, char next_turn) {
+	if (find(in_lanes.begin(), in_lanes.end(), lane_id) != in_lanes.end()) {
+		// parse the lane_id
+		stringstream ss_car(lane_id);
+		string x;
+		getline(ss_car, x, '_');
+		string y;
+		getline(ss_car, y, '_');
+		string lane_direction_str;
+		getline(ss_car, lane_direction_str, '_');
+		uint8_t lane_direction = uint8_t(stoi(lane_direction_str));
+		string lane_sub_idx_str;
+		getline(ss_car, lane_sub_idx_str, '_');
+		uint8_t lane_sub_idx = uint8_t(stoi(lane_sub_idx_str));
+		
+		uint8_t lane = uint8_t((4 - lane_direction) * LANE_NUM_PER_DIRECTION + (LANE_NUM_PER_DIRECTION - lane_sub_idx - 1));
+
+		// Add car if the car is not in the list yet
+		if (car_list.find(car_id) == car_list.end()) {
+			// Gather the information of the new car
+			uint8_t length = uint8_t(traci.vehicle.getLength(car_id));
+			char turning = current_turn;
+
+			Car* new_car_ptr = new Car(car_id, length, lane, turning, next_turn);
+			new_car_ptr->Enter_T = simu_step - (traci.vehicle.getLanePosition(car_id)) / V_MAX;
+			car_list[car_id] = new_car_ptr;
+
+			traci.vehicle.setMaxSpeed(car_id, V_MAX);
+			traci.vehicle.setSpeed(car_id, V_MAX);
+		}
+
+		update_path(car_id, current_turn, next_turn, lane_direction);
+		car_list[car_id]->current_turn = current_turn;
+		car_list[car_id]->next_turn = next_turn;
+
+
+		//TODO:
+
+	}
+}
+
+void IntersectionManager::update_path(string car_id, char current_turn, char next_turn, uint8_t intersection_dir) {
+	uint16_t x_idx = get<0>(id);
+	uint16_t y_idx = get<1>(id);
+
+	uint8_t target_dir = 0;
+
+	if (current_turn == 'R') {
+		target_dir = ((intersection_dir + 4 - 1) + 1) % 4 + 1;		// +4 to prevent negative
+	}
+	else if (current_turn == 'S') {
+		target_dir = intersection_dir;
+	}
+	else if (current_turn == 'L') {
+		target_dir = ((intersection_dir + 4 - 1) - 1) % 4 + 1;		// +4 to prevent negative
+	}
+
+	if (target_dir == 1) {
+		x_idx = x_idx + 1;
+		y_idx = y_idx;
+	}
+	else if (target_dir == 2) {
+		x_idx = x_idx;
+		y_idx = y_idx - 1;
+	}
+	else if (target_dir == 3) {
+		x_idx = x_idx - 1;
+		y_idx = y_idx;
+	}
+	else if (target_dir == 4) {
+		x_idx = x_idx;
+		y_idx = y_idx + 1;
+	}
+
+
+
+
+
+
 }

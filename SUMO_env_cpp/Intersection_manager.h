@@ -46,11 +46,11 @@ public:
 	string id_str = "";
 
 	// Break down to these to reduce the search space
-	map<string, Car> car_list;		// Cars that needs to be handled
-	map<string, Car> az_list;
-	map<string, Car> pz_list;
-	map<string, Car> cc_list;		// Cars under Cruse Control in CCZ
-	map<string, Car> leaving_cars;	// Cars just entered the intersection (leave the CC zone)
+	map<string, Car*> car_list;		// Cars that needs to be handled
+	map<string, Car*> az_list;
+	map<string, Car*> pz_list;
+	map<string, Car*> cc_list;		// Cars under Cruse Control in CCZ
+	map<string, Car*> leaving_cars;	// Cars just entered the intersection (leave the CC zone)
 
 	double schedule_period_count = 0;
 
@@ -77,6 +77,9 @@ public:
 
 	void connect(const uint8_t& my_direction, IntersectionManager& target_intersection, const uint8_t& its_direction);
 	Car_Info_In_Intersection get_car_info_for_route(const string& car_id);
+	string check_in_my_region(string lane_id);
+	void update_car(string car_id, string lane_id, double simu_step, char current_turn, char next_turn);
+	void update_path(string car_id, char current_turn, char next_turn, uint8_t intersection_dir);
 private:
 	void set_round_lane();
 };
