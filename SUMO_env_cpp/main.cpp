@@ -3,6 +3,7 @@
 #include <string>
 #include <fstream>
 #include <cmath>
+#include <algorithm>
 #include "LaneAdviser.h"
 #include "Intersection_manager.h"
 #include "server.h"
@@ -242,7 +243,8 @@ void run_sumo(Thread_Worker& router_thread) {
             // Hnadle the car in each intersection
             bool is_handled = false;
             for (auto& [intersection_id, intersection_ptr] : intersection_map) {
-                if (intersection_ptr->check_in_my_region(lane_id).compare("On my lane") == 0) {
+                const string& inter_region = intersection_ptr->check_in_my_region(lane_id);
+                if (inter_region == "On my lane") {
 
                     char current_turn = car_info_dict[car_id].route[0];
                     char next_turn = car_info_dict[car_id].route[1];
@@ -252,14 +254,52 @@ void run_sumo(Thread_Worker& router_thread) {
                     car_info_dict[car_id].inter_status = "On my lane";
                     car_info_dict[car_id].intersection_manager_ptr = intersection_ptr;
                 }
+                else if (inter_region == "In my intersection") {
+                    // Check if the car enter the intersection (by changing state from "On my lane" to "in intersection")
+                    if (car_info_dict[car_id].inter_status == "On my lane") {
+                        car_info_dict[car_id].route = car_info_dict[car_id].route.erase(0, 1);
+                    }
 
+                    char current_turn = car_info_dict[car_id].route[0];
+                    char next_turn = car_info_dict[car_id].route[1];
 
-
-
+                    intersection_ptr->update_car(car_id, lane_id, simu_step, current_turn, next_turn);
+                    is_handled = true;
+                    car_info_dict[car_id].inter_status = "In my intersection";
+                    car_info_dict[car_id].intersection_manager_ptr = intersection_ptr;
+                }
+                else {
+                    // The intersection doesn't have the car
+                    intersection_ptr->delete_car(car_id);
+                }
             }
 
+            if (!is_handled) {
+                // Leaving intersections
+                traci.vehicle.setSpeed(car_id, V_MAX);
+                car_info_dict[car_id].inter_status = "None";
+                car_info_dict[car_id].intersection_manager_ptr = nullptr;
+            }
         }
 
+        // Remove cars
+        vector<string> car_to_delete;
+        for (const auto& [car_id, Car_Info] : car_info_dict) {
+            // car_id is not found in current simulation
+            if (find(all_c.begin(), all_c.end(), car_id) == all_c.end()) {
+                car_to_delete.push_back(car_id);
+            }
+        }
+        for (const auto& car_id : car_to_delete) {
+            car_info_dict.erase(car_id);
+            to_delete_car_in_database.push_back(car_id);    // This is for telling the router to delete the car
+        }
+
+        for (auto& [intersection_id, intersection_manager_ptr] : intersection_map) {
+            intersection_manager_ptr->run(simu_step);
+        }
+
+        simu_step += _TIME_STEP;
 
         // TODO: add is_scheduled
 

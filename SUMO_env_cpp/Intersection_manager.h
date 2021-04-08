@@ -21,6 +21,7 @@ public:
 class Road_Info {
 public:
 	uint16_t avail_len = TOTAL_LEN;
+	double delay = 0;
 	vector<Car_Delay_Position_Record> car_delay_position;
 };
 class Car_Info_In_Intersection {
@@ -55,9 +56,23 @@ public:
 	double schedule_period_count = 0;
 
 	Lane_Adviser lane_advisor;
-	//scheduling_thread = None
 	vector<string> in_lanes;
 	vector<string> out_lanes;
+
+	#ifdef EXP_FUEL
+	vector<double> total_fuel_consumption;
+	#endif
+
+	#ifdef EXP_DELAY
+	vector<double> total_delays;
+	vector<double> total_delays_by_sche;
+	#endif
+
+	#ifdef PEDESTRIAN
+	bool is_pedestrian_list[4];		// Whether there is a pedestrian request
+	double pedestrian_time_mark_list[4];	// Planned pedestrian time (In case some cars insterted and interrupt the pedestiran time)
+	void get_max_AT_direction(const vector<Car*>& sched_car, const bool* is_pedestrian_list, double* pedestrian_time_mark_list);
+	#endif
 
 	// For front car
 	map<uint8_t, Car*> CC_last_cars_on_lanes;
@@ -69,7 +84,7 @@ public:
 	// Spillback info
 	Road_Info my_road_info[4 * LANE_NUM_PER_DIRECTION];
 	Road_Info* others_road_info[4 * LANE_NUM_PER_DIRECTION];
-	//self.spillback_delay_record = [0]*(4*cfg.LANE_NUM_PER_DIRECTION)
+	double spillback_delay_record[4 * LANE_NUM_PER_DIRECTION] = {0};
 	
 
 	IntersectionManager();
@@ -80,6 +95,10 @@ public:
 	string check_in_my_region(string lane_id);
 	void update_car(string car_id, string lane_id, double simu_step, char current_turn, char next_turn);
 	void update_path(string car_id, char current_turn, char next_turn, uint8_t intersection_dir);
+	void delete_car(string car_id);
+	void run(double simu_step);
 private:
 	void set_round_lane();
+	double scheduling(map<string, Car*>& sched_car, map<string, Car*>& n_sched_car, map<string, Car*>& advised_n_sched_car);
+	void Roadrunner_P(map<string, Car*>& sched_car, map<string, Car*>& n_sched_car, map<string, Car*>& advised_n_sched_car);
 };

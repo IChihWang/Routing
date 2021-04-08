@@ -1,5 +1,6 @@
 #include "intersection_manager.h"
 #include "Car.h"
+#include "global.h"
 #include <sstream>
 #include <iomanip>
 #include <algorithm>
@@ -310,3 +311,149 @@ void IntersectionManager::update_path(string car_id, char current_turn, char nex
 	// Update dst lanes and info
 	car_list[car_id]->set_turning(current_turn, next_turn);
 }
+
+void IntersectionManager::delete_car(string car_id) {
+	if (car_list.find(car_id) != car_list.end()) {
+		delete car_list[car_id];
+		car_list.erase(car_id);
+	}
+}
+
+void IntersectionManager::run(double simu_step) {
+	// ===== Update the time OT =====
+	for (const auto& [car_key, car_ptr] : car_list) {
+		// Update when the car is scheduled
+		car_ptr->OT -= _TIME_STEP;
+
+#ifdef EXP_FUEL
+		total_fuel_consumption.push_back(traci.vehicle.getFuelConsumption(car_key) * _TIME_STEP);
+#endif
+
+		if (car_ptr->is_spillback_strict == true) {
+			traci.vehicle.setColor(car_key, libsumo::TraCIColor(255, 59, 59));
+		}
+		else if (car_ptr->is_spillback == true) {
+			traci.vehicle.setColor(car_key, libsumo::TraCIColor(255, 153, 51));
+		}
+		else if (car_ptr->is_scheduled) {
+			traci.vehicle.setColor(car_key, libsumo::TraCIColor(100, 250, 92));
+		}
+	}
+
+	// ===== Entering the intersection (Record the cars) =====
+	for (const auto& [car_id, car_ptr] : car_list) {
+		string lane_id = traci.vehicle.getLaneID(car_id);
+		if (find(in_lanes.begin(), in_lanes.end(), lane_id) == in_lanes.end()) {
+			traci.vehicle.setSpeed(car_id, car_ptr->speed_in_intersection);
+
+			car_ptr->Leave_T = simu_step;
+
+#ifdef EXP_DELAY
+			total_delays.push_back((car.Leave_T - car.Enter_T) - (TOTAL_LEN / V_MAX));
+			self.total_delays_by_sche.push_back(car.D);
+#endif		
+
+			car_ptr->zone = "Intersection";
+		}
+	}
+
+	// ===== Starting Cruise control
+	vector<string> to_be_deleted;
+	for (const auto& [car_id, car_ptr] : pz_list) {
+		if (car_ptr->position <= CCZ_LEN && car_ptr->is_scheduled == true) {
+			to_be_deleted.push_back(car_id);
+
+			if (car_ptr->CC_state == "Preseting_done") {
+				car_ptr->CC_state = "CruiseControl_ready";
+			}
+			else if (car_ptr->position <= CCZ_LEN) {
+				to_be_deleted.push_back(car_id);
+
+				if ((car_ptr->CC_state == "") || (!(car_ptr->CC_state.find("Platoon") != string::npos || car_ptr->CC_state.find("Entering") != string::npos))) {
+					car_ptr->CC_state = "Keep_Max_speed";
+				}
+			}
+		}
+	}
+	for (const auto& car_id : to_be_deleted) {
+		pz_list.erase(car_id);
+	}
+
+	// ##############################################
+	// Grouping the carsand schedule
+	// Put here due to the thread handling
+	schedule_period_count += _TIME_STEP;
+	if (schedule_period_count > GZ_LEN / V_MAX - 1) {
+		// Classify the cars for scheduler
+		map<string, Car*> sched_car;
+		map<string, Car*> n_sched_car;
+		map<string, Car*> advised_n_sched_car;
+
+		for (const auto& [car_id, car_ptr] : car_list) {
+			if (car_ptr->zone == "GZ" || car_ptr->zone == "BZ" || car_ptr->zone == "CCZ") {
+				if (car_ptr->zone_state == "not_scheduled") {
+					n_sched_car[car_id] = car_ptr;
+				}
+				else {
+					sched_car[car_id] = car_ptr;
+					traci.vehicle.setColor(car_id, libsumo::TraCIColor(100, 250, 92));
+				}
+			}
+			else if (car_ptr->zone == "PZ" || car_ptr->zone == "AZ") {
+				advised_n_sched_car[car_id] = car_ptr;
+			}
+		}
+		for (const auto& [car_id, car_ptr] : n_sched_car) {
+			car_ptr->is_scheduled = false;
+			car_ptr->D = -1;
+		}
+
+		#ifdef PEDESTRIAN
+		// Setting the pedestrian list
+		for (uint8_t i = 0; i < 4; i++)
+			is_pedestrian_list[i] = true;
+		for (uint8_t direction = 0; direction < 4; direction++) {
+			// Cancel the request if a pedestrian time has been scheduled
+			if (is_pedestrian_list[direction] == true && (pedestrian_time_mark_list[direction] > 0)) {
+				is_pedestrian_list[direction] = false;
+			}
+		}
+		get_max_AT_direction(sched_car, is_pedestrian_list, pedestrian_time_mark_list);
+		#endif
+
+		scheduling(sched_car, n_sched_car, advised_n_sched_car);
+		schedule_period_count = 0;
+	}
+}
+
+#ifdef PEDESTRIAN
+void IntersectionManager::get_max_AT_direction(const vector<Car*>& sched_car, const bool* is_pedestrian_list, double* pedestrian_time_mark_list) {
+	double max_AT[4];
+	for (uint8_t i = 0; i < 4; i++)
+		max_AT[i] = 0;
+
+	for (const auto& car_ptr : sched_car) {
+		// Compute the direction of entering / exiting for the intersection
+		uint8_t in_dir = car_ptr->in_direction;
+		uint8_t out_dir = car_ptr->out_direction;
+
+		// Compute arrival time at the exiting point and entering point
+		double in_AT = car_ptr->OT + car_ptr->D + car_ptr->length / car_ptr->speed_in_intersection;
+		double out_AT = car_ptr->OT + car_ptr->D + car_ptr->length / V_MAX + get_Intertime(car_ptr->lane, car_ptr->current_turn);
+
+		// Find max and update
+		if (in_AT > max_AT[in_dir])
+			max_AT[in_dir] = in_AT;
+		if (out_AT > max_AT[out_dir])
+			max_AT[out_dir] = out_AT;
+	}
+
+	for (uint8_t direction = 0; direction < 4; direction++)
+		if (pedestrian_time_mark_list[direction] <= 0)
+			if (is_pedestrian_list[direction] == false)
+				pedestrian_time_mark_list[direction] = -1;
+			else {
+				pedestrian_time_mark_list[direction] = max_AT[direction];
+			}
+}
+#endif

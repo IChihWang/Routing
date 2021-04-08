@@ -1,37 +1,19 @@
 #include "ortools/linear_solver/linear_solver.h"
 #include <algorithm>
 #include "global.h"
+#include "intersection_manager.h"
+#include "Car.h"
 
 using namespace operations_research;
 
-double Intersection::scheduling(Car& target_car) {
-	shared_lock<shared_mutex> rLock(rwlock_mutex);
+double IntersectionManager::scheduling(map<string, Car*>& sched_car, map<string, Car*>& n_sched_car, map<string, Car*>& advised_n_sched_car) {
 
-	target_car.OT = (double)target_car.position / _V_MAX;
-	target_car.D = NOT_SCHEDULED;
+	Roadrunner_P(sched_car, n_sched_car, advised_n_sched_car);
 
-	vector<Car_in_database> copied_scheduling_cars;
-	for (const auto& [car_id, car] : *scheduling_cars) {
-		car.D = NOT_SCHEDULED;
-		copied_scheduling_cars.push_back(car);
-	}
-	copied_scheduling_cars.push_back(target_car);
-
-	Roadrunner_P(copied_scheduling_cars, target_car);
-
-	if (target_car.D == SCHEDULE_POSPONDED) {
-		return SCHEDULE_POSPONDED;
-	}
-	else {
-		double car_exiting_time = target_car.OT + target_car.D;
-		car_exiting_time += get_Intertime(target_car.lane, target_car.current_turn);
-
-		return car_exiting_time;
-	}
 }
 
-void Intersection::Roadrunner_P(vector<Car_in_database>& scheduling_cars, Car& target_car) {
-			
+void IntersectionManager::Roadrunner_P(map<string, Car*>& old_cars, map<string, Car*>& new_cars, map<string, Car*>& advised_n_sched_car) {
+
 	// part 1: build the solver
 	MPSolver solver("Linearptr", MPSolver::GLOP_LINEAR_PROGRAMMING);
 	const double infinity = solver.infinity();
@@ -43,41 +25,65 @@ void Intersection::Roadrunner_P(vector<Car_in_database>& scheduling_cars, Car& t
 	uint16_t pre_accumulate_car_len_lane[4 * LANE_NUM_PER_DIRECTION] = {};
 
 	// Compute accumulated car len
-	const map<string, Car_in_database>& my_sched_cars = (*sched_cars);
-	for (const auto& [car_id, old_car] : my_sched_cars) {
-		uint8_t lane_base_idx = old_car.dst_lane / LANE_NUM_PER_DIRECTION * LANE_NUM_PER_DIRECTION;
+	for (const auto& [car_id, old_car_ptr] : old_cars) {
+		Car& old_car = *old_car_ptr;
+		pre_accumulate_car_len_lane[old_car.dst_lane] += (old_car.length + HEADWAY);
+		pre_accumulate_car_len_lane[old_car.dst_lane_changed_to] += (old_car.length + HEADWAY);
 
-		for (uint8_t i = 0; i < LANE_NUM_PER_DIRECTION; i++) {
-			pre_accumulate_car_len_lane[lane_base_idx + i] += old_car.length + _HEADWAY;
-		}
 	}
 
-	vector<reference_wrapper<Car_in_database>> sorted_scheduling_cars_list;
-	for (auto& car : scheduling_cars) {
-		sorted_scheduling_cars_list.push_back(car);
+	map<string, Car*> sorted_scheduling_cars_list;
+	for (auto& [car_id, car_ptr] : new_cars) {
+		sorted_scheduling_cars_list[car_id] = car_ptr;
 	}
 
-	sort(sorted_scheduling_cars_list.begin(), sorted_scheduling_cars_list.end(), [](Car_in_database a, Car_in_database b) -> bool {return a.position < b.position; });
+	sort(sorted_scheduling_cars_list.begin(), sorted_scheduling_cars_list.end(), [](Car* a, Car* b) -> bool {return a->position < b->position; });
 	double head_of_line_blocking_position[4 * LANE_NUM_PER_DIRECTION];
 	fill_n(head_of_line_blocking_position, 4 * LANE_NUM_PER_DIRECTION, UINT16_MAX);
 	int32_t accumulate_car_len[4 * LANE_NUM_PER_DIRECTION];
 	fill_n(accumulate_car_len, 4 * LANE_NUM_PER_DIRECTION, INT32_MIN);
+	double recorded_delay[4 * LANE_NUM_PER_DIRECTION];
+	fill_n(recorded_delay, 4 * LANE_NUM_PER_DIRECTION, 0);
 
 	for (uint8_t i = 0; i < 4 * LANE_NUM_PER_DIRECTION; i++) {
 		if (others_road_info[i] != nullptr) {
-			accumulate_car_len[i] = pre_accumulate_car_len_lane[i] - (*(others_road_info[i]))->avail_len + CAR_MAX_LEN + _HEADWAY + CCZ_ACC_LEN;
+			accumulate_car_len[i] = pre_accumulate_car_len_lane[i] - (others_road_info[i])->avail_len + CAR_MAX_LEN + HEADWAY + CCZ_ACC_LEN;
+			recorded_delay[i] = max(others_road_info[i]->delay, spillback_delay_record[i]);	// To record the dispatch speed
 		}
 	}
 
-	for (Car_in_database& car : sorted_scheduling_cars_list) {
+	for (auto& [car_id, car_ptr] : sorted_scheduling_cars_list) {
+		Car& car = *car_ptr;
 		car.is_spillback = false;
 		car.is_spillback_strict = false;
 
 		uint8_t dst_lane_idx = car.dst_lane;
+		uint8_t dst_lane_changed_to_idx = car.dst_lane_changed_to;
 		uint8_t lane_idx = car.lane;
 
 		if (others_road_info[dst_lane_idx] != nullptr) {
+			if (car.position > head_of_line_blocking_position[lane_idx]) {
+				new_cars.erase(car_id);    // Blocked by the car at the front
+				continue;
+			}
+
+			vector<Car_Delay_Position_Record>& dst_car_delay_position = (others_road_info[dst_lane_idx])->car_delay_position;
+			accumulate_car_len[dst_lane_idx] += (car.length + HEADWAY);
 			double spillback_delay = 0;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 			if (car.position > head_of_line_blocking_position[lane_idx]) {
 				// The car is blocked by front car, whose sheduling is prosponed.
