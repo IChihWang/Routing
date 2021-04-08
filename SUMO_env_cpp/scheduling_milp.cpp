@@ -63,58 +63,20 @@ void IntersectionManager::Roadrunner_P(map<string, Car*>& old_cars, map<string, 
 
 		if (others_road_info[dst_lane_idx] != nullptr) {
 			if (car.position > head_of_line_blocking_position[lane_idx]) {
+				car.is_spillback_strict = true;
+				car.is_spillback = true;
 				new_cars.erase(car_id);    // Blocked by the car at the front
 				continue;
 			}
 
-			vector<Car_Delay_Position_Record>& dst_car_delay_position = (others_road_info[dst_lane_idx])->car_delay_position;
 			accumulate_car_len[dst_lane_idx] += (car.length + HEADWAY);
 			double spillback_delay = 0;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-			if (car.position > head_of_line_blocking_position[lane_idx]) {
-				// The car is blocked by front car, whose sheduling is prosponed.
-				car.is_spillback_strict = true;
-				car.is_spillback = true;
-
-				// remove car from scheduling_cars
-				uint32_t idx_in_scheduling_cars = -1;
-				for (uint32_t idx = 0; idx < (uint32_t)scheduling_cars.size(); idx++) {
-					if (car.id.compare(scheduling_cars[idx].id) == 0) {
-						idx_in_scheduling_cars = idx;
-						break;
-					}
-				}
-				string deleted_car_id = car.id;
-				scheduling_cars.erase(scheduling_cars.begin() + idx_in_scheduling_cars);
-
-				if (deleted_car_id.compare(target_car.id) == 0) {
-					target_car.D = SCHEDULE_POSPONDED;
-					return;
-				}
-
-				continue;
-			}
-
-			accumulate_car_len[dst_lane_idx] += (car.length + _HEADWAY);
 			if (accumulate_car_len[dst_lane_idx] > 0) {
-				const vector<Car_Delay_Position_Record>& dst_car_delay_position = (*(others_road_info[dst_lane_idx]))->car_delay_position;
+				const vector<Car_Delay_Position_Record>& dst_car_delay_position = (others_road_info[dst_lane_idx])->car_delay_position;
 
 				car.is_spillback = true;
-				if (dst_car_delay_position.size() < 1 || (double(accumulate_car_len[dst_lane_idx]) + CAR_MAX_LEN + _HEADWAY > dst_car_delay_position.back().position)) {
+				if (dst_car_delay_position.size() < 1 || (double(accumulate_car_len[dst_lane_idx]) + CAR_MAX_LEN + HEADWAY > dst_car_delay_position.back().position)) {
 					// Skip because no records is found
 					car.is_spillback_strict = true;
 				}
@@ -133,38 +95,54 @@ void IntersectionManager::Roadrunner_P(map<string, Car*>& old_cars, map<string, 
 					double spillback_delay_multiply_factor = back_delay / back_position;
 					spillback_delay = accumulate_car_len[dst_lane_idx] * spillback_delay_multiply_factor;
 				}
+
+				spillback_delay_record[dst_lane_idx] = recorded_delay[dst_lane_idx];
+			}
+			else {
+				spillback_delay_record[dst_lane_idx] = 0;
 			}
 
-			for (uint8_t lane_i = 0; lane_i < LANE_NUM_PER_DIRECTION; lane_i++) {
-				uint8_t other_lane_idx = dst_lane_idx / LANE_NUM_PER_DIRECTION * LANE_NUM_PER_DIRECTION + lane_i;
+			if (dst_lane_changed_to_idx != dst_lane_idx) {
+				int8_t for_step = 0;
+				if (dst_lane_changed_to_idx > dst_lane_idx)
+					for_step = -1;
+				else if (dst_lane_changed_to_idx < dst_lane_idx)
+					for_step = 1;
 
-				if (other_lane_idx != dst_lane_idx) {
-					accumulate_car_len[other_lane_idx] += (car.length + _HEADWAY);
-					double spillback_delay_dst_lane_changed_to = 0;
-					const vector<Car_Delay_Position_Record>& dst_car_delay_position = (*(others_road_info[other_lane_idx]))->car_delay_position;
+				for (uint8_t other_lane_idx = dst_lane_changed_to_idx; other_lane_idx != dst_lane_idx; other_lane_idx += for_step) {
 
-					if (accumulate_car_len[other_lane_idx] > 0) {
-						car.is_spillback = true;
+					if (other_lane_idx != dst_lane_idx) {
+						accumulate_car_len[other_lane_idx] += (car.length + HEADWAY);
+						double spillback_delay_dst_lane_changed_to = 0;
+						const vector<Car_Delay_Position_Record>& dst_car_delay_position = (others_road_info[other_lane_idx])->car_delay_position;
 
-						if (dst_car_delay_position.size() < 1 || (double(accumulate_car_len[other_lane_idx]) + double(CAR_MAX_LEN) + _HEADWAY > dst_car_delay_position.back().position)) {
-							// Skip because no records is found
-							car.is_spillback_strict = true;
+						if (accumulate_car_len[other_lane_idx] > 0) {
+							car.is_spillback = true;
+
+							if (dst_car_delay_position.size() < 1 || (double(accumulate_car_len[other_lane_idx]) + double(CAR_MAX_LEN) + HEADWAY > dst_car_delay_position.back().position)) {
+								// Skip because no records is found
+								car.is_spillback_strict = true;
+							}
+							else {
+								// Find the position in the list to compare
+								uint32_t compare_dst_car_idx = 0;
+								for (uint32_t dst_car_idx = 0; dst_car_idx < (uint32_t)dst_car_delay_position.size(); dst_car_idx++) {
+									if (accumulate_car_len[other_lane_idx] < dst_car_delay_position[other_lane_idx].position) {
+										compare_dst_car_idx = dst_car_idx;
+										break;
+									}
+								}
+
+								double back_delay = dst_car_delay_position[compare_dst_car_idx].delay;
+								double back_position = dst_car_delay_position[compare_dst_car_idx].position;
+								double spillback_delay_multiply_factor = back_delay / back_position;
+								double spillback_delay_alter = accumulate_car_len[other_lane_idx] * spillback_delay_multiply_factor;
+								spillback_delay = max(spillback_delay, spillback_delay_alter);
+							}
+							spillback_delay_record[other_lane_idx] = recorded_delay[other_lane_idx];
 						}
 						else {
-							// Find the position in the list to compare
-							uint32_t compare_dst_car_idx = 0;
-							for (uint32_t dst_car_idx = 0; dst_car_idx < (uint32_t)dst_car_delay_position.size(); dst_car_idx++) {
-								if (accumulate_car_len[other_lane_idx] < dst_car_delay_position[other_lane_idx].position) {
-									compare_dst_car_idx = dst_car_idx;
-									break;
-								}
-							}
-
-							double back_delay = dst_car_delay_position[compare_dst_car_idx].delay;
-							double back_position = dst_car_delay_position[compare_dst_car_idx].position;
-							double spillback_delay_multiply_factor = back_delay / back_position;
-							double spillback_delay_alter = accumulate_car_len[other_lane_idx] * spillback_delay_multiply_factor;
-							spillback_delay = max(spillback_delay, spillback_delay_alter);
+							spillback_delay_record[other_lane_idx] = 0;
 						}
 					}
 				}
@@ -172,56 +150,35 @@ void IntersectionManager::Roadrunner_P(map<string, Car*>& old_cars, map<string, 
 
 			if (car.is_spillback_strict == true) {
 				// remove car from scheduling_cars
-				uint32_t idx_in_scheduling_cars = -1;
-				for (uint32_t idx = 0; idx < (uint32_t)scheduling_cars.size(); idx++) {
-					if (car.id.compare(scheduling_cars[idx].id) == 0) {
-						idx_in_scheduling_cars = idx;
-						break;
-					}
-				}
-
-				string deleted_car_id = car.id;
-				scheduling_cars.erase(scheduling_cars.begin() + idx_in_scheduling_cars);
+				new_cars.erase(car_id);
 
 				if (car.position < head_of_line_blocking_position[lane_idx]) {
 					head_of_line_blocking_position[lane_idx] = car.position;
 				}
-
-				if (deleted_car_id.compare(target_car.id) == 0) {
-					target_car.D = SCHEDULE_POSPONDED;
-					return;
-				}
 			}
 			else {
+				double min_d_add = 0;
+				if (car.position < CCZ_LEN) {
+					min_d_add = (2 * 2 * CCZ_ACC_LEN / (V_MAX + 0)) - (2 * CCZ_ACC_LEN / V_MAX);	 // Cost of fully stop
+					double add_blind_car_delay = (LANE_WIDTH * LANE_NUM_PER_DIRECTION * 2) - (car.position / V_MAX + min_d_add);
+					add_blind_car_delay = max(0.0, add_blind_car_delay);
+					min_d_add += add_blind_car_delay;
+				}
+
 				if (car.current_turn == 'S') {
-					MPVariable* const temp_D = solver.MakeNumVar(spillback_delay, infinity, "d" + car.id);
+					MPVariable* const temp_D = solver.MakeNumVar(max(0 + min_d_add, spillback_delay), infinity, "d" + car.id);
 					D_solver_variables[car.id] = temp_D;
 				}
 				else {
-					double min_d = (2 * CCZ_DEC2_LEN / (double(_V_MAX) + _TURN_SPEED)) - (CCZ_DEC2_LEN / _V_MAX);
-					MPVariable* const temp_D = solver.MakeNumVar(max(min_d, spillback_delay), infinity, "d" + car.id);
+					double min_d = (2 * CCZ_DEC2_LEN / (double(V_MAX) + TURN_SPEED)) - (CCZ_DEC2_LEN / V_MAX);
+					MPVariable* const temp_D = solver.MakeNumVar(max(min_d + min_d_add, spillback_delay), infinity, "d" + car.id);
 					D_solver_variables[car.id] = temp_D;
 				}
 			}
 		}
 		else {
 			if (car.position > head_of_line_blocking_position[lane_idx]) {
-				// remove car from scheduling_cars
-				uint32_t idx_in_scheduling_cars = -1;
-				for (uint32_t idx = 0; idx < (uint32_t)scheduling_cars.size(); idx++) {
-					if (car.id.compare(scheduling_cars[idx].id) == 0) {
-						idx_in_scheduling_cars = idx;
-						break;
-					}
-				}
-
-				string deleted_car_id = car.id;
-				scheduling_cars.erase(scheduling_cars.begin() + idx_in_scheduling_cars);
-
-				if (deleted_car_id.compare(target_car.id) == 0) {
-					target_car.D = SCHEDULE_POSPONDED;
-					return;
-				}
+				new_cars.erase(car_id);	  //Blocked by the car at the front
 			}
 			else {
 				if (car.current_turn == 'S') {
@@ -229,7 +186,7 @@ void IntersectionManager::Roadrunner_P(map<string, Car*>& old_cars, map<string, 
 					D_solver_variables[car.id] = temp_D;
 				}
 				else {
-					double min_d = (2 * CCZ_DEC2_LEN / (double(_V_MAX) + _TURN_SPEED)) - (CCZ_DEC2_LEN / _V_MAX);
+					double min_d = (2 * CCZ_DEC2_LEN / (double(V_MAX) + TURN_SPEED)) - (CCZ_DEC2_LEN / V_MAX);
 					MPVariable* const temp_D = solver.MakeNumVar(min_d, infinity, "d" + car.id);
 					D_solver_variables[car.id] = temp_D;
 				}
@@ -240,13 +197,15 @@ void IntersectionManager::Roadrunner_P(map<string, Car*>& old_cars, map<string, 
 
 	// part 4: set constrain (10) (Car on same lane, rear-end collision avoidance)
 	// (1) old car and new car
-	for (const Car_in_database& new_car : scheduling_cars) {
-		for (const auto& [car_id, old_car] : *sched_cars) {
-			
+	for (const auto& [n_car_id, new_car_ptr] : new_cars) {
+		for (const auto& [o_car_id, old_car_ptr] : old_cars) {
+			Car& new_car = *new_car_ptr;
+			Car& old_car = *old_car_ptr;
+
 			double bound = old_car.length / old_car.speed_in_intersection + (old_car.OT + old_car.D);
-			bound += _HEADWAY / old_car.speed_in_intersection;
+			bound += HEADWAY / old_car.speed_in_intersection;
 			if (new_car.current_turn == 'S' && old_car.current_turn != 'S') {
-				bound += (double(_V_MAX) - _TURN_SPEED) * (CCZ_DEC2_LEN) / (_V_MAX * (double(_V_MAX) + _TURN_SPEED));
+				bound += (double(V_MAX) - TURN_SPEED) * (CCZ_DEC2_LEN) / (V_MAX * (double(V_MAX) + TURN_SPEED));
 			}
 			bound = bound - new_car.OT;
 
@@ -256,10 +215,10 @@ void IntersectionManager::Roadrunner_P(map<string, Car*>& old_cars, map<string, 
 	}
 
 	// (2) two new cars
-	for (uint32_t i = 0; i < (uint32_t)scheduling_cars.size(); i++) {
-		for (uint32_t j = i+1; j < (uint32_t)scheduling_cars.size(); j++) {
-			Car_in_database* car_a_ptr = &(scheduling_cars[i]);
-			Car_in_database* car_b_ptr = &(scheduling_cars[j]);
+	for (auto i = new_cars.begin(); i != new_cars.end(); i++) {
+		for (auto j = next(new_cars.begin(), 1); j != new_cars.end(); j++) {
+			Car* car_a_ptr = i->second;
+			Car* car_b_ptr = j->second;
 			
 			// Ensure car_a_ptr->OT > car_b_ptr->OT
 			if (car_a_ptr->OT < car_b_ptr->OT) {
@@ -267,9 +226,9 @@ void IntersectionManager::Roadrunner_P(map<string, Car*>& old_cars, map<string, 
 			}
 
 			double bound = car_b_ptr->length / car_b_ptr->speed_in_intersection - car_a_ptr->OT + car_b_ptr->OT;
-			bound += _HEADWAY / car_b_ptr->speed_in_intersection;
+			bound += HEADWAY / car_b_ptr->speed_in_intersection;
 			if (car_a_ptr->current_turn == 'S' && car_b_ptr->current_turn != 'S') {
-				bound += (double(_V_MAX) - _TURN_SPEED) * (CCZ_DEC2_LEN) / (double(_V_MAX) * (double(_V_MAX) + _TURN_SPEED));
+				bound += (double(V_MAX) - TURN_SPEED) * (CCZ_DEC2_LEN) / (double(V_MAX) * (double(V_MAX) + TURN_SPEED));
 			}
 			MPConstraint* const tmp_conts = solver.MakeRowConstraint(bound, infinity);
 			tmp_conts->SetCoefficient(D_solver_variables[car_a_ptr->id], 1);
@@ -278,10 +237,10 @@ void IntersectionManager::Roadrunner_P(map<string, Car*>& old_cars, map<string, 
 	}
 
 	// part 5: set constrain (11) (two new cars in the intersection)
-	for (uint32_t i = 0; i < (uint32_t)scheduling_cars.size(); i++) {
-		for (uint32_t j = i + 1; j < (uint32_t)scheduling_cars.size(); j++) {
-			Car_in_database& car_i = scheduling_cars[i];
-			Car_in_database& car_j = scheduling_cars[j];
+	for (auto i = new_cars.begin(); i != new_cars.end(); i++) {
+		for (auto j = next(new_cars.begin(), 1); j != new_cars.end(); j++) {
+			Car& car_i = *(i->second);
+			Car& car_j = *(j->second);
 
 			if (car_i.lane == car_j.lane) {
 				continue;
@@ -292,7 +251,7 @@ void IntersectionManager::Roadrunner_P(map<string, Car*>& old_cars, map<string, 
 				double tau_S1_S2 = get<0>(conflict_region_data);
 				double tau_S2_S1 = get<1>(conflict_region_data);
 
-				MPVariable* const flag = solver.MakeIntVar(0, 1, string("flag_new_new_") + to_string(i) + "_" + to_string(j));
+				MPVariable* const flag = solver.MakeIntVar(0, 1, string("flag_new_new_") + car_i.id + "_" + car_j.id);
 
 				double bound_2 = -car_j.OT + car_i.OT + tau_S1_S2 - LARGE_NUM;
 				MPConstraint* const tmp_conts2 = solver.MakeRowConstraint(bound_2, infinity);
@@ -310,8 +269,10 @@ void IntersectionManager::Roadrunner_P(map<string, Car*>& old_cars, map<string, 
 	}
 
 	// part 6: set constrain (12) (one new car and one old car in the intersection)
-	for (const Car_in_database& new_car : scheduling_cars) {
-		for (const auto& [car_id, old_car] : *sched_cars) {
+	for (const auto& [n_car_id, new_car_ptr] : new_cars) {
+		for (const auto& [o_car_id, old_car_ptr] : old_cars) {
+			Car& new_car = *new_car_ptr;
+			Car& old_car = *old_car_ptr;
 
 			if (new_car.lane == old_car.lane) {
 				continue;
@@ -337,10 +298,71 @@ void IntersectionManager::Roadrunner_P(map<string, Car*>& old_cars, map<string, 
 		}
 	}
 
+	#ifdef PEDESTRIAN
+	// part 7: pedestrian
+	for (const auto& [car_id, car_ptr] : new_cars) {
+		Car& car = *car_ptr;
+		uint8_t in_dir = car.in_direction;
+		uint8_t out_dir = car.out_direction;
+
+		// Set pedestrian constraint if "in" is not none
+		if (pedestrian_time_mark_list[in_dir] > 0) {
+			double avoid_start_AT = pedestrian_time_mark_list[in_dir] - car.length / car.speed_in_intersection;
+			double avoid_end_AT = pedestrian_time_mark_list[in_dir] + PEDESTRIAN_TIME_GAP;
+
+			if (avoid_start_AT - car.OT <= 0) {
+				double bound_p1 = avoid_end_AT - car.OT;
+				MPConstraint* const tmp_conts1 = solver.MakeRowConstraint(bound_p1, solver.infinity());
+				tmp_conts1->SetCoefficient(D_solver_variables[car_id], 1);
+			}
+			else {
+				MPVariable* const flag = solver.MakeIntVar(0, 1, string("flag_ped_in_") + car_id);
+
+				double bound_p2 = avoid_end_AT - car.OT - LARGE_NUM;
+				MPConstraint* const tmp_conts2 = solver.MakeRowConstraint(bound_p2, infinity);
+				tmp_conts2->SetCoefficient(D_solver_variables[car_id], 1);
+				tmp_conts2->SetCoefficient(flag, -LARGE_NUM);
+
+				double bound_p3 = -(avoid_start_AT - car.OT);
+				MPConstraint* const tmp_conts3 = solver.MakeRowConstraint(bound_p3, infinity);
+				tmp_conts3->SetCoefficient(D_solver_variables[car_id], -1);
+				tmp_conts3->SetCoefficient(flag, LARGE_NUM);
+			}
+		}
+
+		// Set pedestrian constraint if "out" is not none
+		if (pedestrian_time_mark_list[out_dir] > 0) {
+			double avoid_start_AT = pedestrian_time_mark_list[out_dir] - car.length / V_MAX;
+			double avoid_end_AT = pedestrian_time_mark_list[out_dir] + PEDESTRIAN_TIME_GAP;
+			double travel_in_inter_time = get_Intertime(car.lane, car.current_turn);
+
+			if (avoid_start_AT - car.OT - travel_in_inter_time <= 0) {
+				double bound = avoid_end_AT - car.OT - travel_in_inter_time;
+				MPConstraint* const tmp_conts1 = solver.MakeRowConstraint(bound, infinity);
+				tmp_conts1->SetCoefficient(D_solver_variables[car_id], 1);
+			}
+			else {
+				MPVariable* const flag = solver.MakeIntVar(0, 1, string("flag_ped_out_") + car_id);
+
+				double bound_p2 = avoid_end_AT - car.OT - travel_in_inter_time - LARGE_NUM;
+				MPConstraint* const tmp_conts2 = solver.MakeRowConstraint(bound_p2, infinity);
+				tmp_conts2->SetCoefficient(D_solver_variables[car_id], 1);
+				tmp_conts2->SetCoefficient(flag, -LARGE_NUM);
+
+				double bound_p3 = -(avoid_start_AT - car.OT - travel_in_inter_time);
+				MPConstraint* const tmp_conts3 = solver.MakeRowConstraint(bound_p3, infinity);
+				tmp_conts3->SetCoefficient(D_solver_variables[car_id], -1);
+				tmp_conts3->SetCoefficient(flag, LARGE_NUM);
+			}
+		}
+	}
+	#endif
+
+
 	// part 7: set objective
 	MPObjective* const objective = solver.MutableObjective();
-	for (const Car_in_database& new_car : scheduling_cars) {
-		objective->SetCoefficient(D_solver_variables[new_car.id], 1);
+	for (const auto& [car_id, new_car_ptr] : new_cars) {
+		objective->SetCoefficient(D_solver_variables[car_id], 1);
 	}
 	objective->SetMinimization();
 
@@ -353,5 +375,8 @@ void IntersectionManager::Roadrunner_P(map<string, Car*>& old_cars, map<string, 
 	}
 
 	// Update the delays
-	target_car.D = D_solver_variables[target_car.id]->solution_value();
+	for (const auto& [car_id, D_variable] : D_solver_variables) {
+		new_cars[car_id]->D = D_solver_variables[car_id]->solution_value();
+		new_cars[car_id]->is_scheduled = true;
+	}
 }

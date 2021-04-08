@@ -424,6 +424,18 @@ void IntersectionManager::run(double simu_step) {
 		scheduling(sched_car, n_sched_car, advised_n_sched_car);
 		schedule_period_count = 0;
 	}
+
+
+
+
+
+
+
+
+
+
+
+
 }
 
 #ifdef PEDESTRIAN

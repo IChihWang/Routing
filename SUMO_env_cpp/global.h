@@ -32,6 +32,10 @@ using namespace std;
 #define SCHEDULING_PERIOD GZ_LEN/V_MAX
 #define ROUTING_PERIOD_NUM int((TOTAL_LEN/V_MAX/2) / SCHEDULING_PERIOD) - 1
 #define ROUTING_PERIOD ROUTING_PERIOD_NUM*SCHEDULING_PERIOD
+#define LARGE_NUM 65535
+
+
+#define PEDESTRIAN_TIME_GAP 0 // 60 second
 
 
 extern map<string, vector< map<char, uint8_t> >> lane_dict;
