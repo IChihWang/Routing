@@ -1,4 +1,5 @@
 #include "intersection_manager.h"
+#include "Car.h"
 #include <sstream>
 #include <iomanip>
 #include <algorithm>
@@ -58,16 +59,16 @@ Car_Info_In_Intersection IntersectionManager::get_car_info_for_route(const strin
 	string src_intersection_id = "";              // After offset, which intersection / node
 	uint8_t direction_of_src_intersection = 0;
 	uint8_t src_shift_num = 0;
-	double position = car_list[car_id].position;
+	double position = car_list[car_id]->position;
 
 	// Not yet enter Roadrunner
-	if (car_list[car_id].zone.compare("") == 0) {
+	if (car_list[car_id]->zone == "") {
 		double diff_pos = position - TOTAL_LEN;
 		time_offset = diff_pos / V_MAX;
 
 		if (time_offset > ROUTING_PERIOD) {
 			// Get the origin intersection id
-			uint8_t lane = car_list[car_id].lane;
+			uint8_t lane = car_list[car_id]->lane;
 			uint8_t direction = lane / LANE_NUM_PER_DIRECTION;
 
 			direction_of_src_intersection = direction;
@@ -85,15 +86,15 @@ Car_Info_In_Intersection IntersectionManager::get_car_info_for_route(const strin
 
 		// Find lane of the car
 		uint8_t lane = 0;
-		if (car_list[car_id].zone.compare("AZ") == 0) {
-			lane = car_list[car_id].desired_lane;
+		if (car_list[car_id]->zone == "AZ") {
+			lane = car_list[car_id]->desired_lane;
 		}
 		else {
-			lane = car_list[car_id].lane;
+			lane = car_list[car_id]->lane;
 		}
 
 		// Compute the time_offset
-		if (!car_list[car_id].is_scheduled) {
+		if (!car_list[car_id]->is_scheduled) {
 			// Delay is not computed yet
 			time_offset = position / V_MAX;
 			// Estimate by borrowing the known delay
@@ -103,11 +104,11 @@ Car_Info_In_Intersection IntersectionManager::get_car_info_for_route(const strin
 		}
 		else {
 			// Compute with the known delay
-			time_offset = car_list[car_id].OT + car_list[car_id].D;
+			time_offset = car_list[car_id]->OT + car_list[car_id]->D;
 		}
 
 		// Add the time in the intersection
-		char turning = car_list[car_id].current_turn;
+		char turning = car_list[car_id]->current_turn;
 		double time_in_inter = get_Intertime(lane, turning);
 		time_offset += time_in_inter;  // time passing intersection
 
@@ -184,7 +185,7 @@ string IntersectionManager::check_in_my_region(string lane_id) {
 		getline(ss_car, y, '_');
 		string lane_id_short = x + '_' + y;
 
-		if (lane_id_short.compare(string(":") + id_str) == 0) {
+		if (lane_id_short == (string(":") + id_str)) {
 			return "In my intersection";
 		}
 		else {
@@ -228,9 +229,33 @@ void IntersectionManager::update_car(string car_id, string lane_id, double simu_
 		car_list[car_id]->current_turn = current_turn;
 		car_list[car_id]->next_turn = next_turn;
 
+		// Set the position of each cars
+		double position = traci.lane.getLength(lane_id) - traci.vehicle.getLanePosition(car_id);
+		car_list[car_id]->position = position;
 
-		//TODO:
+		if ((car_list[car_id]->zone == "") && (position <= TOTAL_LEN - car_list[car_id]->length)) {
+			car_list[car_id]->zone = "AZ";
+			car_list[car_id]->zone_state = "AZ_not_advised";
+		}
+		else if ((car_list[car_id]->zone == "AZ") && (position <= PZ_LEN + GZ_LEN + BZ_LEN + CCZ_LEN)) {
+			car_list[car_id]->zone = "PZ";
+			car_list[car_id]->zone_state = "PZ_not_set";
+		}
 
+		else if ((car_list[car_id]->zone == "PZ") && (position <= GZ_LEN + BZ_LEN + CCZ_LEN)) {
+			car_list[car_id]->zone = "GZ";
+			car_list[car_id]->zone_state = "not_scheduled";
+		}
+
+		else if ((car_list[car_id]->zone == "GZ") && (position <= BZ_LEN + CCZ_LEN)) {
+			car_list[car_id]->zone = "BZ";
+		}
+
+		else if ((car_list[car_id]->zone == "BZ") && (position <= CCZ_LEN)) {
+			car_list[car_id]->zone = "CCZ";
+		}
+
+		car_list[car_id]->lane = lane;
 	}
 }
 
@@ -267,9 +292,21 @@ void IntersectionManager::update_path(string car_id, char current_turn, char nex
 		y_idx = y_idx + 1;
 	}
 
+	// Compute the intersection id
+	string intersection_manager_id = "";
+	stringstream ss;
+	ss << std::setw(3) << std::setfill('0') << x_idx;
+	intersection_manager_id += ss.str();
+	intersection_manager_id += "_";
+	ss.str("");
+	ss << std::setw(3) << std::setfill('0') << y_idx;
+	intersection_manager_id += ss.str();
 
+	string target_edge = intersection_manager_id + "_" + to_string(target_dir);
+	traci.vehicle.changeTarget(car_id, target_edge);
+	traci.vehicle.setMaxSpeed(car_id, V_MAX);
+	traci.vehicle.setColor(car_id, libsumo::TraCIColor(255, 255, 255));
 
-
-
-
+	// Update dst lanes and info
+	car_list[car_id]->set_turning(current_turn, next_turn);
 }

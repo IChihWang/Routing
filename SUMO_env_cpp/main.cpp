@@ -7,6 +7,7 @@
 #include "Intersection_manager.h"
 #include "server.h"
 #include "json.hpp"
+#include "thread_worker.h"
 
 using namespace std;
 using json = nlohmann::json;
@@ -251,6 +252,10 @@ void run_sumo(Thread_Worker& router_thread) {
                     car_info_dict[car_id].inter_status = "On my lane";
                     car_info_dict[car_id].intersection_manager_ptr = intersection_ptr;
                 }
+
+
+
+
             }
 
         }

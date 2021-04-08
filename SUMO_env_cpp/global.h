@@ -39,6 +39,7 @@ extern map<string, double> inter_length_dict;
 extern map<string, map<string, double> > inter_info;
 
 class Car;
+class IntersectionManager;
 
 void read_load_adv_data();
 void read_inter_info_data();

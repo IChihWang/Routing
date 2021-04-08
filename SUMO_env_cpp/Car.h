@@ -53,8 +53,9 @@ public:
 	Car() {}
 	Car(string car_id, uint8_t length, uint8_t lane, char turn, char next_turn);
 
-private:
 	void set_turning(char turn, char next_turn);
+
+private:
 };
 
 class Car_Info {

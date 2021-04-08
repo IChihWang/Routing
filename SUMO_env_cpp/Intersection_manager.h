@@ -1,7 +1,7 @@
 #pragma once
 #include <tuple>
 #include <map>
-#include "Car.h"
+#include "global.h"
 #include "LaneAdviser.h"
 using namespace std;
 
