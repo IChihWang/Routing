@@ -346,6 +346,12 @@ void IntersectionManager::run(double simu_step) {
 		if (find(in_lanes.begin(), in_lanes.end(), lane_id) == in_lanes.end()) {
 			traci.vehicle.setSpeed(car_id, car_ptr->speed_in_intersection);
 
+			/*
+			if ((car_ptr->Leave_T == 0)) {
+				cout << car_id << "  " << car_ptr->OT + car_ptr->D << " : " << car_ptr->OT << " " << car_ptr->D << endl;
+			}
+			*/
+
 			car_ptr->Leave_T = simu_step;
 
 #ifdef EXP_DELAY

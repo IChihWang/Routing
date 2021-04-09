@@ -46,7 +46,7 @@ uint8_t Lane_Adviser::advise_lane(const Car& car, const bool spillback_lane_advi
 	// Sort occup_time_list
 	vector<uint8_t> candidate_list(occup_time_list.size());
 	iota(candidate_list.begin(), candidate_list.end(), 0);
-	sort(candidate_list.begin(), candidate_list.end(), [&occup_time_list](double a, double b) {return a < b; });
+	sort(candidate_list.begin(), candidate_list.end(), [&occup_time_list](size_t a, size_t b) {return occup_time_list[a] < occup_time_list[b]; });
 
 	// Get the shortest or the most ideal lane
 	uint8_t ideal_lane = start_lane;

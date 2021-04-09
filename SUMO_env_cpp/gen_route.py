@@ -110,7 +110,8 @@ def generate_routefile_with_src_dst(inter_size, arrival_rate, rand_seed, time_st
                 src_node_idx = int(route)
                 # Genterate destination
                 dst_node_idx = src_node_idx
-                while (src_node_idx-dst_node_idx)%(inter_size*4) < inter_size-1 or (dst_node_idx-src_node_idx)%(inter_size*4) < inter_size-1:
+                #while (src_node_idx-dst_node_idx)%(inter_size*4) < inter_size-1 or (dst_node_idx-src_node_idx)%(inter_size*4) < inter_size-1:
+                while dst_node_idx == src_node_idx:
                     dst_node_idx = random.randrange(0,inter_size*4)
 
                 #while src_node_idx == dst_node_idx:
