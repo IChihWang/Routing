@@ -31,6 +31,7 @@ public:
 		worker_ptr = new thread(call_routing_thread, this);
 	}
 	~Thread_Worker() {
-		delete worker_ptr;
+		if (worker_ptr->joinable())
+			delete worker_ptr;
 	}
 };

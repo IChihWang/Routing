@@ -5,9 +5,9 @@
 #include "LaneAdviser.h"
 using namespace std;
 
-#ifndef COORD
-#define COORD
-typedef tuple<uint16_t, uint16_t> Coord;
+#ifndef MY_COORD
+#define MY_COORD
+typedef tuple<uint16_t, uint16_t> My_Coord;
 #endif
 
 class Car_Delay_Position_Record {
@@ -20,7 +20,7 @@ public:
 };
 class Road_Info {
 public:
-	uint16_t avail_len = TOTAL_LEN;
+	double avail_len = TOTAL_LEN;
 	double delay = 0;
 	vector<Car_Delay_Position_Record> car_delay_position;
 };
@@ -43,7 +43,7 @@ public:
 
 class IntersectionManager {
 public:
-	Coord id;
+	My_Coord id;
 	string id_str = "";
 
 	// Break down to these to reduce the search space
@@ -88,7 +88,7 @@ public:
 	
 
 	IntersectionManager();
-	IntersectionManager(Coord id);
+	IntersectionManager(My_Coord id);
 
 	void connect(const uint8_t& my_direction, IntersectionManager& target_intersection, const uint8_t& its_direction);
 	Car_Info_In_Intersection get_car_info_for_route(const string& car_id);
@@ -99,6 +99,6 @@ public:
 	void run(double simu_step);
 private:
 	void set_round_lane();
-	double scheduling(map<string, Car*>& sched_car, map<string, Car*>& n_sched_car, map<string, Car*>& advised_n_sched_car);
+	void scheduling(map<string, Car*>& sched_car, map<string, Car*>& n_sched_car, map<string, Car*>& advised_n_sched_car);
 	void Roadrunner_P(map<string, Car*>& sched_car, map<string, Car*>& n_sched_car, map<string, Car*>& advised_n_sched_car);
 };

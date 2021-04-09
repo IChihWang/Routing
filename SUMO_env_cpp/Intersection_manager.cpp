@@ -16,7 +16,7 @@ IntersectionManager::IntersectionManager() {
 	set_round_lane();
 }
 
-IntersectionManager::IntersectionManager(Coord id) : id(id) {
+IntersectionManager::IntersectionManager(My_Coord id) : id(id) {
 	stringstream ss;
 	ss << std::setw(3) << std::setfill('0') << get<0>(id);
 	id_str += ss.str();
@@ -350,7 +350,7 @@ void IntersectionManager::run(double simu_step) {
 
 #ifdef EXP_DELAY
 			total_delays.push_back((car.Leave_T - car.Enter_T) - (TOTAL_LEN / V_MAX));
-			self.total_delays_by_sche.push_back(car.D);
+			total_delays_by_sche.push_back(car.D);
 #endif		
 
 			car_ptr->zone = "Intersection";
@@ -358,16 +358,16 @@ void IntersectionManager::run(double simu_step) {
 	}
 
 	// ===== Starting Cruise control
-	vector<string> to_be_deleted;
+	vector<string> to_be_deleted_CC;
 	for (const auto& [car_id, car_ptr] : pz_list) {
 		if (car_ptr->position <= CCZ_LEN && car_ptr->is_scheduled == true) {
-			to_be_deleted.push_back(car_id);
+			to_be_deleted_CC.push_back(car_id);
 
 			if (car_ptr->CC_state == "Preseting_done") {
 				car_ptr->CC_state = "CruiseControl_ready";
 			}
 			else if (car_ptr->position <= CCZ_LEN) {
-				to_be_deleted.push_back(car_id);
+				to_be_deleted_CC.push_back(car_id);
 
 				if ((car_ptr->CC_state == "") || (!(car_ptr->CC_state.find("Platoon") != string::npos || car_ptr->CC_state.find("Entering") != string::npos))) {
 					car_ptr->CC_state = "Keep_Max_speed";
@@ -375,7 +375,7 @@ void IntersectionManager::run(double simu_step) {
 			}
 		}
 	}
-	for (const auto& car_id : to_be_deleted) {
+	for (const auto& car_id : to_be_deleted_CC) {
 		pz_list.erase(car_id);
 	}
 
@@ -425,17 +425,161 @@ void IntersectionManager::run(double simu_step) {
 		schedule_period_count = 0;
 	}
 
+	// ################################################
+	// Set Max Speed in PZ
+	vector<string> to_be_deleted_PZ;
+	for (const auto& [car_id, car_ptr] : az_list) {
+		if (car_ptr->zone == "PZ" && car_ptr->zone_state == "PZ_not_set") {
+			traci.vehicle.setMinGap(car_id, HEADWAY);
+			pz_list[car_id] = car_ptr;
+			to_be_deleted_PZ.push_back(car_id);
+
+			// Take over the speed control from the car
+			traci.vehicle.setSpeedMode(car_id, 0);
+			if (car_ptr->CC_state == "")
+				car_ptr->CC_state = "Preseting_start";
+
+			// Cancel the auto gap
+			traci.vehicle.setLaneChangeMode(car_id, 0);
+			uint8_t lane = car_ptr->lane;
+			car_ptr->desired_lane = lane;
+			uint8_t lane_sub_idx = (LANE_NUM_PER_DIRECTION - lane % LANE_NUM_PER_DIRECTION - 1);
+
+			// Stay on its lane
+			traci.vehicle.changeLane(car_id, lane_sub_idx, 1.0);
+			car_ptr->zone_state = "PZ_set";
+		}
+	}
+
+	for (const string& car_id : to_be_deleted_PZ) {
+		az_list.erase(car_id);
+	}
+	to_be_deleted_PZ.clear();
+
+	// Set Max Speed in PZ
+	for (const auto& [car_id, car_ptr] : pz_list) {
+		if (car_ptr->zone == "PZ" && car_ptr->zone_state == "PZ_set") {
+			uint8_t lane = car_ptr->lane;
+			car_ptr->desired_lane = car_ptr->lane;
+
+			uint8_t out_sub_lane = (LANE_NUM_PER_DIRECTION - lane % LANE_NUM_PER_DIRECTION - 1);
+			car_ptr->dst_lane = int(car_ptr->out_direction * LANE_NUM_PER_DIRECTION + out_sub_lane);     // Destination lane before next lane change
+
+			// Stay on its lane
+			traci.vehicle.changeLane(car_id, out_sub_lane, 1.0);
+		}
+	}
 
 
+	// ##########################################
+	// Cruse Control
 
+	// Start to let cars control itself once it enters the CCZ
+	// Each car perform their own Cruise Control behavior
+	vector<pair<string, Car*>> sorted_cars_list;
+	for (auto& [car_id, car_ptr] : car_list) {
+		sorted_cars_list.push_back(make_pair(car_id, car_ptr));
+	}
 
+	sort(sorted_cars_list.begin(), sorted_cars_list.end(), [](pair<string, Car*> a, pair<string, Car*> b) -> bool {return a.second->position < b.second->position; });
+	for (auto& [car_id, car_ptr] : sorted_cars_list) {
+		// Cars perform their own CC
+		if (car_ptr->zone != "")
+			car_ptr->handle_CC_behavior(car_list);
+	}
 
+	// ################################################
+	// Change lane in AZ
 
+	// Check whether there is a spillback
+	uint32_t accumulate_car_len_lane[4 * LANE_NUM_PER_DIRECTION] = {0};
+	bool spillback_lane_advise_avoid[4 * LANE_NUM_PER_DIRECTION] = {0};
 
+	for (const auto& [car_id, car_ptr] : car_list) {
+		Car& car = *car_ptr;
+		uint8_t lane_idx = car.dst_lane;
+		uint8_t lane_changed_to_idx = car.dst_lane_changed_to;
 
+		if (others_road_info[lane_idx] != nullptr)
+			accumulate_car_len_lane[lane_idx] += (car.length + HEADWAY);
+		if (others_road_info[lane_changed_to_idx] != nullptr)
+			accumulate_car_len_lane[lane_changed_to_idx] += (car.length + HEADWAY);
+		if (car.is_spillback == true)
+			spillback_lane_advise_avoid[lane_idx] = true;
+	}
+	for (uint8_t lane_idx = 0; lane_idx < 4 * LANE_NUM_PER_DIRECTION; lane_idx++) {
+		if (others_road_info[lane_idx] != nullptr) {
+			if (accumulate_car_len_lane[lane_idx] >= others_road_info[lane_idx]->avail_len)
+				spillback_lane_advise_avoid[lane_idx] = true;
+		}
+	}
 
+	for (const auto& [car_id, car_ptr] : car_list) {
+		Car& car = *car_ptr;
+		if (car.zone == "AZ" and car.zone_state == "AZ_not_advised") {
+			az_list[car_id] = car_ptr;
 
+			traci.vehicle.setMinGap(car_id, 3);
+			traci.vehicle.setLaneChangeMode(car_id, 784);
 
+			double time_in_AZ = 9999.91;
+			uint8_t advised_lane = lane_advisor.advise_lane(*(car_list[car_id]), spillback_lane_advise_avoid);
+
+			traci.vehicle.changeLane(car_id, advised_lane, time_in_AZ);
+			car.desired_lane = int((LANE_NUM_PER_DIRECTION - advised_lane - 1) + (car.lane/LANE_NUM_PER_DIRECTION)*LANE_NUM_PER_DIRECTION);
+			car.zone_state = "AZ_advised";
+		}
+		else if (car.zone == "AZ" && car.zone_state == "AZ_advised" && car.position <= PZ_LEN + GZ_LEN + BZ_LEN + CCZ_LEN + CCZ_ACC_LEN) {
+			pair<string, double> leader_tuple = traci.vehicle.getLeader(car.id, 0);
+			if (leader_tuple.first != "") {
+				if (car_list.find(leader_tuple.first) != car_list.end()) {
+					string front_car_ID = leader_tuple.first;
+					Car* front_car_ptr = car_list[front_car_ID];
+					double front_distance = leader_tuple.second;
+
+					double my_speed = traci.vehicle.getSpeed(car.id);
+					double front_speed = traci.vehicle.getSpeed(front_car_ptr->id);
+					double min_catch_up_time = (my_speed - front_speed) / MAX_ACC;
+					double min_distance = (my_speed - front_speed) * min_catch_up_time;
+
+					double min_gap = max(double(HEADWAY), min_distance + HEADWAY);
+					traci.vehicle.setMinGap(car_id, min_gap);
+				}
+			}
+		}
+	}
+
+	// ##########################################
+	// Update the road info after actions
+	double car_accumulate_len_lane[LANE_NUM_PER_DIRECTION * 4];
+	fill_n(car_accumulate_len_lane, 4 * LANE_NUM_PER_DIRECTION, (CCZ_DEC2_LEN + CCZ_ACC_LEN));
+	double delay_lane[LANE_NUM_PER_DIRECTION * 4] = { 0 };
+	double car_position_with_delay_lane[LANE_NUM_PER_DIRECTION * 4] = { 0 };
+	map<uint8_t, vector<Car_Delay_Position_Record>>	lane_car_delay_position;
+
+	for (const auto& [car_id, car_ptr] : sorted_cars_list) {
+		Car& car = *car_ptr;
+		uint8_t lane = car.lane;
+		car_accumulate_len_lane[lane] += car.length + HEADWAY;
+		if (car.is_scheduled) {
+			lane_car_delay_position[lane].push_back(Car_Delay_Position_Record(car_accumulate_len_lane[lane], car.D));
+		}
+
+		if (car.position > TOTAL_LEN - AZ_LEN && lane != car.desired_lane) {
+			car_accumulate_len_lane[car.desired_lane] += car.length + HEADWAY;
+		}
+
+		if (car.position > car_position_with_delay_lane[lane] && car.is_scheduled) {
+			car_position_with_delay_lane[lane] = car.position;
+			delay_lane[lane] = car.D;
+		}
+	}
+
+	for (uint8_t lane_idx = 0; lane_idx < 4 * LANE_NUM_PER_DIRECTION; lane_idx++) {
+		my_road_info[lane_idx].avail_len = TOTAL_LEN - car_accumulate_len_lane[lane_idx] - HEADWAY;
+		my_road_info[lane_idx].delay = delay_lane[lane_idx];
+		my_road_info[lane_idx].car_delay_position = lane_car_delay_position[lane_idx];
+	}
 }
 
 #ifdef PEDESTRIAN

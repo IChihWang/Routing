@@ -20,7 +20,7 @@ public:
 	Lane_Adviser();
 
 	uint8_t advise_lane(const Car& car, const bool spillback_lane_advise_avoid[]);
-	void update_Table_from_cars(const map<string, Car>& advising_car, const map<string, Car>& scheduling_cars, const map<string, Car>& scheduled_cars);
+	void update_Table_from_cars(const map<string, Car*>& n_sched_car, const map<string, Car*>& advised_n_sched_car);
 private:
 	double timeMatrix[LANE_ADV_NUM][LANE_ADV_NUM] = {};
 	map<Trajectory_ID, uint16_t> count_advised_not_secheduled_car_num;
@@ -29,4 +29,5 @@ private:
 	void update_Table(const Car& car, double time);
 	double get_Max_Time(uint8_t lane, char turn, double time_matrix[][LANE_ADV_NUM]);
 	void update_Table_After_Advise(const uint8_t& lane, const char& turn, const uint8_t& car_length, double time_matrix[][LANE_ADV_NUM]);
+	void reset_Table();
 };

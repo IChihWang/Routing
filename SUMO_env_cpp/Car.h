@@ -46,16 +46,20 @@ public:
 
 	string CC_state = "";
 	double CC_slowdown_timer = 0;
-		//self.CC_front_car = None
+	Car* CC_front_car = nullptr;
 	bool CC_is_stop_n_go = false;
 
 
 	Car() {}
 	Car(string car_id, uint8_t length, uint8_t lane, char turn, char next_turn);
+	void handle_CC_behavior(map<string, Car*>& car_list);
 
 	void set_turning(char turn, char next_turn);
 
 private:
+	double CC_get_front_speed();
+	pair<double, double> CC_get_shifts(map<string, Car*>& car_list);	// return {'shifting': shifting, 'shifting_end': CC_shift_end}
+	void CC_get_slow_down_speed();
 };
 
 class Car_Info {

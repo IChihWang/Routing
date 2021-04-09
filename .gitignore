@@ -22,3 +22,4 @@ MiniVnet_cpp/x64/
 SUMO_env_cpp/Debug/
 SUMO_env_cpp/.vs/
 *.user
+SUMO_env_cpp/x64/

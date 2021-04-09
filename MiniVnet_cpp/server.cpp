@@ -76,6 +76,7 @@ SOCKET initial_server_handler() {
 	char buffer[1024] = { 0 };
 	recv(new_socket, buffer, 1024, 0);
 
+	cout << buffer << endl;
 	stringstream ss(buffer);
 	vector<float> results;
 	for (int i = 0; i < 8; i++) {

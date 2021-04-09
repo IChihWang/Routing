@@ -171,7 +171,7 @@ class Car:
                 max_total_time = (self.position - (cfg.CCZ_ACC_LEN+cfg.CCZ_DEC2_LEN))/(my_speed/2) + cfg.CCZ_ACC_LEN/(cfg.MAX_SPEED/2)
 
                 if T > max_total_time:
-                    self.CC_auto_stop_n_go = True
+                    self.CC_is_stop_n_go = True
                     slow_down_speed = 0.001
                 elif T < 0:
                     slow_down_speed = cfg.MAX_SPEED

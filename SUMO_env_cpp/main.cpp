@@ -26,14 +26,15 @@ void run_sumo(Thread_Worker& router_thread);
 
 int main(int argc, char* argv[])
 {
-    cout << "Usage: ./main <grid_size> <src_dst_file.json>" << endl;
-
+    cout << "Usage: ./main <grid_size> <src_dst_file.json> <_N_TIME_STEP> <_TIME_STEP>" << endl;
     string src_dst_file_name = "data/routes/";
     // Parse the input
-    if (argc >= 3) {
+    if (argc >= 5) {
         string grid_size_str = argv[1];
         _grid_size = stoi(grid_size_str);
         src_dst_file_name += argv[2];
+        _N_TIME_STEP = stoi(argv[3]);
+        _TIME_STEP = stof(argv[4]);
     }
     else {
         cout << "Wrong number of arguments" << endl;
@@ -96,10 +97,10 @@ void run_sumo(Thread_Worker& router_thread) {
     double simu_step = 0;
 
     // Create a list with intersection managers
-    map<Coord, IntersectionManager*> intersection_map;
+    map<My_Coord, IntersectionManager*> intersection_map;
     for (uint16_t i = 1; i <= _grid_size; i++) {
         for (uint16_t j = 1; j <= _grid_size; j++) {
-            Coord coordinate(i, j);
+            My_Coord coordinate(i, j);
             IntersectionManager* intersection = new IntersectionManager(coordinate);
             intersection_map[coordinate] = intersection;
         }
@@ -108,13 +109,13 @@ void run_sumo(Thread_Worker& router_thread) {
     // Connect intersections for spillback prevention
     for (uint16_t i = 1; i <= _grid_size; i++) {
         for (uint16_t j = 1; j <= _grid_size; j++) {
-            Coord coordinate(i, j);
+            My_Coord coordinate(i, j);
             if (i <= _grid_size - 1) {
-                Coord target_coordinate(i + 1, j);
+                My_Coord target_coordinate(i + 1, j);
                 (*(intersection_map[coordinate])).connect(1, (*(intersection_map[target_coordinate])), 3);
             }
             if (j <= _grid_size - 1) {
-                Coord target_coordinate(i, j + 1);
+                My_Coord target_coordinate(i, j + 1);
                 (*(intersection_map[coordinate])).connect(2, (*(intersection_map[target_coordinate])), 0);
             }
         }
@@ -187,6 +188,7 @@ void run_sumo(Thread_Worker& router_thread) {
             // Send route request
             {
                 unique_lock<mutex> worker_lock(router_thread.request_worker_mutex);
+                router_thread.request_worker_ready = true;
                 router_thread.request_worker_condition_variable.notify_all();
             }
         }
@@ -197,29 +199,32 @@ void run_sumo(Thread_Worker& router_thread) {
                 unique_lock<mutex> main_thread_lock(router_thread.routing_done_mutex);
                 Thread_Worker* router_thread_ptr = &router_thread;
                 router_thread.routing_done_condition_variable.wait(main_thread_lock, [router_thread_ptr] {return router_thread_ptr->allow_main_continue; });
+                router_thread.allow_main_continue = false;
             }
             // Get result
             string route_result = router_thread.route_result;
-            route_result.pop_back();    // Remove the ";" at the end
-            stringstream ss_car(route_result);
-            while (ss_car.good()) {
-                string car_str;
-                getline(ss_car, car_str, ';');
-                stringstream ss_car_data(car_str);
-                string car_id;
-                getline(ss_car_data, car_id, ',');
-                string car_path;
-                getline(ss_car_data, car_path, ',');
+            if (route_result.length() > 0) {
+                route_result.pop_back();    // Remove the ";" at the end
+                stringstream ss_car(route_result);
+                while (ss_car.good()) {
+                    string car_str;
+                    getline(ss_car, car_str, ';');
+                    stringstream ss_car_data(car_str);
+                    string car_id;
+                    getline(ss_car_data, car_id, ',');
+                    string car_path;
+                    getline(ss_car_data, car_path, ',');
 
-                // Update the path
-                uint8_t src_shift_num = car_info_dict[car_id].src_shift_num;
-                string pre_route_part = "";
-                if (car_info_dict[car_id].route.length() > src_shift_num) {
-                    pre_route_part = car_info_dict[car_id].route.substr(0, src_shift_num);
+                    // Update the path
+                    uint8_t src_shift_num = car_info_dict[car_id].src_shift_num;
+                    string pre_route_part = "";
+                    if (car_info_dict[car_id].route.length() > src_shift_num) {
+                        pre_route_part = car_info_dict[car_id].route.substr(0, src_shift_num);
+                    }
+                    car_info_dict[car_id].route = pre_route_part + car_path + "SS";     //Add "next turn" at the end
+
+                    car_info_dict[car_id].route_state = "OLD";
                 }
-                car_info_dict[car_id].route = pre_route_part + car_path + "SS";     //Add "next turn" at the end
-
-                car_info_dict[car_id].route_state = "OLD";
             }
         }
 
@@ -300,9 +305,6 @@ void run_sumo(Thread_Worker& router_thread) {
         }
 
         simu_step += _TIME_STEP;
-
-        // TODO: add is_scheduled
-
     }
 
     // Delete the intersection manager

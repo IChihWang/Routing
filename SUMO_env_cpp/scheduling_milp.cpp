@@ -1,18 +1,40 @@
 #include "ortools/linear_solver/linear_solver.h"
 #include <algorithm>
+#include <iostream>
 #include "global.h"
 #include "intersection_manager.h"
 #include "Car.h"
 
+using namespace std;
 using namespace operations_research;
 
-double IntersectionManager::scheduling(map<string, Car*>& sched_car, map<string, Car*>& n_sched_car, map<string, Car*>& advised_n_sched_car) {
+void IntersectionManager::scheduling(map<string, Car*>& sched_car, map<string, Car*>& n_sched_car, map<string, Car*>& advised_n_sched_car) {
 
 	Roadrunner_P(sched_car, n_sched_car, advised_n_sched_car);
+	lane_advisor.update_Table_from_cars(n_sched_car, advised_n_sched_car);
 
+	for (auto& [car_id, car_ptr] : n_sched_car) {
+		car_ptr->zone_state = "scheduled";
+		car_ptr->is_scheduled = true;
+	}
+
+	#ifdef PEDESTRIAN
+	// Update the pedestrian ime list
+	for (uint8_t direction = 0; direction < 4; direction++) {
+		if (pedestrian_time_mark_list[direction] > 0)
+			pedestrian_time_mark_list[direction] -= schedule_period_count;
+		if (pedestrian_time_mark_list[direction] < -PEDESTRIAN_TIME_GAP)
+			pedestrian_time_mark_list[direction] = 0;
+	}
+	#endif
 }
 
 void IntersectionManager::Roadrunner_P(map<string, Car*>& old_cars, map<string, Car*>& new_cars, map<string, Car*>& advised_n_sched_car) {
+
+	for (auto& [car_id, car_ptr] : new_cars) {
+		double OT = car_ptr->position / V_MAX;
+		car_ptr->OT = OT + SUMO_TIME_ERR;
+	}
 
 	// part 1: build the solver
 	MPSolver solver("Linearptr", MPSolver::GLOP_LINEAR_PROGRAMMING);
@@ -32,15 +54,15 @@ void IntersectionManager::Roadrunner_P(map<string, Car*>& old_cars, map<string, 
 
 	}
 
-	map<string, Car*> sorted_scheduling_cars_list;
+	vector<pair<string, Car*>> sorted_scheduling_cars_list;
 	for (auto& [car_id, car_ptr] : new_cars) {
-		sorted_scheduling_cars_list[car_id] = car_ptr;
+		sorted_scheduling_cars_list.push_back(make_pair(car_id, car_ptr));
 	}
 
-	sort(sorted_scheduling_cars_list.begin(), sorted_scheduling_cars_list.end(), [](Car* a, Car* b) -> bool {return a->position < b->position; });
+	sort(sorted_scheduling_cars_list.begin(), sorted_scheduling_cars_list.end(), [](pair<string, Car*> a, pair<string, Car*> b) -> bool {return a.second->position < b.second->position; });
 	double head_of_line_blocking_position[4 * LANE_NUM_PER_DIRECTION];
 	fill_n(head_of_line_blocking_position, 4 * LANE_NUM_PER_DIRECTION, UINT16_MAX);
-	int32_t accumulate_car_len[4 * LANE_NUM_PER_DIRECTION];
+	double accumulate_car_len[4 * LANE_NUM_PER_DIRECTION];
 	fill_n(accumulate_car_len, 4 * LANE_NUM_PER_DIRECTION, INT32_MIN);
 	double recorded_delay[4 * LANE_NUM_PER_DIRECTION];
 	fill_n(recorded_delay, 4 * LANE_NUM_PER_DIRECTION, 0);
@@ -69,7 +91,7 @@ void IntersectionManager::Roadrunner_P(map<string, Car*>& old_cars, map<string, 
 				continue;
 			}
 
-			accumulate_car_len[dst_lane_idx] += (car.length + HEADWAY);
+			accumulate_car_len[dst_lane_idx] += (double(car.length) + HEADWAY);
 			double spillback_delay = 0;
 
 			if (accumulate_car_len[dst_lane_idx] > 0) {
@@ -170,7 +192,7 @@ void IntersectionManager::Roadrunner_P(map<string, Car*>& old_cars, map<string, 
 					D_solver_variables[car.id] = temp_D;
 				}
 				else {
-					double min_d = (2 * CCZ_DEC2_LEN / (double(V_MAX) + TURN_SPEED)) - (CCZ_DEC2_LEN / V_MAX);
+					double min_d = (2.0 * CCZ_DEC2_LEN / (double(V_MAX) + TURN_SPEED)) - (double(CCZ_DEC2_LEN) / V_MAX);
 					MPVariable* const temp_D = solver.MakeNumVar(max(min_d + min_d_add, spillback_delay), infinity, "d" + car.id);
 					D_solver_variables[car.id] = temp_D;
 				}
@@ -186,7 +208,7 @@ void IntersectionManager::Roadrunner_P(map<string, Car*>& old_cars, map<string, 
 					D_solver_variables[car.id] = temp_D;
 				}
 				else {
-					double min_d = (2 * CCZ_DEC2_LEN / (double(V_MAX) + TURN_SPEED)) - (CCZ_DEC2_LEN / V_MAX);
+					double min_d = (2.0 * CCZ_DEC2_LEN / (double(V_MAX) + TURN_SPEED)) - (double(CCZ_DEC2_LEN) / V_MAX);
 					MPVariable* const temp_D = solver.MakeNumVar(min_d, infinity, "d" + car.id);
 					D_solver_variables[car.id] = temp_D;
 				}
@@ -202,37 +224,46 @@ void IntersectionManager::Roadrunner_P(map<string, Car*>& old_cars, map<string, 
 			Car& new_car = *new_car_ptr;
 			Car& old_car = *old_car_ptr;
 
-			double bound = old_car.length / old_car.speed_in_intersection + (old_car.OT + old_car.D);
-			bound += HEADWAY / old_car.speed_in_intersection;
-			if (new_car.current_turn == 'S' && old_car.current_turn != 'S') {
-				bound += (double(V_MAX) - TURN_SPEED) * (CCZ_DEC2_LEN) / (V_MAX * (double(V_MAX) + TURN_SPEED));
+			if (new_car.lane == old_car.lane) {
+				double bound = old_car.length / old_car.speed_in_intersection + (old_car.OT + old_car.D);
+				bound += HEADWAY / old_car.speed_in_intersection;
+				if (new_car.current_turn == 'S' && old_car.current_turn != 'S') {
+					bound += (double(V_MAX) - TURN_SPEED) * (CCZ_DEC2_LEN) / (V_MAX * (double(V_MAX) + TURN_SPEED));
+				}
+				bound = bound - new_car.OT;
+				MPConstraint* const tmp_conts = solver.MakeRowConstraint(bound, infinity);
+				tmp_conts->SetCoefficient(D_solver_variables[new_car.id], 1);
 			}
-			bound = bound - new_car.OT;
-
-			MPConstraint* const tmp_conts = solver.MakeRowConstraint(bound, infinity);
-			tmp_conts->SetCoefficient(D_solver_variables[new_car.id], 1);
 		}
 	}
 
 	// (2) two new cars
-	for (auto i = new_cars.begin(); i != new_cars.end(); i++) {
-		for (auto j = next(new_cars.begin(), 1); j != new_cars.end(); j++) {
-			Car* car_a_ptr = i->second;
-			Car* car_b_ptr = j->second;
-			
-			// Ensure car_a_ptr->OT > car_b_ptr->OT
-			if (car_a_ptr->OT < car_b_ptr->OT) {
-				swap(car_a_ptr, car_b_ptr);
-			}
+	vector<Car*> new_cars_vector;
+	for (auto& [car_id, car_ptr] : new_cars) {
+		new_cars_vector.push_back(car_ptr);
+	}
+	for (uint32_t i = 0; i < new_cars_vector.size(); i++) {
+		for (uint32_t j = i+1; j < new_cars_vector.size(); j++) {
+			Car* car_a_ptr = new_cars_vector[i];
+			Car* car_b_ptr = new_cars_vector[j];
 
-			double bound = car_b_ptr->length / car_b_ptr->speed_in_intersection - car_a_ptr->OT + car_b_ptr->OT;
-			bound += HEADWAY / car_b_ptr->speed_in_intersection;
-			if (car_a_ptr->current_turn == 'S' && car_b_ptr->current_turn != 'S') {
-				bound += (double(V_MAX) - TURN_SPEED) * (CCZ_DEC2_LEN) / (double(V_MAX) * (double(V_MAX) + TURN_SPEED));
+			if (car_a_ptr->lane == car_b_ptr->lane) {
+
+				// Ensure car_a_ptr->OT > car_b_ptr->OT
+				if (car_a_ptr->OT < car_b_ptr->OT) {
+					swap(car_a_ptr, car_b_ptr);
+				}
+
+				double bound = car_b_ptr->length / car_b_ptr->speed_in_intersection - car_a_ptr->OT + car_b_ptr->OT;
+				bound += HEADWAY / car_b_ptr->speed_in_intersection;
+				if (car_a_ptr->current_turn == 'S' && car_b_ptr->current_turn != 'S') {
+					bound += (double(V_MAX) - TURN_SPEED) * (CCZ_DEC2_LEN) / (double(V_MAX) * (double(V_MAX) + TURN_SPEED));
+				}
+
+				MPConstraint* const tmp_conts = solver.MakeRowConstraint(bound, infinity);
+				tmp_conts->SetCoefficient(D_solver_variables[car_a_ptr->id], 1);
+				tmp_conts->SetCoefficient(D_solver_variables[car_b_ptr->id], -1);
 			}
-			MPConstraint* const tmp_conts = solver.MakeRowConstraint(bound, infinity);
-			tmp_conts->SetCoefficient(D_solver_variables[car_a_ptr->id], 1);
-			tmp_conts->SetCoefficient(D_solver_variables[car_b_ptr->id], -1);
 		}
 	}
 
@@ -291,7 +322,7 @@ void IntersectionManager::Roadrunner_P(map<string, Car*>& old_cars, map<string, 
 				tmp_conts3->SetCoefficient(flag, -LARGE_NUM);
 
 				double bound_4 = old_car.D + old_car.OT - new_car.OT + tau_S2_S1;
-				MPConstraint* const tmp_conts4 = solver.MakeRowConstraint(bound_3, infinity);
+				MPConstraint* const tmp_conts4 = solver.MakeRowConstraint(bound_4, infinity);
 				tmp_conts4->SetCoefficient(D_solver_variables[new_car.id], 1);
 				tmp_conts4->SetCoefficient(flag, LARGE_NUM);
 			}
@@ -378,5 +409,12 @@ void IntersectionManager::Roadrunner_P(map<string, Car*>& old_cars, map<string, 
 	for (const auto& [car_id, D_variable] : D_solver_variables) {
 		new_cars[car_id]->D = D_solver_variables[car_id]->solution_value();
 		new_cars[car_id]->is_scheduled = true;
+
+		if (car_id == "car_21") {
+			cout << car_id << " " << new_cars[car_id]->D << endl;
+		}
+		else if (car_id == "car_22") {
+			cout << car_id << " " << new_cars[car_id]->D << endl;
+		}
 	}
 }

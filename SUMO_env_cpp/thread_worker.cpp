@@ -19,7 +19,7 @@ void call_routing_thread(Thread_Worker* thread_worker) {
 		send_str += '@';
 
 		// Send request
-		send(client_sock, send_str.c_str(), send_str.length(), 0);
+		send(client_sock, send_str.c_str(), int(send_str.length()), 0);
 
 		// Get route results
 		string in_str = "";

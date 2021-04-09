@@ -11,7 +11,7 @@ double Intersection::scheduling(Car& target_car) {
 	target_car.D = NOT_SCHEDULED;
 
 	vector<Car_in_database> copied_scheduling_cars;
-	for (const auto& [car_id, car] : *scheduling_cars) {
+	for (auto& [car_id, car] : *scheduling_cars) {
 		car.D = NOT_SCHEDULED;
 		copied_scheduling_cars.push_back(car);
 	}
@@ -236,16 +236,17 @@ void Intersection::Roadrunner_P(vector<Car_in_database>& scheduling_cars, Car& t
 	// (1) old car and new car
 	for (const Car_in_database& new_car : scheduling_cars) {
 		for (const auto& [car_id, old_car] : *sched_cars) {
-			
-			double bound = old_car.length / old_car.speed_in_intersection + (old_car.OT + old_car.D);
-			bound += _HEADWAY / old_car.speed_in_intersection;
-			if (new_car.current_turn == 'S' && old_car.current_turn != 'S') {
-				bound += (double(_V_MAX) - _TURN_SPEED) * (CCZ_DEC2_LEN) / (_V_MAX * (double(_V_MAX) + _TURN_SPEED));
-			}
-			bound = bound - new_car.OT;
+			if (new_car.lane == old_car.lane) {
+				double bound = old_car.length / old_car.speed_in_intersection + (old_car.OT + old_car.D);
+				bound += _HEADWAY / old_car.speed_in_intersection;
+				if (new_car.current_turn == 'S' && old_car.current_turn != 'S') {
+					bound += (double(_V_MAX) - _TURN_SPEED) * (CCZ_DEC2_LEN) / (_V_MAX * (double(_V_MAX) + _TURN_SPEED));
+				}
+				bound = bound - new_car.OT;
 
-			MPConstraint* const tmp_conts = solver.MakeRowConstraint(bound, infinity);
-			tmp_conts->SetCoefficient(D_solver_variables[new_car.id], 1);
+				MPConstraint* const tmp_conts = solver.MakeRowConstraint(bound, infinity);
+				tmp_conts->SetCoefficient(D_solver_variables[new_car.id], 1);
+			}
 		}
 	}
 
@@ -255,19 +256,21 @@ void Intersection::Roadrunner_P(vector<Car_in_database>& scheduling_cars, Car& t
 			Car_in_database* car_a_ptr = &(scheduling_cars[i]);
 			Car_in_database* car_b_ptr = &(scheduling_cars[j]);
 			
-			// Ensure car_a_ptr->OT > car_b_ptr->OT
-			if (car_a_ptr->OT < car_b_ptr->OT) {
-				swap(car_a_ptr, car_b_ptr);
-			}
+			if (car_a_ptr->lane == car_b_ptr->lane) {
+				// Ensure car_a_ptr->OT > car_b_ptr->OT
+				if (car_a_ptr->OT < car_b_ptr->OT) {
+					swap(car_a_ptr, car_b_ptr);
+				}
 
-			double bound = car_b_ptr->length / car_b_ptr->speed_in_intersection - car_a_ptr->OT + car_b_ptr->OT;
-			bound += _HEADWAY / car_b_ptr->speed_in_intersection;
-			if (car_a_ptr->current_turn == 'S' && car_b_ptr->current_turn != 'S') {
-				bound += (double(_V_MAX) - _TURN_SPEED) * (CCZ_DEC2_LEN) / (double(_V_MAX) * (double(_V_MAX) + _TURN_SPEED));
+				double bound = car_b_ptr->length / car_b_ptr->speed_in_intersection - car_a_ptr->OT + car_b_ptr->OT;
+				bound += _HEADWAY / car_b_ptr->speed_in_intersection;
+				if (car_a_ptr->current_turn == 'S' && car_b_ptr->current_turn != 'S') {
+					bound += (double(_V_MAX) - _TURN_SPEED) * (CCZ_DEC2_LEN) / (double(_V_MAX) * (double(_V_MAX) + _TURN_SPEED));
+				}
+				MPConstraint* const tmp_conts = solver.MakeRowConstraint(bound, infinity);
+				tmp_conts->SetCoefficient(D_solver_variables[car_a_ptr->id], 1);
+				tmp_conts->SetCoefficient(D_solver_variables[car_b_ptr->id], -1);
 			}
-			MPConstraint* const tmp_conts = solver.MakeRowConstraint(bound, infinity);
-			tmp_conts->SetCoefficient(D_solver_variables[car_a_ptr->id], 1);
-			tmp_conts->SetCoefficient(D_solver_variables[car_b_ptr->id], -1);
 		}
 	}
 
@@ -324,7 +327,7 @@ void Intersection::Roadrunner_P(vector<Car_in_database>& scheduling_cars, Car& t
 				tmp_conts3->SetCoefficient(flag, -LARGE_NUM);
 
 				double bound_4 = old_car.D + old_car.OT - new_car.OT + tau_S2_S1;
-				MPConstraint* const tmp_conts4 = solver.MakeRowConstraint(bound_3, infinity);
+				MPConstraint* const tmp_conts4 = solver.MakeRowConstraint(bound_4, infinity);
 				tmp_conts4->SetCoefficient(D_solver_variables[new_car.id], 1);
 				tmp_conts4->SetCoefficient(flag, LARGE_NUM);
 			}

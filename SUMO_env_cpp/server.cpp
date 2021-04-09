@@ -55,7 +55,7 @@ SOCKET initial_client_handler() {
 	init_info += ":V_MAX:" + get_string_from_double(V_MAX, 2);
 	init_info += ":TURN_SPEED:" + get_string_from_double(TURN_SPEED, 2);
 	init_info += ":TOTAL_LEN:" + get_string_from_double(TOTAL_LEN, 1);
-	send(client_sock, init_info.c_str(), init_info.length(), 0);
+	send(client_sock, init_info.c_str(), int(init_info.length()), 0);
 
 	char buffer[1024] = { 0 };
 	recv(client_sock, buffer, 1024, 0);
