@@ -46,6 +46,7 @@ int main(int argc, char const* argv[]) {
 			in_str += buffer;
 		}
 		in_str.pop_back();
+		cout << in_str << endl;
 
 
 		string out_str = "";
@@ -59,6 +60,7 @@ int main(int argc, char const* argv[]) {
 		if (out_str == "end") {
 			return 0;
 		}
+		cout << out_str << endl;
 	}
 
 	terminate_thread_pool();
