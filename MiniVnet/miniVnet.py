@@ -113,7 +113,7 @@ def routing(miniVnet, cars):
 
                 out_intersection_id, out_intersection_direction = out_data
                 car.lane = intersection_dir * miniVnet.LANE_NUM_PER_DIRECTION
-                car.current_turn = turning
+                car.set_turn(turning, miniVnet.LANE_NUM_PER_DIRECTION)
                 car.lane = intersection.manager.advise_lane(car)
                 car.position = position_at_offset
                 car.update_dst_lane_and_data(LANE_NUM_PER_DIRECTION, V_MAX, TURN_SPEED)

@@ -64,7 +64,7 @@ class LaneAdviser:
         advise_lane = None
 
         # If spillback detected, avoid the other lanes
-        if spillback_lane_advise_avoid[car.dst_lane] == true or spillback_lane_advise_avoid[car.dst_lane_changed_to] == true :
+        if spillback_lane_advise_avoid[car.dst_lane] == True or spillback_lane_advise_avoid[car.dst_lane_changed_to] == True :
             # Get the shortest or the most ideal lane
             start_lane = (car.lane//cfg.LANE_NUM_PER_DIRECTION)*cfg.LANE_NUM_PER_DIRECTION
             ideal_lane = None

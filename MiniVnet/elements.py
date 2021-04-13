@@ -99,6 +99,21 @@ class Car_in_database:
         self.is_spillback = False
         self.is_spillback_strict = False
 
+    def set_turn(self, current_turn, LANE_NUM_PER_DIRECTION):
+        self.current_turn = current_turn
+        self.in_direction = self.lane // LANE_NUM_PER_DIRECTION
+        self.out_direction = None
+        if current_turn == 'S':
+            self.out_direction = (self.in_direction+2)%4
+        elif current_turn == 'R':
+            self.out_direction = (self.in_direction+1)%4
+        elif current_turn == 'L':
+            self.out_direction = (self.in_direction-1)%4
+
+        out_sub_lane = (LANE_NUM_PER_DIRECTION-self.lane%LANE_NUM_PER_DIRECTION-1)
+        self.dst_lane = int(self.out_direction*LANE_NUM_PER_DIRECTION + out_sub_lane)     # Destination lane before next lane change
+        self.dst_lane_changed_to = int(self.out_direction*LANE_NUM_PER_DIRECTION + out_sub_lane)  # Destination lane after next lane change
+
     def copy_car_for_database(self):
         car = Car_in_database(self.id, self.length)
         car.lane = self.lane

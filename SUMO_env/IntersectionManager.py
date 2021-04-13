@@ -487,7 +487,7 @@ class IntersectionManager:
                 #advised_lane = self.lane_advisor.adviseLane_v2(self.car_list[car_id])
                 #advised_lane = random.randrange(0, cfg.LANE_NUM_PER_DIRECTION)
 
-                traci.vehicle.changeLane(car_id, advised_lane, time_in_AZ)
+                #traci.vehicle.changeLane(car_id, advised_lane, time_in_AZ)
                 car.desired_lane = int((cfg.LANE_NUM_PER_DIRECTION-advised_lane-1)+(car.lane//cfg.LANE_NUM_PER_DIRECTION)*cfg.LANE_NUM_PER_DIRECTION)
                 #self.car_list[car_id].desired_lane = car.lane
 

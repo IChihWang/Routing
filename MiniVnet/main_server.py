@@ -112,7 +112,7 @@ def run_router(router, _iteration_num, _handler_process, _to_handler_queue, _fro
     from_handler_queue = _from_handler_queue
     iteration_num = _iteration_num
 
-    process_num = 4
+    process_num = 1
     process_pool = Pool(process_num)
 
     try:

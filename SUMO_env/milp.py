@@ -393,6 +393,7 @@ def IcaccPlus(old_cars, new_cars, advised_n_sched_car, pedestrian_time_mark_list
 
     for nc_idx in range(len(new_cars)):
         new_cars[nc_idx].D = new_cars[nc_idx].D.solution_value()
+        print("    ", new_cars[nc_idx].ID, new_cars[nc_idx].D, new_cars[nc_idx].OT)
 
     #print('Solution:')
     avg_delay = 0

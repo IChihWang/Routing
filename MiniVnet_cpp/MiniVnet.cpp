@@ -252,7 +252,7 @@ map<string, vector<Node_in_Path>> routing(const vector<reference_wrapper<Car>>& 
 				vector<Car_in_Node_Record> recordings;
 
 				car.lane = intersection_dir * LANE_NUM_PER_DIRECTION;
-				car.current_turn = turning;
+				car.set_turn(turning);
 				car.lane = intersection.advise_lane(car);
 				car.position = position_at_offset;
 				car.update_dst_lane_and_data();

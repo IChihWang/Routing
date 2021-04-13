@@ -109,6 +109,7 @@ public:
 	~Car_in_database() {};
 
 	void update_dst_lane_and_data();
+	void set_turn(char current_turn);
 };
 
 class Node_in_Path;
