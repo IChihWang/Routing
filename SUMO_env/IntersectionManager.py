@@ -270,6 +270,7 @@ class IntersectionManager:
 
         # ===== Update the time OT =====
         for car_key in self.car_list:
+
             # Update when the car is scheduled
             if self.car_list[car_key].OT != None:
                 self.car_list[car_key].OT -= cfg.TIME_STEP

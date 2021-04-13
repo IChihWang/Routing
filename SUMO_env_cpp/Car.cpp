@@ -120,9 +120,7 @@ void Car::handle_CC_behavior(map<string, Car*>& car_list) {
 		traci.vehicle.setMaxSpeed(id, slow_down_speed);
 		double dec_time = (position - (CCZ_ACC_LEN + CCZ_DEC2_LEN)) / ((my_speed + slow_down_speed) / 2);
 		CC_slowdown_timer = dec_time;
-		if (dec_time < 0) {
-			traci.vehicle.slowDown(id, slow_down_speed, dec_time);
-		}
+		traci.vehicle.slowDown(id, slow_down_speed, dec_time);
 	}
 	else if ((CC_state == "Entering_decelerate" || CC_state == "Entering_wait") && (CC_slowdown_timer <= 0)) {
 		traci.vehicle.setSpeed(id, CC_slow_speed);

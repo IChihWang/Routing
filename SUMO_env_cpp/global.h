@@ -21,7 +21,7 @@ using namespace std;
 #define HEADWAY 3
 #define CCZ_ACC_LEN 5.0
 #define CCZ_DEC2_LEN 2.5
-#define MAX_ACC (V_MAX*V_MAX)/(2*CCZ_ACC_LEN)
+#define MAX_ACC double((V_MAX*V_MAX)/(2*CCZ_ACC_LEN))
 #define CCZ_CATCHUP_MIN_SPEED 3
 
 #define CAR_MAX_LEN 15
@@ -31,7 +31,7 @@ using namespace std;
 
 #define SCHEDULING_PERIOD double(GZ_LEN/V_MAX)
 #define ROUTING_PERIOD_NUM int((TOTAL_LEN/V_MAX/2.0)/SCHEDULING_PERIOD)-1
-#define ROUTING_PERIOD ROUTING_PERIOD_NUM*SCHEDULING_PERIOD
+#define ROUTING_PERIOD double(ROUTING_PERIOD_NUM*SCHEDULING_PERIOD)
 #define LARGE_NUM 65535
 
 

@@ -25,7 +25,6 @@ void call_routing_thread(Thread_Worker* thread_worker) {
 		while (in_str.length() == 0 || in_str.back() != '@') {
 			char buffer[1024] = { 0 };
 			int n_recv = recv(client_sock, buffer, 1023, 0);
-			cout << buffer << endl;
 			if (n_recv <= 0) {
 				return;
 			}

@@ -14,7 +14,7 @@ data = Data()
 
 def IcaccPlus(old_cars, new_cars, advised_n_sched_car, pedestrian_time_mark_list, others_road_info, spillback_delay_record):
     # part 1: calculate OT
-    print("===================")
+    # print("===================")
     for c_idx in range(len(new_cars)):
         OT = new_cars[c_idx].position/cfg.MAX_SPEED
         new_cars[c_idx].OT = OT + cfg.SUMO_TIME_ERR
@@ -190,20 +190,18 @@ def IcaccPlus(old_cars, new_cars, advised_n_sched_car, pedestrian_time_mark_list
                         if all_cars[c_idx].current_turn == 'S' and all_cars[c_jdx].current_turn != 'S':
                             bound += (cfg.MAX_SPEED-cfg.TURN_SPEED)*(cfg.CCZ_DEC2_LEN)/(cfg.MAX_SPEED*(cfg.MAX_SPEED+cfg.TURN_SPEED))
                         bound = bound - all_cars[c_idx].OT
-                        print("4-1.    ", all_cars[c_idx].ID, all_cars[c_jdx].ID, bound)
+                        # print("4-1.    ", all_cars[c_idx].ID, all_cars[c_jdx].ID, bound)
                         tmp_conts = solver.Constraint(bound,solver.infinity())
                         tmp_conts.SetCoefficient(all_cars[c_idx].D, 1)
-                        #print("eq1-1 ", bound, all_cars[c_idx]['ID'], all_cars[c_jdx]['ID'])
                     elif (type(all_cars[c_idx].D)==float and type(all_cars[c_jdx].D)!=float):
                         bound = all_cars[c_idx].length/all_cars[c_idx].speed_in_intersection + (all_cars[c_idx].OT+all_cars[c_idx].D)
                         bound += cfg.HEADWAY/all_cars[c_idx].speed_in_intersection
                         if all_cars[c_jdx].current_turn == 'S' and all_cars[c_idx].current_turn != 'S':
                             bound += (cfg.MAX_SPEED-cfg.TURN_SPEED)*(cfg.CCZ_DEC2_LEN)/(cfg.MAX_SPEED*(cfg.MAX_SPEED+cfg.TURN_SPEED))
                         bound = bound - all_cars[c_jdx].OT
-                        print("4-1.    ", all_cars[c_jdx].ID, all_cars[c_idx].ID, bound)
+                        # print("4-1.    ", all_cars[c_jdx].ID, all_cars[c_idx].ID, bound)
                         tmp_conts = solver.Constraint(bound, solver.infinity())
                         tmp_conts.SetCoefficient(all_cars[c_jdx].D, 1)
-                        #print("eq1-2 ", bound, all_cars[c_idx]['ID'], all_cars[c_jdx]['ID'])
 
                 elif (type(all_cars[c_jdx].D)!=float or type(all_cars[c_idx].D)!=float):
                     if (all_cars[c_idx].OT > all_cars[c_jdx].OT):
@@ -213,22 +211,20 @@ def IcaccPlus(old_cars, new_cars, advised_n_sched_car, pedestrian_time_mark_list
                         bound += cfg.HEADWAY/all_cars[c_jdx].speed_in_intersection
                         if all_cars[c_idx].current_turn == 'S' and all_cars[c_jdx].current_turn != 'S':
                             bound += (cfg.MAX_SPEED-cfg.TURN_SPEED)*(cfg.CCZ_DEC2_LEN)/(cfg.MAX_SPEED*(cfg.MAX_SPEED+cfg.TURN_SPEED))
-                        print("4-2.    ", all_cars[c_idx].ID, all_cars[c_jdx].ID, bound)
+                        # print("4-2.    ", all_cars[c_idx].ID, all_cars[c_jdx].ID, bound)
                         tmp_conts = solver.Constraint(bound, solver.infinity())
                         tmp_conts.SetCoefficient(all_cars[c_idx].D, 1)
                         tmp_conts.SetCoefficient(all_cars[c_jdx].D, -1)
-                        #print("eq1-3 ", bound, all_cars[c_idx]['ID'], all_cars[c_jdx]['ID'])
                     elif (all_cars[c_idx].OT < all_cars[c_jdx].OT):
 
                         bound = all_cars[c_idx].length/all_cars[c_idx].speed_in_intersection + all_cars[c_idx].OT-all_cars[c_jdx].OT
                         bound += cfg.HEADWAY/all_cars[c_idx].speed_in_intersection
                         if all_cars[c_jdx].current_turn == 'S' and all_cars[c_idx].current_turn != 'S':
                             bound += (cfg.MAX_SPEED-cfg.TURN_SPEED)*(cfg.CCZ_DEC2_LEN)/(cfg.MAX_SPEED*(cfg.MAX_SPEED+cfg.TURN_SPEED))
-                        print("4-2.    ", all_cars[c_jdx].ID, all_cars[c_idx].ID, bound)
+                        # print("4-2.    ", all_cars[c_jdx].ID, all_cars[c_idx].ID, bound)
                         tmp_conts = solver.Constraint(bound, solver.infinity())
                         tmp_conts.SetCoefficient(all_cars[c_idx].D, -1)
                         tmp_conts.SetCoefficient(all_cars[c_jdx].D, 1)
-                        #print("eq1-4 ", bound, all_cars[c_idx]['ID'], all_cars[c_jdx]['ID'])
 
 
 
@@ -248,27 +244,21 @@ def IcaccPlus(old_cars, new_cars, advised_n_sched_car, pedestrian_time_mark_list
                 tau_S1_S2 = ans[0]
                 tau_S2_S1 = ans[1]
 
-
-
-
-
                 flag = solver.IntVar(0, 1, 'flag'+str(c_idx)+'_'+str(c_jdx))
 
                 bound = -new_cars[c_jdx].OT + new_cars[c_idx].OT + tau_S1_S2 - cfg.LARGE_NUM
-                print("5-1.    ", new_cars[c_idx].ID, new_cars[c_jdx].ID, bound, tau_S1_S2)
+                # print("5-1.    ", new_cars[c_idx].ID, new_cars[c_jdx].ID, bound, tau_S1_S2)
                 tmp_conts2 = solver.Constraint(bound, solver.infinity())
                 tmp_conts2.SetCoefficient(new_cars[c_idx].D, -1)
                 tmp_conts2.SetCoefficient(new_cars[c_jdx].D, 1)
                 tmp_conts2.SetCoefficient(flag, -cfg.LARGE_NUM)
-                #print("eq2-1 ", bound+ cfg.LARGE_NUM, new_cars[c_idx]['ID'], new_cars[c_jdx]['ID'], c_idx, c_jdx)
 
                 bound = -new_cars[c_idx].OT + new_cars[c_jdx].OT + tau_S2_S1
-                print("5-2.    ", new_cars[c_idx].ID, new_cars[c_jdx].ID, bound, tau_S2_S1)
+                # print("5-2.    ", new_cars[c_idx].ID, new_cars[c_jdx].ID, bound, tau_S2_S1)
                 tmp_conts1 = solver.Constraint(bound, solver.infinity())
                 tmp_conts1.SetCoefficient(new_cars[c_idx].D, 1)
                 tmp_conts1.SetCoefficient(new_cars[c_jdx].D, -1)
                 tmp_conts1.SetCoefficient(flag, cfg.LARGE_NUM)
-                #print("eq2-2 ", bound, new_cars[c_idx]['ID'], new_cars[c_jdx]['ID'])
 
     #'''
     # part 6: set constrain (12)
@@ -296,17 +286,16 @@ def IcaccPlus(old_cars, new_cars, advised_n_sched_car, pedestrian_time_mark_list
                 flag = solver.IntVar(0, 1, 'flagg'+str(nc_idx)+"_"+str(oc_idx))
 
                 bound = -old_cars[oc_idx].D-old_cars[oc_idx].OT + new_cars[nc_idx].OT + tau_S1_S2 - cfg.LARGE_NUM
-                print("6-1.    ", new_cars[nc_idx].ID, old_cars[oc_idx].ID, bound, tau_S1_S2)
+                # print("6-1.    ", new_cars[nc_idx].ID, old_cars[oc_idx].ID, bound, tau_S1_S2)
                 tmp_conts3 = solver.Constraint(bound, solver.infinity())
                 tmp_conts3.SetCoefficient(new_cars[nc_idx].D, -1)
                 tmp_conts3.SetCoefficient(flag, -cfg.LARGE_NUM)
 
                 bound = old_cars[oc_idx].D + old_cars[oc_idx].OT - new_cars[nc_idx].OT + tau_S2_S1
-                print("6-2.    ", new_cars[nc_idx].ID, old_cars[oc_idx].ID, bound, tau_S2_S1)
+                # print("6-2.    ", new_cars[nc_idx].ID, old_cars[oc_idx].ID, bound, tau_S2_S1)
                 tmp_conts4 = solver.Constraint(bound, solver.infinity())
                 tmp_conts4.SetCoefficient(new_cars[nc_idx].D, 1)
                 tmp_conts4.SetCoefficient(flag, cfg.LARGE_NUM)
-                #print("eq3-2 ", bound, new_cars[nc_idx]['ID'], old_cars[oc_idx]['ID'])
     #'''
 
 
@@ -393,7 +382,6 @@ def IcaccPlus(old_cars, new_cars, advised_n_sched_car, pedestrian_time_mark_list
 
     for nc_idx in range(len(new_cars)):
         new_cars[nc_idx].D = new_cars[nc_idx].D.solution_value()
-        print("    ", new_cars[nc_idx].ID, new_cars[nc_idx].D, new_cars[nc_idx].OT)
 
     #print('Solution:')
     avg_delay = 0

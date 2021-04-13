@@ -30,7 +30,7 @@ void IntersectionManager::scheduling(map<string, Car*>& sched_car, map<string, C
 }
 
 void IntersectionManager::Roadrunner_P(map<string, Car*>& old_cars, map<string, Car*>& new_cars, map<string, Car*>& advised_n_sched_car) {
-	cout << "========================================" << endl;
+	// cout << "========================================" << endl;
 	for (auto& [car_id, car_ptr] : new_cars) {
 		double OT = car_ptr->position / V_MAX;
 		car_ptr->OT = OT + SUMO_TIME_ERR;
@@ -233,7 +233,7 @@ void IntersectionManager::Roadrunner_P(map<string, Car*>& old_cars, map<string, 
 				bound = bound - new_car.OT;
 				MPConstraint* const tmp_conts = solver->MakeRowConstraint(bound, infinity);
 				tmp_conts->SetCoefficient(D_solver_variables[new_car.id], 1);
-				cout << "4-1.    " << n_car_id << " " << o_car_id << " " << bound << endl;
+				// cout << "4-1.    " << n_car_id << " " << o_car_id << " " << bound << endl;
 			}
 		}
 	}
@@ -261,7 +261,7 @@ void IntersectionManager::Roadrunner_P(map<string, Car*>& old_cars, map<string, 
 					bound += (double(V_MAX) - TURN_SPEED) * (CCZ_DEC2_LEN) / (double(V_MAX) * (double(V_MAX) + TURN_SPEED));
 				}
 
-				cout << "4-2.    " << car_a_ptr->id << " " << car_b_ptr->id << " " << bound << endl;
+				// cout << "4-2.    " << car_a_ptr->id << " " << car_b_ptr->id << " " << bound << endl;
 				MPConstraint* const tmp_conts = solver->MakeRowConstraint(bound, infinity);
 				tmp_conts->SetCoefficient(D_solver_variables[car_a_ptr->id], 1);
 				tmp_conts->SetCoefficient(D_solver_variables[car_b_ptr->id], -1);
@@ -287,14 +287,14 @@ void IntersectionManager::Roadrunner_P(map<string, Car*>& old_cars, map<string, 
 				MPVariable* const flag = solver->MakeIntVar(0, 1, string("flag_new_new_") + car_i.id + "_" + car_j.id);
 
 				double bound_2 = -car_j.OT + car_i.OT + tau_S1_S2 - LARGE_NUM;
-				cout << "5-1.    " << car_i.id << " " << car_j.id << " " << bound_2 << " " << tau_S1_S2 << endl;
+				// cout << "5-1.    " << car_i.id << " " << car_j.id << " " << bound_2 << " " << tau_S1_S2 << endl;
 				MPConstraint* const tmp_conts2 = solver->MakeRowConstraint(bound_2, infinity);
 				tmp_conts2->SetCoefficient(D_solver_variables[car_i.id], -1);
 				tmp_conts2->SetCoefficient(D_solver_variables[car_j.id], 1);
 				tmp_conts2->SetCoefficient(flag, -LARGE_NUM);
 
 				double bound_1 = -car_i.OT + car_j.OT + tau_S2_S1;
-				cout << "5-2.    " << car_i.id << " " << car_j.id << " " << bound_1 << " " << tau_S2_S1 << endl;
+				// cout << "5-2.    " << car_i.id << " " << car_j.id << " " << bound_1 << " " << tau_S2_S1 << endl;
 				MPConstraint* const tmp_conts1 = solver->MakeRowConstraint(bound_1, infinity);
 				tmp_conts1->SetCoefficient(D_solver_variables[car_i.id], 1);
 				tmp_conts1->SetCoefficient(D_solver_variables[car_j.id], -1);
@@ -321,13 +321,13 @@ void IntersectionManager::Roadrunner_P(map<string, Car*>& old_cars, map<string, 
 				MPVariable* const flag = solver->MakeIntVar(0, 1, string("flag_old_new_") + old_car.id + "_" + new_car.id);
 
 				double bound_3 = -old_car.D - old_car.OT + new_car.OT + tau_S1_S2 - LARGE_NUM;
-				cout << "6-1.    " << n_car_id << " " << o_car_id << " " << bound_3 << " " << tau_S1_S2 << endl;
+				// cout << "6-1.    " << n_car_id << " " << o_car_id << " " << bound_3 << " " << tau_S1_S2 << endl;
 				MPConstraint* const tmp_conts3 = solver->MakeRowConstraint(bound_3, infinity);
 				tmp_conts3->SetCoefficient(D_solver_variables[new_car.id], -1);
 				tmp_conts3->SetCoefficient(flag, -LARGE_NUM);
 
 				double bound_4 = old_car.D + old_car.OT - new_car.OT + tau_S2_S1;
-				cout << "6-2.    " << n_car_id << " " << o_car_id << " " << bound_4 << " " << tau_S2_S1 << endl;
+				// cout << "6-2.    " << n_car_id << " " << o_car_id << " " << bound_4 << " " << tau_S2_S1 << endl;
 				MPConstraint* const tmp_conts4 = solver->MakeRowConstraint(bound_4, infinity);
 				tmp_conts4->SetCoefficient(D_solver_variables[new_car.id], 1);
 				tmp_conts4->SetCoefficient(flag, LARGE_NUM);
@@ -408,13 +408,12 @@ void IntersectionManager::Roadrunner_P(map<string, Car*>& old_cars, map<string, 
 
 	// Check that the problem has an optimal solution.
 	if (result_status != MPSolver::FEASIBLE && result_status != MPSolver::OPTIMAL) {
-		cout << "The problem has no solution!" << endl;
+		 cout << "The problem has no solution!" << endl;
 	}
 
 	// Update the delays
 	for (const auto& [car_id, D_variable] : D_solver_variables) {
 		new_cars[car_id]->D = D_solver_variables[car_id]->solution_value();
 		new_cars[car_id]->is_scheduled = true;
-		cout << "     " << car_id << " " << new_cars[car_id]->D << " " << new_cars[car_id]->OT <<endl;
 	}
 }

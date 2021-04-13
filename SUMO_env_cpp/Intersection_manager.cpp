@@ -322,6 +322,7 @@ void IntersectionManager::delete_car(string car_id) {
 void IntersectionManager::run(double simu_step) {
 	// ===== Update the time OT =====
 	for (const auto& [car_key, car_ptr] : car_list) {
+
 		// Update when the car is scheduled
 		car_ptr->OT -= _TIME_STEP;
 
@@ -531,7 +532,7 @@ void IntersectionManager::run(double simu_step) {
 			double time_in_AZ = 9999.91;
 			uint8_t advised_lane = lane_advisor.advise_lane(*(car_list[car_id]), spillback_lane_advise_avoid);
 
-			//traci.vehicle.changeLane(car_id, advised_lane, time_in_AZ);
+			traci.vehicle.changeLane(car_id, advised_lane, time_in_AZ);
 			car.desired_lane = int((LANE_NUM_PER_DIRECTION - advised_lane - 1) + (car.lane/LANE_NUM_PER_DIRECTION)*LANE_NUM_PER_DIRECTION);
 			car.zone_state = "AZ_advised";
 		}

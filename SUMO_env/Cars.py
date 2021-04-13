@@ -189,15 +189,10 @@ class Car:
                     slow_down_speed = min(slow_down_speed, cfg.MAX_SPEED)
 
             self.CC_slow_speed = slow_down_speed
-            if slow_down_speed < 0:
-                print(self.ID, T, max_total_time, slow_down_speed)
-                print(self.ID, x1, x2, v1, vm)
 
             traci.vehicle.setMaxSpeed(self.ID, slow_down_speed)
             dec_time = (self.position-(cfg.CCZ_ACC_LEN+cfg.CCZ_DEC2_LEN)) / ((my_speed+slow_down_speed)/2)
             self.CC_slowdown_timer = dec_time
-            if (dec_time < 0):
-                print(self.ID, slow_down_speed, dec_time, self.position, my_speed+slow_down_speed)
             traci.vehicle.slowDown(self.ID,slow_down_speed, dec_time)
 
 
