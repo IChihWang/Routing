@@ -351,11 +351,11 @@ void Intersection::Roadrunner_P(vector<Car_in_database>& scheduling_cars, Car& t
 
 	// Update the delays
 	target_car.D = D_solver_variables[target_car.id]->solution_value();
-	if (target_car.D > 0.1)
+	if (target_car.D > 0.05)
 		cout << "D  " << target_car.D << endl;
 
 	for (const auto& [car_id, D_variable] : D_solver_variables) {
-		if (target_car.D > 0.1)
+		if (target_car.D > 0.05)
 			cout << "  DD   " << car_id << " " << D_solver_variables[car_id]->solution_value() << endl;
 	}
 }
