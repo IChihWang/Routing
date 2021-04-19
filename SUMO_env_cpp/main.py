@@ -59,10 +59,19 @@ if __name__ == "__main__":
         # 3. Start TraCi
         net_name = "lane%iby%i.net.xml" % (cfg.INTER_SIZE, cfg.INTER_SIZE)
         route_name = "%i_%s_%i.rou.xml" % (cfg.INTER_SIZE, arrival_rate, seed)
+        background = "START /B "
 
-        os.system(sumo + "-c data/UDTA.sumocfg --step-length " + str(cfg.TIME_STEP)
+        os.system(background + sumo + "-c data/UDTA.sumocfg --step-length " + str(cfg.TIME_STEP)
                     + " --collision.mingap-factor 0 -n data/net/"+net_name
                     + " -r data/routes/"+route_name + " --remote-port " + str(PORT))
+        
+
+        cpp_cmd = r'.\x64\Release\SUMO_env_cpp.exe '
+        cpp_cmd += str(cfg.INTER_SIZE) + " "
+        cpp_cmd += "%i_%s_%i_src_dst.json " % (cfg.INTER_SIZE, arrival_rate, seed)
+        cpp_cmd += str(cfg.N_TIME_STEP) + " "
+        cpp_cmd += str(cfg.TIME_STEP) + " &"
+        os.system(cpp_cmd)
 
     except Exception as e:
         traceback.print_exc()

@@ -291,7 +291,7 @@ pair<double, double> Car::CC_get_shifts(map<string, Car*>& car_list) {
 	// 1.1 Determine how much to advance the car acceleration (shift_end)
 	bool is_catching_up_front = false;
 
-	if (CC_front_car != nullptr) {
+	if (CC_front_car != nullptr && CC_front_car->CC_shift >= 0) {
 		double shifting_end = CCZ_DEC2_LEN;
 		double front_remain_D = (CC_front_car->OT + CC_front_car->D) - (CC_front_car->position / V_MAX);
 		double catch_up_distance = (front_remain_D - D) * V_MAX;

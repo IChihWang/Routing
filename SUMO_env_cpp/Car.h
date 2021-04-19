@@ -41,7 +41,7 @@ public:
 	// Variables for Cruse Control
 	double CC_front_pos_diff = 0;
 	double CC_slow_speed = V_MAX;
-	double CC_shift = 0;
+	double CC_shift = -1;
 	double CC_shift_end = 0;
 
 	string CC_state = "";
