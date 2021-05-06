@@ -77,6 +77,7 @@ public:
 	void add_scheduling_cars(Car_in_database car, Car& target_car);
 	void add_advising_car(Car_in_database car, Car& target_car);
 	void delete_car_from_intersection(Car& car, const string& type);
+	uint16_t get_car_num();
 
 private:
 	void Roadrunner_P(vector<Car_in_database>& copied_scheduling_cars, Car& target_car);

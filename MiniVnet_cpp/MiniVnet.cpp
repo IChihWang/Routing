@@ -4,12 +4,19 @@
 #include <cstdlib>
 #include <iostream>
 #include <cassert>
+#include <thread>
+#include <set>
 using namespace std;
 
 
+uint8_t _CHOOSE_CAR_OPTION;
+uint8_t _TOP_N_CONGESTED;
 vector < map< Coord, Intersection* >* > _database;
 map<string, Car> _car_dict;
+vector<pair<int32_t, Intersection*>> _top_congested_intersections;
 
+shared_mutex wlock_mutex_affected_intersections;
+set<pair<uint16_t, Intersection*>> affected_intersections;
 
 
 /* Handling database */
@@ -62,10 +69,23 @@ void move_a_time_step() {
 		delete intersection_map;
 		_database.erase(_database.begin());
 	}
+
+	for (auto item : _top_congested_intersections) {
+		item.first -= _routing_period_num;
+	}
+
+	_top_congested_intersections.erase(
+		std::remove_if(
+			_top_congested_intersections.begin(),
+			_top_congested_intersections.end(),
+			[](pair<int32_t, Intersection*> const& p) { return p.first <= 0; }
+		),
+		_top_congested_intersections.end()
+	);
 }
 
 shared_mutex database_mutex;
-Intersection& get_intersection(const int current_arrival_time, const Coord &intersection_id) {
+Intersection& get_intersection(const uint16_t current_arrival_time, const Coord &intersection_id) {
 	while (current_arrival_time >= int(_database.size())) {
 		lock_guard<shared_mutex> database_write_lock(database_mutex);
 		add_time_step();
@@ -343,6 +363,11 @@ map<string, vector<Node_in_Path>> routing(const vector<reference_wrapper<Car>>& 
 
 		// Retrieve the paths
 		vector<Node_in_Path> path_list;
+
+		if (nodes_arrival_time_data.find(dst_node) == nodes_arrival_time_data.end()) {
+			cout << "No route is found for " << car.id << endl;
+			exit(-1);
+		}
 		Node_Record node_data = nodes_arrival_time_data[dst_node];
 		while (node_data.is_src == false) {
 			path_list.insert(path_list.begin(), Node_in_Path(node_data.turning, node_data.recordings, node_data.arrival_time_stamp));
@@ -435,6 +460,31 @@ map<char, Node_ID> decide_available_turnings(Coord src_coord, uint8_t src_inters
 	return available_turnings_and_out_direction; // Key : turnings, Values : out_direction
 }
 
+void add_intersection_to_reschedule_list() {
+	
+	for (auto item : affected_intersections) {
+		const uint16_t time = item.first;
+		Intersection* intersection_ptr = item.second;
+
+		uint8_t insert_pos = 0;
+		for (insert_pos; insert_pos < _top_congested_intersections.size(); insert_pos++) {
+			Intersection* comparing_intersection_ptr = _top_congested_intersections[insert_pos].second;
+			if (intersection_ptr->get_car_num() > comparing_intersection_ptr->get_car_num()) {
+				break;
+			}
+		}
+
+		if (insert_pos >= _TOP_N_CONGESTED) {
+			continue;
+		}
+	
+		_top_congested_intersections.insert(_top_congested_intersections.begin() + insert_pos, pair(time, intersection_ptr));
+		while (_top_congested_intersections.size() > _TOP_N_CONGESTED) {
+			_top_congested_intersections.pop_back();
+		}
+	}
+}
+
 void add_car_to_database(Car& target_car, const vector<Node_in_Path>& path_list) {
 	// TODO: write lock
 	
@@ -460,11 +510,21 @@ void add_car_to_database(Car& target_car, const vector<Node_in_Path>& path_list)
 			intersection.add_advising_car(car, target_car);
 			Node_in_Car to_save_key(time, intersection_id);
 			target_car.records_intersection_in_database[&intersection] = "lane_advising";
+
+			{
+				lock_guard<shared_mutex> wLock(wlock_mutex_affected_intersections);
+				affected_intersections.insert(pair(time, &intersection));
+			}
 		}
 		else if (state.compare("lane_advising")) {
 			intersection.add_scheduling_cars(car, target_car);
 			Node_in_Car to_save_key(time, intersection_id);
 			target_car.records_intersection_in_database[&intersection] = "scheduling";
+
+			{
+				lock_guard<shared_mutex> wLock(wlock_mutex_affected_intersections);
+				affected_intersections.insert(pair(time, &intersection));
+			}
 		}
 		// See if the record change to next intersection: add scheduled cars
 		if (pre_record != nullptr && intersection_id != pre_record->last_intersection_id) {
@@ -479,6 +539,11 @@ void add_car_to_database(Car& target_car, const vector<Node_in_Path>& path_list)
 					intersection_to_save.add_sched_car(saving_car, target_car);
 					Node_in_Car to_save_key(time_idx, intersection_id);
 					target_car.records_intersection_in_database[&intersection_to_save] = "scheduled";
+
+					{
+						lock_guard<shared_mutex> wLock(wlock_mutex_affected_intersections);
+						affected_intersections.insert(pair(time_idx, &intersection_to_save));
+					}
 				}
 			}
 		}
@@ -498,6 +563,11 @@ void add_car_to_database(Car& target_car, const vector<Node_in_Path>& path_list)
 			intersection_to_save.add_sched_car(saving_car, target_car);
 			Node_in_Car to_save_key(time_idx, intersection_id);
 			target_car.records_intersection_in_database[&intersection_to_save] = "scheduled";
+
+			{
+				lock_guard<shared_mutex> wLock(wlock_mutex_affected_intersections);
+				affected_intersections.insert(pair(time_idx, &intersection_to_save));
+			}
 		}
 	}
 

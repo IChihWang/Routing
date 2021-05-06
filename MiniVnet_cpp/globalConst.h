@@ -27,6 +27,8 @@ extern float _V_MAX;
 extern float _TURN_SPEED;
 extern uint16_t _TOTAL_LEN;
 extern float _routing_period;
+extern uint8_t _CHOOSE_CAR_OPTION;
+extern uint8_t _TOP_N_CONGESTED;
 
 
 #ifndef COORD

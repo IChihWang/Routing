@@ -79,7 +79,7 @@ SOCKET initial_server_handler() {
 	cout << buffer << endl;
 	stringstream ss(buffer);
 	vector<float> results;
-	for (int i = 0; i < 8; i++) {
+	for (int i = 0; i < 10; i++) {
 		string substr;
 		getline(ss, substr, ':');
 		getline(ss, substr, ':');
@@ -97,6 +97,8 @@ SOCKET initial_server_handler() {
 	_V_MAX = results[5];
 	_TURN_SPEED = results[6];
 	_TOTAL_LEN = uint16_t(results[7]);
+	_CHOOSE_CAR_OPTION = uint8_t(results[8]);
+	_TOP_N_CONGESTED = uint8_t(results[9]);
 	_routing_period = _schedule_period * _routing_period_num;
 
 	cout << _grid_size << " " << _schedule_period << " "

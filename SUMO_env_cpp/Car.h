@@ -42,7 +42,7 @@ public:
 	double CC_front_pos_diff = 0;
 	double CC_slow_speed = V_MAX;
 	double CC_shift = -1;
-	double CC_shift_end = 0;
+	double CC_shift_end = CCZ_DEC2_LEN+2*CCZ_ACC_LEN;
 
 	string CC_state = "";
 	double CC_slowdown_timer = 0;

@@ -232,6 +232,10 @@ void Intersection::add_advising_car(Car_in_database car, Car& target_car) {
 	update_my_spillback_info(car);
 
 }
+uint16_t Intersection::get_car_num() {
+	shared_lock<shared_mutex> rLock(rwlock_mutex);
+	return uint16_t(sched_cars->size() + scheduling_cars->size());
+}
 
 
 

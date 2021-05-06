@@ -55,6 +55,9 @@ SOCKET initial_client_handler() {
 	init_info += ":V_MAX:" + get_string_from_double(V_MAX, 2);
 	init_info += ":TURN_SPEED:" + get_string_from_double(TURN_SPEED, 2);
 	init_info += ":TOTAL_LEN:" + get_string_from_double(TOTAL_LEN, 1);
+	init_info += ":CHOOSE_CAR_OPTION:" + to_string(_CHOOSE_CAR_OPTION);
+	init_info += ":TOP_N_CONGESTED:" + to_string(_TOP_N_CONGESTED);
+
 	send(client_sock, init_info.c_str(), int(init_info.length()), 0);
 
 	char buffer[1024] = { 0 };

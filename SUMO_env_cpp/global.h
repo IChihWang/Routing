@@ -60,6 +60,9 @@ public:
 extern uint8_t _grid_size;
 extern uint16_t _N_TIME_STEP;
 extern float _TIME_STEP;
+extern uint8_t _CHOOSE_CAR_OPTION;
+extern uint8_t _TOP_N_CONGESTED;
+
 
 // Claim in main.cpp
 extern SUMO_Traci traci;

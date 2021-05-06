@@ -123,6 +123,9 @@ string handle_request(string &in_str) {
 		vector<vector<reference_wrapper<Car>>> route_groups;
 		route_groups = choose_car_to_thread_group(new_car_ids, old_car_ids);
 
+		// Clear affected_intersection_list before routing starts 
+		affected_intersections.clear();
+
 		auto begin = high_resolution_clock::now();
 		// routing_with_groups(route_groups, routes_dict);
 		routing_with_groups_thread(route_groups, routes_dict);
@@ -130,6 +133,9 @@ string handle_request(string &in_str) {
 
 		auto route_time = duration<double>(end - begin);
 		cout << "Route_time: " << route_time.count() << " seconds" << endl;
+
+		// Find the next top N congested list
+		add_intersection_to_reschedule_list();
 
 		// Updated during routing, so no need to update database here
 		// router.update_database_after_routing(route_groups)
