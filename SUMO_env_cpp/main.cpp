@@ -17,7 +17,8 @@ using json = nlohmann::json;
 SUMO_Traci traci;
 uint16_t _N_TIME_STEP;
 float _TIME_STEP;
-uint16_t _CHOOSE_CAR_OPTION;
+uint8_t _CHOOSE_CAR_OPTION;
+uint8_t _TOP_N_CONGESTED;
 
 map<string, string> src_dst_dict;
 
