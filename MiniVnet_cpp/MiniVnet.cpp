@@ -1,4 +1,5 @@
 #include "global.h"
+#include "thread_worker.h"
 
 #include <sstream>
 #include <cstdlib>
@@ -148,6 +149,10 @@ vector<vector<reference_wrapper<Car>>> choose_car_to_thread_group(vector<string>
 		results.push_back(vector<reference_wrapper<Car>>());
 	}
 
+	affected_intersections;
+
+
+
 	int process_idx = 0;
 	for (string car_id : new_car_ids) {
 		process_idx++;
@@ -184,6 +189,7 @@ void delete_car_from_database_id(string car_id) {
 	_car_dict.erase(car_id);
 }
 
+/*
 map<string, string>& routing_with_groups(const vector<vector<reference_wrapper<Car>>>& route_groups, map<string, string>& routes_dict) {
 	for (const vector<reference_wrapper<Car>> &route_group : route_groups) {
 		map<string, vector<Node_in_Path>> result = routing(route_group);
@@ -204,10 +210,10 @@ map<string, string>& routing_with_groups(const vector<vector<reference_wrapper<C
 
 	return routes_dict;
 }
+*/
 
-
-map<string, vector<Node_in_Path>> routing(const vector<reference_wrapper<Car>>& route_group) {
-
+map<string, vector<Node_in_Path>> routing(const vector<reference_wrapper<Car>>& route_group, set< pair<uint16_t, Intersection*> >& thread_affected_intersections) {
+	thread_affected_intersections.clear();
 	map<string, vector<Node_in_Path>> route_record;
 
 	for (Car& car : route_group) {
@@ -376,7 +382,7 @@ map<string, vector<Node_in_Path>> routing(const vector<reference_wrapper<Car>>& 
 
 		route_record[car.id] = path_list;
 
-		add_car_to_database(car, path_list);
+		add_car_to_database(car, path_list, thread_affected_intersections);
 	}
 
 	return route_record;
@@ -462,6 +468,13 @@ map<char, Node_ID> decide_available_turnings(Coord src_coord, uint8_t src_inters
 
 void add_intersection_to_reschedule_list() {
 	
+	affected_intersections.clear();
+
+	for (uint8_t thread_i = 0; thread_i < _thread_num; thread_i++) {
+		set< pair<uint16_t, Intersection*> >& thread_affected_intersections = _thread_pool[thread_i]->thread_affected_intersections;
+		affected_intersections.insert(thread_affected_intersections.begin(), thread_affected_intersections.end());
+	}
+
 	for (auto item : affected_intersections) {
 		const uint16_t time = item.first;
 		Intersection* intersection_ptr = item.second;
@@ -485,7 +498,7 @@ void add_intersection_to_reschedule_list() {
 	}
 }
 
-void add_car_to_database(Car& target_car, const vector<Node_in_Path>& path_list) {
+void add_car_to_database(Car& target_car, const vector<Node_in_Path>& path_list, set< pair<uint16_t, Intersection*> >& thread_affected_intersections) {
 	// TODO: write lock
 	
 	// Put all to-write records together
@@ -511,20 +524,14 @@ void add_car_to_database(Car& target_car, const vector<Node_in_Path>& path_list)
 			Node_in_Car to_save_key(time, intersection_id);
 			target_car.records_intersection_in_database[&intersection] = "lane_advising";
 
-			{
-				lock_guard<shared_mutex> wLock(wlock_mutex_affected_intersections);
-				affected_intersections.insert(pair(time, &intersection));
-			}
+			thread_affected_intersections.insert(pair(time, &intersection));
 		}
 		else if (state.compare("lane_advising")) {
 			intersection.add_scheduling_cars(car, target_car);
 			Node_in_Car to_save_key(time, intersection_id);
 			target_car.records_intersection_in_database[&intersection] = "scheduling";
 
-			{
-				lock_guard<shared_mutex> wLock(wlock_mutex_affected_intersections);
-				affected_intersections.insert(pair(time, &intersection));
-			}
+			thread_affected_intersections.insert(pair(time, &intersection));
 		}
 		// See if the record change to next intersection: add scheduled cars
 		if (pre_record != nullptr && intersection_id != pre_record->last_intersection_id) {
@@ -540,10 +547,8 @@ void add_car_to_database(Car& target_car, const vector<Node_in_Path>& path_list)
 					Node_in_Car to_save_key(time_idx, intersection_id);
 					target_car.records_intersection_in_database[&intersection_to_save] = "scheduled";
 
-					{
-						lock_guard<shared_mutex> wLock(wlock_mutex_affected_intersections);
-						affected_intersections.insert(pair(time_idx, &intersection_to_save));
-					}
+					thread_affected_intersections.insert(pair(time_idx, &intersection_to_save));
+
 				}
 			}
 		}
@@ -564,10 +569,8 @@ void add_car_to_database(Car& target_car, const vector<Node_in_Path>& path_list)
 			Node_in_Car to_save_key(time_idx, intersection_id);
 			target_car.records_intersection_in_database[&intersection_to_save] = "scheduled";
 
-			{
-				lock_guard<shared_mutex> wLock(wlock_mutex_affected_intersections);
-				affected_intersections.insert(pair(time_idx, &intersection_to_save));
-			}
+			thread_affected_intersections.insert(pair(time_idx, &intersection_to_save));
+
 		}
 	}
 

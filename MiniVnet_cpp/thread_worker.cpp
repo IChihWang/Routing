@@ -33,7 +33,7 @@ void routing_in_thread(Thread_Worker* thread_worker) {
 		}
 
 		// Start the routing
-		map<string, vector<Node_in_Path>> result = routing(*(thread_worker->route_group_ptr));
+		map<string, vector<Node_in_Path>> result = routing(*(thread_worker->route_group_ptr), thread_worker->thread_affected_intersections);
 		// Get the result
 		for (const auto& [car_id, path_data] : result) {
 			string turning_str = "";

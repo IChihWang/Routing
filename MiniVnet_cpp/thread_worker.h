@@ -20,6 +20,7 @@ public:
 	static mutex request_worker_mutex;
 	static condition_variable request_worker_condition_variable;
 	bool request_worker_ready = false;
+	set< pair<uint16_t, Intersection*> > thread_affected_intersections;
 
 	thread* worker_ptr;
 

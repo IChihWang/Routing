@@ -40,7 +40,6 @@ extern vector< map< Coord, Intersection* >* > _database;
 extern map<string, Car> _car_dict;
 extern vector< pair<int32_t, Intersection*> > _top_congested_intersections;
 
-extern shared_mutex wlock_mutex_affected_intersections;
 extern set< pair<uint16_t, Intersection*> > affected_intersections;
 void add_intersection_to_reschedule_list();
 
@@ -61,9 +60,9 @@ map<string, string>& routing_with_groups(const vector<vector<reference_wrapper<C
 // Multi threads (in thread_worker.cpp)
 map<string, string>& routing_with_groups_thread(const vector<vector<reference_wrapper<Car>>>& route_groups, map<string, string>& routes_dict);
 
-map<string, vector<Node_in_Path>> routing(const vector<reference_wrapper<Car>>& route_group);
+map<string, vector<Node_in_Path>> routing(const vector<reference_wrapper<Car>>& route_group, set< pair<uint16_t, Intersection*> >& thread_affected_intersections);
 map<char, Node_ID> decide_available_turnings(Coord src_coord, uint8_t src_intersection_direction, Coord dst_coord, uint16_t additional_search_range);
-void add_car_to_database(Car& target_car, const vector<Node_in_Path>& path_list);
+void add_car_to_database(Car& target_car, const vector<Node_in_Path>& path_list, set< pair<uint16_t, Intersection*> >& thread_affected_intersections);
 void testQ();
 
 
