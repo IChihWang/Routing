@@ -144,22 +144,157 @@ vector<vector<reference_wrapper<Car>>> choose_car_to_thread_group(vector<string>
 	vector<vector<reference_wrapper<Car>>> results;
 	// Important: a car shouldn't appear in two different groups at the same time!!!!!!!!!!!!
 
-	// Dummy allocation  TODO: change
+	/*
+	* _CHOOSE_CAR_OPTION == 0: BFS on rescheduling/  ideal and fast
+	* _CHOOSE_CAR_OPTION == 1: without BFS on rescheduling/ Not ideal but fast
+	* _CHOOSE_CAR_OPTION == 2: Round-robin top-N cars on rescheduling (one thread on rescheduling)/ ideal but slow
+	* _CHOOSE_CAR_OPTION == 3: Round-robin all cars on rescheduling (one thread on rescheduling)/ most ideal but very slow
+	* _CHOOSE_CAR_OPTION == 4: No rescheduling
+	*/
+
 	for (int i = 0; i < _thread_num; i++) {
 		results.push_back(vector<reference_wrapper<Car>>());
 	}
 
-	affected_intersections;
 
+	if (_CHOOSE_CAR_OPTION == 0) {
+		// Find the correlatioin between affected intersections (Whether they share same CAV)
+		vector<pair<uint32_t, Intersection*>> not_yet_searched_list(_top_congested_intersections.begin(), _top_congested_intersections.end());
+		vector<pair<uint32_t, Intersection*>> searched_list;
+		vector<pair<uint32_t, Intersection*>> searching_list;
+		while (not_yet_searched_list.size() > 0) {
+			// Find the thread with minimum size to store the current tree
+			vector<reference_wrapper<Car>>& target_result = *min_element(results.begin(), results.end(),
+				[](const vector<reference_wrapper<Car>>& a, const vector<reference_wrapper<Car>>& b) -> bool
+				{
+					return a.size() < b.size();
+				});
 
+			// Start constructing the tree (BFS)
+			searching_list.push_back(not_yet_searched_list[0]);
+			not_yet_searched_list.erase(not_yet_searched_list.begin());
 
+			while (searching_list.size() > 0) {
+				pair<uint32_t, Intersection*>& visiting_intersection = searching_list[0];
+				searching_list.erase(searching_list.begin());
+
+				if (find(searched_list.begin(), searched_list.end(), visiting_intersection) != searched_list.end()) {
+					// Visisted, so skip
+					continue;
+				}
+
+				searched_list.push_back(visiting_intersection);
+				Intersection* visiting_intersection_ptr = visiting_intersection.second;
+				vector<uint32_t> to_be_deleted_idx;
+				for (uint16_t idx = 0; idx < not_yet_searched_list.size(); idx++) {
+					const pair<uint32_t, Intersection*>& checking_intersection = not_yet_searched_list[idx];
+					uint32_t timestamp = checking_intersection.first;
+					Intersection* checking_intersection_ptr = checking_intersection.second;
+
+					for (auto item : *(visiting_intersection_ptr->scheduling_cars)) {
+						string car_id = item.first;
+						if ((checking_intersection_ptr->scheduling_cars)->find(car_id) != (checking_intersection_ptr->scheduling_cars)->end()) {
+							// Find car in another intersection, correlated
+							searching_list.push_back(checking_intersection);
+							to_be_deleted_idx.push_back(idx);
+							break;
+						}
+					}
+				}
+
+				// Remove element from the back
+				for (int idx = to_be_deleted_idx.size() - 1; idx >= 0; idx--) {
+					not_yet_searched_list.erase(not_yet_searched_list.begin() + to_be_deleted_idx[idx]);
+				}
+
+				// Record the car results
+				for (auto item : *(visiting_intersection_ptr->scheduling_cars)) {
+					string car_id = item.first;
+					target_result.push_back(_car_dict[car_id]);
+				}
+			}
+		}
+	}
+	else if (_CHOOSE_CAR_OPTION == 1) {
+
+		for (const pair<uint32_t, Intersection*> item : _top_congested_intersections) {
+			// Find the thread with minimum size to store the current tree
+			vector<reference_wrapper<Car>>& target_result = *min_element(results.begin(), results.end(),
+				[](const vector<reference_wrapper<Car>>& a, const vector<reference_wrapper<Car>>& b) -> bool
+				{
+					return a.size() < b.size();
+				});
+
+			Intersection* intersection_ptr = item.second;
+			for (auto car_item : *(intersection_ptr->scheduling_cars)) {
+				string car_id = car_item.first;
+				target_result.push_back(_car_dict[car_id]);
+			}
+		}
+	}
+	else if (_CHOOSE_CAR_OPTION == 2) {
+
+		for (const pair<uint32_t, Intersection*> item : _top_congested_intersections) {
+			vector<reference_wrapper<Car>>& target_result = results[0];
+
+			Intersection* intersection_ptr = item.second;
+			for (auto car_item : *(intersection_ptr->scheduling_cars)) {
+				string car_id = car_item.first;
+				target_result.push_back(_car_dict[car_id]);
+			}
+		}
+	}
+	else if (_CHOOSE_CAR_OPTION == 3) {
+
+		for (const pair<string, Car> car_item : _car_dict) {
+			if (find(new_car_ids.begin(), new_car_ids.end(), car_item.first) != new_car_ids.end()) {
+				// New car, skip
+				continue;
+			}
+
+			vector<reference_wrapper<Car>>& target_result = results[0];
+			string car_id = car_item.first;
+			target_result.push_back(_car_dict[car_id]);
+		}
+	}
+	else if (_CHOOSE_CAR_OPTION == 4) {
+		// Do nothing with the old cars
+	}
+	
+
+	// Handling the new cars
+	auto min_max_result = minmax_element(results.begin(), results.end(), 
+		[](const vector<reference_wrapper<Car>>& a, const vector<reference_wrapper<Car>>& b) -> bool
+		{
+			return a.size() < b.size();
+		});
+	vector<reference_wrapper<Car>>* min_group = &(*min_max_result.first);
+	vector<reference_wrapper<Car>>* max_group = &(*min_max_result.second);
+	for (string car_id : new_car_ids) {
+		min_group->push_back(_car_dict[car_id]);
+		if (min_group->size() > max_group->size() - 3) {	// 3 is a temporary number to control the load balance
+			// Re-sort the group
+			auto min_max_result = minmax_element(results.begin(), results.end(),
+				[](const vector<reference_wrapper<Car>>& a, const vector<reference_wrapper<Car>>& b) -> bool
+				{
+					return a.size() < b.size();
+				});
+			min_group = &(*min_max_result.first);
+			max_group = &(*min_max_result.second);
+		}
+	}
+
+	/*
+	* Looping through each bucket
 	int process_idx = 0;
 	for (string car_id : new_car_ids) {
 		process_idx++;
 		process_idx %= _thread_num;
 		results[process_idx].push_back(_car_dict[car_id]);
 	}
+	*/
 
+	// Remove Cars from the database for new routes
 	for (vector<reference_wrapper<Car>> car_group : results) {
 		for (Car &car: car_group) {
 			delete_car_from_database(car);

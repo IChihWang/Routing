@@ -37,7 +37,8 @@ int main(int argc, char* argv[])
         src_dst_file_name += argv[2];
         _N_TIME_STEP = stoi(argv[3]);
         _TIME_STEP = stof(argv[4]);
-        _CHOOSE_CAR_OPTION = stof(argv[4]);
+        _TOP_N_CONGESTED = stoi(argv[5]);
+        _CHOOSE_CAR_OPTION = stoi(argv[6]);
     }
     else {
         cout << "Wrong number of arguments" << endl;

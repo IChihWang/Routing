@@ -37,12 +37,14 @@ HOST, PORT = "localhost", 9997
 # Main function
 if __name__ == "__main__":
 
+    print("python main.py <arrival_rate> <seed> <INTER_SIZE> <TOP_N> <CHOOSE_CAR_OPTION>")
+
     # Initial variables
     seed = int(sys.argv[2])
     random.seed(seed)  # make tests reproducible
     numpy.random.seed(seed)
     arrival_rate = float(sys.argv[1])
-    cfg.INTER_SIZE = int(sys.argv[4])
+    cfg.INTER_SIZE = int(sys.argv[3])
 
     # Initial SUMO
     #sumoBinary = checkBinary('sumo-gui')
@@ -64,13 +66,16 @@ if __name__ == "__main__":
         os.system(background + sumo + "-c data/UDTA.sumocfg --step-length " + str(cfg.TIME_STEP)
                     + " --collision.mingap-factor 0 -n data/net/"+net_name
                     + " -r data/routes/"+route_name + " --remote-port " + str(PORT))
-        
+
 
         cpp_cmd = r'.\x64\Release\SUMO_env_cpp.exe '
         cpp_cmd += str(cfg.INTER_SIZE) + " "
         cpp_cmd += "%i_%s_%i_src_dst.json " % (cfg.INTER_SIZE, arrival_rate, seed)
         cpp_cmd += str(cfg.N_TIME_STEP) + " "
-        cpp_cmd += str(cfg.TIME_STEP) + " &"
+        cpp_cmd += str(cfg.TIME_STEP) + " "
+        cpp_cmd += sys.argv[4] + " "    # TOP_N
+        cpp_cmd += sys.argv[5] + " "    # Choose car option
+        cpp_cmd += " &"
         os.system(cpp_cmd)
 
     except Exception as e:
