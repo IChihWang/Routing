@@ -72,7 +72,9 @@ void move_a_time_step() {
 	}
 
 	for (auto item : _top_congested_intersections) {
+		cout << item.first << " " << get<0>(item.second->id) << get<1>(item.second->id) << endl;
 		item.first -= _routing_period_num;
+		cout << "---" << item.first << endl;
 	}
 
 	_top_congested_intersections.erase(
@@ -617,6 +619,8 @@ void add_intersection_to_reschedule_list() {
 		uint8_t insert_pos = 0;
 		for (insert_pos; insert_pos < _top_congested_intersections.size(); insert_pos++) {
 			Intersection* comparing_intersection_ptr = _top_congested_intersections[insert_pos].second;
+			cout << "aaa===  " << intersection_ptr->get_car_num() << endl;
+			cout << "bbb===  " << insert_pos << comparing_intersection_ptr->get_car_num() << endl;
 			if (intersection_ptr->get_car_num() > comparing_intersection_ptr->get_car_num()) {
 				break;
 			}
