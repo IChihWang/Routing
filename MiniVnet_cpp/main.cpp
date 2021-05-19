@@ -128,6 +128,10 @@ string handle_request(string &in_str) {
 
 		auto begin = high_resolution_clock::now();
 		// routing_with_groups(route_groups, routes_dict);
+		for (auto car_vec : route_groups) {
+			cout << " " << car_vec.size() << " ";
+		}
+		cout << endl;
 		routing_with_groups_thread(route_groups, routes_dict);
 		auto end = high_resolution_clock::now();
 

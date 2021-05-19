@@ -71,10 +71,8 @@ void move_a_time_step() {
 		_database.erase(_database.begin());
 	}
 
-	for (auto item : _top_congested_intersections) {
-		cout << item.first << " " << get<0>(item.second->id) << get<1>(item.second->id) << endl;
+	for (pair<int32_t, Intersection*>& item : _top_congested_intersections) {
 		item.first -= _routing_period_num;
-		cout << "---" << item.first << endl;
 	}
 
 	_top_congested_intersections.erase(
@@ -274,8 +272,9 @@ vector<vector<reference_wrapper<Car>>> choose_car_to_thread_group(vector<string>
 	vector<reference_wrapper<Car>>* max_group = &(*min_max_result.second);
 	for (string car_id : new_car_ids) {
 		min_group->push_back(_car_dict[car_id]);
-		if (min_group->size() > max_group->size() - 3) {	// 3 is a temporary number to control the load balance
+		if ((int)min_group->size() > (int)max_group->size() - 3) {	// 3 is a temporary number to control the load balance
 			// Re-sort the group
+
 			auto min_max_result = minmax_element(results.begin(), results.end(),
 				[](const vector<reference_wrapper<Car>>& a, const vector<reference_wrapper<Car>>& b) -> bool
 				{
@@ -619,8 +618,6 @@ void add_intersection_to_reschedule_list() {
 		uint8_t insert_pos = 0;
 		for (insert_pos; insert_pos < _top_congested_intersections.size(); insert_pos++) {
 			Intersection* comparing_intersection_ptr = _top_congested_intersections[insert_pos].second;
-			cout << "aaa===  " << intersection_ptr->get_car_num() << endl;
-			cout << "bbb===  " << insert_pos << comparing_intersection_ptr->get_car_num() << endl;
 			if (intersection_ptr->get_car_num() > comparing_intersection_ptr->get_car_num()) {
 				break;
 			}
