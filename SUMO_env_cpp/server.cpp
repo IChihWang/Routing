@@ -57,6 +57,7 @@ SOCKET initial_client_handler() {
 	init_info += ":TOTAL_LEN:" + get_string_from_double(TOTAL_LEN, 1);
 	init_info += ":CHOOSE_CAR_OPTION:" + to_string(_CHOOSE_CAR_OPTION);
 	init_info += ":TOP_N_CONGESTED:" + to_string(_TOP_N_CONGESTED);
+	init_info += ":_THREAD_NUM:" + to_string(_THREAD_NUM);
 
 	send(client_sock, init_info.c_str(), int(init_info.length()), 0);
 

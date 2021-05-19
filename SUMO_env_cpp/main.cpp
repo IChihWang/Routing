@@ -19,6 +19,7 @@ uint16_t _N_TIME_STEP;
 float _TIME_STEP;
 uint8_t _CHOOSE_CAR_OPTION;
 uint8_t _TOP_N_CONGESTED;
+uint8_t _THREAD_NUM;
 
 map<string, string> src_dst_dict;
 
@@ -39,6 +40,7 @@ int main(int argc, char* argv[])
         _TIME_STEP = stof(argv[4]);
         _TOP_N_CONGESTED = stoi(argv[5]);
         _CHOOSE_CAR_OPTION = stoi(argv[6]);
+        _THREAD_NUM = stoi(argv[7]);
     }
     else {
         cout << "Wrong number of arguments" << endl;

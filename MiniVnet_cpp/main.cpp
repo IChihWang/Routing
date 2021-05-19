@@ -8,7 +8,7 @@
 using namespace std;
 using namespace std::chrono;
 
-uint8_t _thread_num = 2;
+uint8_t _thread_num;
 map<string, map<string, double> > inter_info;
 map<string, vector< map<char, uint8_t> >> lane_dict;
 map<string, double> inter_length_dict;
@@ -128,10 +128,6 @@ string handle_request(string &in_str) {
 
 		auto begin = high_resolution_clock::now();
 		// routing_with_groups(route_groups, routes_dict);
-		for (auto car_vec : route_groups) {
-			cout << " " << car_vec.size() << " ";
-		}
-		cout << endl;
 		routing_with_groups_thread(route_groups, routes_dict);
 		auto end = high_resolution_clock::now();
 

@@ -261,6 +261,11 @@ vector<vector<reference_wrapper<Car>>> choose_car_to_thread_group(vector<string>
 		// Do nothing with the old cars
 	}
 	
+	cout << "=====" << endl;
+	for (auto car_vec : results) {
+		cout << " " << car_vec.size() << " ";
+	}
+	cout << endl;
 
 	// Handling the new cars
 	auto min_max_result = minmax_element(results.begin(), results.end(), 
@@ -284,6 +289,11 @@ vector<vector<reference_wrapper<Car>>> choose_car_to_thread_group(vector<string>
 			max_group = &(*min_max_result.second);
 		}
 	}
+
+	for (auto car_vec : results) {
+		cout << " " << car_vec.size() << " ";
+	}
+	cout << endl;
 
 	/*
 	* Looping through each bucket
@@ -611,9 +621,12 @@ void add_intersection_to_reschedule_list() {
 		affected_intersections.insert(thread_affected_intersections.begin(), thread_affected_intersections.end());
 	}
 
+
 	for (auto item : affected_intersections) {
 		const uint16_t time = item.first;
 		Intersection* intersection_ptr = item.second;
+
+		//cout << (intersection_ptr->scheduling_cars)->size() << endl;
 
 		uint8_t insert_pos = 0;
 		for (insert_pos; insert_pos < _top_congested_intersections.size(); insert_pos++) {
@@ -632,6 +645,7 @@ void add_intersection_to_reschedule_list() {
 			_top_congested_intersections.pop_back();
 		}
 	}
+	cout << endl;
 }
 
 void add_car_to_database(Car& target_car, const vector<Node_in_Path>& path_list, set< pair<uint16_t, Intersection*> >& thread_affected_intersections) {
@@ -659,10 +673,8 @@ void add_car_to_database(Car& target_car, const vector<Node_in_Path>& path_list,
 			intersection.add_advising_car(car, target_car);
 			Node_in_Car to_save_key(time, intersection_id);
 			target_car.records_intersection_in_database[&intersection] = "lane_advising";
-
-			thread_affected_intersections.insert(pair(time, &intersection));
 		}
-		else if (state.compare("lane_advising")) {
+		else if (state.compare("scheduling")) {
 			intersection.add_scheduling_cars(car, target_car);
 			Node_in_Car to_save_key(time, intersection_id);
 			target_car.records_intersection_in_database[&intersection] = "scheduling";
@@ -684,7 +696,6 @@ void add_car_to_database(Car& target_car, const vector<Node_in_Path>& path_list,
 					target_car.records_intersection_in_database[&intersection_to_save] = "scheduled";
 
 					thread_affected_intersections.insert(pair(time_idx, &intersection_to_save));
-
 				}
 			}
 		}
@@ -706,7 +717,6 @@ void add_car_to_database(Car& target_car, const vector<Node_in_Path>& path_list,
 			target_car.records_intersection_in_database[&intersection_to_save] = "scheduled";
 
 			thread_affected_intersections.insert(pair(time_idx, &intersection_to_save));
-
 		}
 	}
 
