@@ -210,14 +210,26 @@ vector<vector<reference_wrapper<Car>>> choose_car_to_thread_group(vector<string>
 				// Record the car results
 				for (auto item : *(visiting_intersection_ptr->scheduling_cars)) {
 					string car_id = item.first;
-					target_result.push_back(_car_dict[car_id]);
+					if (_car_dict[car_id].state.compare("OLD") == 0 || _car_dict[car_id].state.compare("NEW") == 0) {
+						target_result.push_back(_car_dict[car_id]);
+					}
 				}
 			}
 		}
 	}
 	else if (_CHOOSE_CAR_OPTION == 1) {
-
+		set<string> cars_to_add;
 		for (const pair<uint32_t, Intersection*> item : _top_congested_intersections) {
+			Intersection* intersection_ptr = item.second;
+			for (auto car_item : *(intersection_ptr->scheduling_cars)) {
+				const string& car_id = car_item.first;
+				if (_car_dict[car_id].state.compare("OLD") == 0 || _car_dict[car_id].state.compare("NEW") == 0) {
+					cars_to_add.insert(car_id);
+				}
+			}
+		}
+
+		for (const string& car_id : cars_to_add) {
 			// Find the thread with minimum size to store the current tree
 			vector<reference_wrapper<Car>>& target_result = *min_element(results.begin(), results.end(),
 				[](const vector<reference_wrapper<Car>>& a, const vector<reference_wrapper<Car>>& b) -> bool
@@ -225,11 +237,7 @@ vector<vector<reference_wrapper<Car>>> choose_car_to_thread_group(vector<string>
 					return a.size() < b.size();
 				});
 
-			Intersection* intersection_ptr = item.second;
-			for (auto car_item : *(intersection_ptr->scheduling_cars)) {
-				string car_id = car_item.first;
-				target_result.push_back(_car_dict[car_id]);
-			}
+			target_result.push_back(_car_dict[car_id]);
 		}
 	}
 	else if (_CHOOSE_CAR_OPTION == 2) {
@@ -263,7 +271,10 @@ vector<vector<reference_wrapper<Car>>> choose_car_to_thread_group(vector<string>
 	
 	cout << "=====" << endl;
 	for (auto car_vec : results) {
-		cout << " " << car_vec.size() << " ";
+		cout << " " << car_vec.size() << " " << endl;
+		for (Car& car : car_vec) {
+			cout << car.id;
+		}
 	}
 	cout << endl;
 

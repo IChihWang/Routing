@@ -118,6 +118,7 @@ class Node_in_Car;
 class Car : public Car_in_database {
 public:
 	Coord dst_coord;
+	string state = "";
 	map<Intersection*, string> records_intersection_in_database;
 	
 	// temporary variables for routing

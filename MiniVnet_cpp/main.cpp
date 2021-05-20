@@ -88,6 +88,7 @@ string handle_request(string &in_str) {
 		}
 		else if (car_state.compare("PAUSE") == 0) {
 			// Cannot reroute the car due to the lower lever control
+			_car_dict[car_id].state = car_state;
 		}
 		else if (car_state.compare("NEW") == 0 || car_state.compare("OLD") == 0) {
 			string car_data;
@@ -107,6 +108,7 @@ string handle_request(string &in_str) {
 			update_car(car_id, car_length, src_intersection_id,
 				direction_of_src_intersection, time_offset_step,
 				position_at_offset, dst_node_str);
+			_car_dict[car_id].state = car_state;
 
 			if (car_state.compare("NEW") == 0) {
 				new_car_ids.push_back(car_id);
@@ -115,6 +117,8 @@ string handle_request(string &in_str) {
 				old_car_ids.push_back(car_id);
 			}
 		}
+
+		
 	}
 
 	map<string, string> routes_dict;

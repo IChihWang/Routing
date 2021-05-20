@@ -129,7 +129,7 @@ Car_Info_In_Intersection IntersectionManager::get_car_info_for_route(const strin
 				direction_of_src_intersection = (direction + 1) % 4;
 			}
 			else if (turning == 'R') {
-				direction_of_src_intersection = (direction - 1) % 4;
+				direction_of_src_intersection = (direction + 4 - 1) % 4;
 			}
 
 			string x = "";

@@ -347,6 +347,16 @@ void Intersection::Roadrunner_P(vector<Car_in_database>& scheduling_cars, Car& t
 	// Check that the problem has an optimal solution.
 	if (result_status != MPSolver::FEASIBLE && result_status != MPSolver::OPTIMAL) {
 		cout << "The problem has no solution!" << endl;
+
+		cout << "==============" << endl;
+		for (auto& car : scheduling_cars) {
+			cout << car.id << " " << car.position << " " << car.length << " " << car.OT << " ";
+		}
+		cout << endl;
+		for (const auto& [car_id, old_car] : *sched_cars) {
+			cout << car_id << " " << old_car.position << " " << old_car.length << " " << old_car.OT << " ";
+		}
+		cout << endl;
 	}
 
 	// Update the delays
