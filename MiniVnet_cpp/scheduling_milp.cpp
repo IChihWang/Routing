@@ -41,7 +41,7 @@ void Intersection::Roadrunner_P(vector<Car_in_database>& scheduling_cars, Car& t
 
 	// part 3: claim parameters
 	uint16_t pre_accumulate_car_len_lane[4 * LANE_NUM_PER_DIRECTION] = {};
-	fill_n(pre_accumulate_car_len_lane, 4 * LANE_NUM_PER_DIRECTION, CAR_MAX_LEN + _HEADWAY);
+	fill_n(pre_accumulate_car_len_lane, 4 * LANE_NUM_PER_DIRECTION, _HEADWAY);
 
 	// Compute accumulated car len
 	const map<string, Car_in_database>& my_sched_cars = (*sched_cars);
@@ -149,7 +149,7 @@ void Intersection::Roadrunner_P(vector<Car_in_database>& scheduling_cars, Car& t
 							// Find the position in the list to compare
 							uint32_t compare_dst_car_idx = 0;
 							for (uint32_t dst_car_idx = 0; dst_car_idx < (uint32_t)dst_car_delay_position.size(); dst_car_idx++) {
-								if (accumulate_car_len[other_lane_idx] < dst_car_delay_position[other_lane_idx].position) {
+								if (accumulate_car_len[other_lane_idx] < dst_car_delay_position[dst_car_idx].position) {
 									compare_dst_car_idx = dst_car_idx;
 									break;
 								}

@@ -320,6 +320,11 @@ void run_sumo(Thread_Worker& router_thread) {
         }
 
         simu_step += _TIME_STEP;
+
+        if (traci.simulation.getEndingTeleportNumber() > 0) {
+            cout << "Collision warning!!" << endl;
+            system("Pause");
+        }
     }
 
     // Delete the intersection manager
