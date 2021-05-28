@@ -100,13 +100,14 @@ Car_Info_In_Intersection IntersectionManager::get_car_info_for_route(const strin
 			time_offset = position / V_MAX;
 			// Estimate by borrowing the known delay
 			if (my_road_info[lane].car_delay_position.size() > 0) {
-				time_offset += my_road_info[lane].car_delay_position[-1].delay;
+				time_offset += my_road_info[lane].car_delay_position[my_road_info[lane].car_delay_position.size() -1].delay;
 			}
 		}
 		else {
 			// Compute with the known delay
 			time_offset = car_list[car_id]->OT + car_list[car_id]->D;
 		}
+
 
 		// Add the time in the intersection
 		char turning = car_list[car_id]->current_turn;
@@ -120,6 +121,7 @@ Car_Info_In_Intersection IntersectionManager::get_car_info_for_route(const strin
 			return Car_Info_In_Intersection(true);
 		}
 		else {
+
 			uint8_t direction = lane / LANE_NUM_PER_DIRECTION;
 
 			if (turning == 'S') {
@@ -167,7 +169,7 @@ Car_Info_In_Intersection IntersectionManager::get_car_info_for_route(const strin
 		}
 	}
 
-	uint16_t time_offset_step = int(time_offset / SCHEDULING_PERIOD);
+	int time_offset_step = int(time_offset / SCHEDULING_PERIOD);
 	time_offset = double(time_offset_step + 1) * SCHEDULING_PERIOD - time_offset;
 	double position_at_offset = TOTAL_LEN - time_offset * V_MAX;
 
@@ -387,7 +389,7 @@ void IntersectionManager::run(double simu_step) {
 	}
 
 	// ##############################################
-	// Grouping the carsand schedule
+	// Grouping the cars and schedule
 	// Put here due to the thread handling
 	schedule_period_count += _TIME_STEP;
 	if (schedule_period_count > GZ_LEN / V_MAX - 1) {
@@ -397,13 +399,13 @@ void IntersectionManager::run(double simu_step) {
 		map<string, Car*> advised_n_sched_car;
 
 		for (const auto& [car_id, car_ptr] : car_list) {
-			if (car_ptr->zone == "GZ" || car_ptr->zone == "BZ" || car_ptr->zone == "CCZ") {
+			if (car_ptr->zone == "GZ" || car_ptr->zone == "BZ" || car_ptr->zone == "CCZ" || car_ptr->zone == "Intersection") {
 				if (car_ptr->zone_state == "not_scheduled") {
 					n_sched_car[car_id] = car_ptr;
 				}
 				else {
 					sched_car[car_id] = car_ptr;
-					traci.vehicle.setColor(car_id, libsumo::TraCIColor(100, 250, 92));
+					//traci.vehicle.setColor(car_id, libsumo::TraCIColor(100, 250, 92));
 				}
 			}
 			else if (car_ptr->zone == "PZ" || car_ptr->zone == "AZ") {
@@ -569,7 +571,7 @@ void IntersectionManager::run(double simu_step) {
 		uint8_t lane = car.lane;
 		car_accumulate_len_lane[lane] += car.length + HEADWAY;
 		if (car.is_scheduled) {
-			lane_car_delay_position[lane].push_back(Car_Delay_Position_Record(car_accumulate_len_lane[lane], car.D));
+			lane_car_delay_position[lane].push_back(Car_Delay_Position_Record(car_accumulate_len_lane[lane], car.D, car.id));
 		}
 
 		if (car.position > TOTAL_LEN - AZ_LEN && lane != car.desired_lane) {
@@ -585,6 +587,8 @@ void IntersectionManager::run(double simu_step) {
 	for (uint8_t lane_idx = 0; lane_idx < 4 * LANE_NUM_PER_DIRECTION; lane_idx++) {
 		my_road_info[lane_idx].avail_len = TOTAL_LEN - car_accumulate_len_lane[lane_idx] - HEADWAY;
 		my_road_info[lane_idx].delay = delay_lane[lane_idx];
+
+
 		my_road_info[lane_idx].car_delay_position = lane_car_delay_position[lane_idx];
 	}
 }

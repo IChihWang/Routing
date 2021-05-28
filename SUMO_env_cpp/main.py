@@ -67,6 +67,7 @@ if __name__ == "__main__":
                     + " --collision.mingap-factor 0 -n data/net/"+net_name
                     + " -r data/routes/"+route_name + " --remote-port " + str(PORT))
 
+        #'''
         cpp_cmd = r'.\x64\Release\SUMO_env_cpp.exe '
         cpp_cmd += str(cfg.INTER_SIZE) + " "
         cpp_cmd += "%i_%s_%i_src_dst.json " % (cfg.INTER_SIZE, arrival_rate, seed)
@@ -77,6 +78,7 @@ if __name__ == "__main__":
         cpp_cmd += sys.argv[6] + " "    # Thread number
         cpp_cmd += " &"
         os.system(cpp_cmd)
+        #'''
 
     except Exception as e:
         traceback.print_exc()

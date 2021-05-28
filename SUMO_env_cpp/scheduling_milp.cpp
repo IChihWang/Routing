@@ -45,12 +45,28 @@ void IntersectionManager::Roadrunner_P(map<string, Car*>& old_cars, map<string, 
 
 	// part 3: claim parameters
 	uint16_t pre_accumulate_car_len_lane[4 * LANE_NUM_PER_DIRECTION] = {};
+	fill_n(pre_accumulate_car_len_lane, 4 * LANE_NUM_PER_DIRECTION, CAR_MAX_LEN+HEADWAY);
 
 	// Compute accumulated car len
 	for (const auto& [car_id, old_car_ptr] : old_cars) {
 		Car& old_car = *old_car_ptr;
 		pre_accumulate_car_len_lane[old_car.dst_lane] += (old_car.length + HEADWAY);
-		pre_accumulate_car_len_lane[old_car.dst_lane_changed_to] += (old_car.length + HEADWAY);
+
+		if (old_car.dst_lane != old_car.dst_lane_changed_to){
+			int8_t for_step = 0;
+			if (old_car.dst_lane_changed_to > old_car.dst_lane)
+				for_step = -1;
+			else if (old_car.dst_lane_changed_to < old_car.dst_lane)
+				for_step = 1;
+
+			for (uint8_t other_lane_idx = old_car.dst_lane_changed_to; other_lane_idx != old_car.dst_lane; other_lane_idx += for_step) {
+				pre_accumulate_car_len_lane[old_car.dst_lane_changed_to] += (old_car.length + HEADWAY);
+			}
+		}
+		
+		//pre_accumulate_car_len_lane[old_car.dst_lane_changed_to] += (old_car.length + HEADWAY);
+		//if (old_car.dst_lane != old_car.dst_lane_changed_to)
+			//pre_accumulate_car_len_lane[old_car.dst_lane_changed_to] += (old_car.length + HEADWAY);
 
 	}
 
@@ -98,7 +114,7 @@ void IntersectionManager::Roadrunner_P(map<string, Car*>& old_cars, map<string, 
 				const vector<Car_Delay_Position_Record>& dst_car_delay_position = (others_road_info[dst_lane_idx])->car_delay_position;
 
 				car.is_spillback = true;
-				if (dst_car_delay_position.size() < 1 || (double(accumulate_car_len[dst_lane_idx]) + CAR_MAX_LEN + HEADWAY > dst_car_delay_position.back().position)) {
+				if (dst_car_delay_position.size() < 1 || (double(accumulate_car_len[dst_lane_idx]) > dst_car_delay_position.back().position)) {
 					// Skip because no records is found
 					car.is_spillback_strict = true;
 				}
@@ -106,7 +122,8 @@ void IntersectionManager::Roadrunner_P(map<string, Car*>& old_cars, map<string, 
 					// Find the position in the list to compare
 					uint32_t compare_dst_car_idx = 0;
 					for (uint32_t dst_car_idx = 0; dst_car_idx < (uint32_t)dst_car_delay_position.size(); dst_car_idx++) {
-						if (accumulate_car_len[dst_car_idx] < dst_car_delay_position[dst_car_idx].position) {
+
+						if (accumulate_car_len[dst_lane_idx] < dst_car_delay_position[dst_car_idx].position) {
 							compare_dst_car_idx = dst_car_idx;
 							break;
 						}
@@ -116,6 +133,7 @@ void IntersectionManager::Roadrunner_P(map<string, Car*>& old_cars, map<string, 
 					double back_position = dst_car_delay_position[compare_dst_car_idx].position;
 					double spillback_delay_multiply_factor = back_delay / back_position;
 					spillback_delay = accumulate_car_len[dst_lane_idx] * spillback_delay_multiply_factor;
+
 				}
 
 				spillback_delay_record[dst_lane_idx] = recorded_delay[dst_lane_idx];
@@ -215,7 +233,6 @@ void IntersectionManager::Roadrunner_P(map<string, Car*>& old_cars, map<string, 
 			}
 		}
 	}
-
 
 	// part 4: set constrain (10) (Car on same lane, rear-end collision avoidance)
 	// (1) old car and new car

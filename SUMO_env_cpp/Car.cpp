@@ -116,6 +116,7 @@ void Car::handle_CC_behavior(map<string, Car*>& car_list) {
 			}
 		}
 		
+		slow_down_speed = max(slow_down_speed, 0.001);
 		CC_slow_speed = slow_down_speed;
 		traci.vehicle.setMaxSpeed(id, slow_down_speed);
 		double dec_time = (position - (CCZ_ACC_LEN + CCZ_DEC2_LEN)) / ((my_speed + slow_down_speed) / 2);
@@ -292,7 +293,7 @@ pair<double, double> Car::CC_get_shifts(map<string, Car*>& car_list) {
 	bool is_catching_up_front = false;
 
 	if (CC_front_car != nullptr && CC_front_car->CC_shift >= 0) {
-		double shifting_end = CCZ_DEC2_LEN;
+		double shifting_end = CCZ_DEC2_LEN + 2 * CCZ_ACC_LEN;
 		double front_remain_D = (CC_front_car->OT + CC_front_car->D) - (CC_front_car->position / V_MAX);
 		double catch_up_distance = (front_remain_D - D) * V_MAX;
 		double diff_distance = position - CC_front_car->position;
@@ -303,7 +304,7 @@ pair<double, double> Car::CC_get_shifts(map<string, Car*>& car_list) {
 			CC_shift_end = shifting_end;
 		}
 	}
-
+	
 	// 1.2 Determine the upperbound of the delaying for a car to accelerate
 	double cc_shift_max = CCZ_LEN - CC_shift_end - 2 * CCZ_ACC_LEN;
 	if (is_catching_up_front && CC_front_car->CC_slow_speed < V_MAX) {
@@ -354,6 +355,7 @@ pair<double, double> Car::CC_get_shifts(map<string, Car*>& car_list) {
 
 	// 1.4 Decide the final shift
 	double shifting = min(reserve_shift, cc_shift_max);
+	shifting = max(shifting, CCZ_LEN - position);
 	CC_shift = shifting;
 
 	return make_pair(shifting, CC_shift_end);
@@ -374,7 +376,7 @@ void Car::CC_get_slow_down_speed() {
 	speed = min(speed, V_MAX);
 
 	// Determine if there's stop && go
-	if (speed < 1)
+	if (speed < 1 || S2 < 0)
 		CC_is_stop_n_go = true;
 
 	CC_slow_speed = speed;

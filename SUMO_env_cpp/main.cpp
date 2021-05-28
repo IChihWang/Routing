@@ -197,6 +197,7 @@ void run_sumo(Thread_Worker& router_thread) {
                 router_thread.request_worker_ready = true;
                 router_thread.request_worker_condition_variable.notify_all();
             }
+            //cout << server_send_str << endl;
         }
 
         if (fmod(simu_step+ _TIME_STEP, ROUTING_PERIOD) < _TIME_STEP) {
@@ -231,6 +232,8 @@ void run_sumo(Thread_Worker& router_thread) {
 
                     car_info_dict[car_id].route_state = "OLD";
                 }
+
+                //cout << route_result << endl;
             }
         }
 
@@ -256,18 +259,8 @@ void run_sumo(Thread_Worker& router_thread) {
             for (auto& [intersection_id, intersection_ptr] : intersection_map) {
                 const string& inter_region = intersection_ptr->check_in_my_region(lane_id);
                 if (inter_region == "On my lane") {
-
-                    char current_turn = car_info_dict[car_id].route[0];
-                    char next_turn = car_info_dict[car_id].route[1];
-
-                    intersection_ptr->update_car(car_id, lane_id, simu_step, current_turn, next_turn);
-                    is_handled = true;
-                    car_info_dict[car_id].inter_status = "On my lane";
-                    car_info_dict[car_id].intersection_manager_ptr = intersection_ptr;
-                }
-                else if (inter_region == "In my intersection") {
-                    // Check if the car enter the intersection (by changing state from "On my lane" to "in intersection")
-                    if (car_info_dict[car_id].inter_status == "On my lane") {
+                    // Check if the car enter the intersection (by changing state from "In intersection" to "on my lane")
+                    if (car_info_dict[car_id].inter_status == "In my intersection") {
                         car_info_dict[car_id].route = car_info_dict[car_id].route.erase(0, 1);
                     }
 
@@ -275,6 +268,22 @@ void run_sumo(Thread_Worker& router_thread) {
                     char next_turn = car_info_dict[car_id].route[1];
 
                     intersection_ptr->update_car(car_id, lane_id, simu_step, current_turn, next_turn);
+                    
+                    is_handled = true;
+                    car_info_dict[car_id].inter_status = "On my lane";
+                    car_info_dict[car_id].intersection_manager_ptr = intersection_ptr;
+                }
+                else if (inter_region == "In my intersection") {
+                    // Check if the car enter the intersection (by changing state from "On my lane" to "in intersection")
+                    //if (car_info_dict[car_id].inter_status == "On my lane") {
+                    //    car_info_dict[car_id].route = car_info_dict[car_id].route.erase(0, 1);
+                    //}
+
+                    char current_turn = car_info_dict[car_id].route[0];
+                    char next_turn = car_info_dict[car_id].route[1];
+
+                    intersection_ptr->update_car(car_id, lane_id, simu_step, current_turn, next_turn);
+
                     is_handled = true;
                     car_info_dict[car_id].inter_status = "In my intersection";
                     car_info_dict[car_id].intersection_manager_ptr = intersection_ptr;

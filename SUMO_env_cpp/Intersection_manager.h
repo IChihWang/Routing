@@ -14,9 +14,10 @@ class Car_Delay_Position_Record {
 public:
 	double position = 0;
 	double delay = 0;
+	string car_id = "";
 
 	Car_Delay_Position_Record() {}
-	Car_Delay_Position_Record(double in_position, double in_delay) : position(in_position), delay(in_delay) {}
+	Car_Delay_Position_Record(double in_position, double in_delay, string in_car_id) : position(in_position), delay(in_delay), car_id(in_car_id){}
 };
 class Road_Info {
 public:

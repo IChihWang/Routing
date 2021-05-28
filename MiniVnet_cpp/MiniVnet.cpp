@@ -226,6 +226,7 @@ vector<vector<reference_wrapper<Car>>> choose_car_to_thread_group(vector<string>
 				if (_car_dict[car_id].state.compare("OLD") == 0 || _car_dict[car_id].state.compare("NEW") == 0) {
 					cars_to_add.insert(car_id);
 				}
+
 			}
 		}
 
@@ -271,10 +272,11 @@ vector<vector<reference_wrapper<Car>>> choose_car_to_thread_group(vector<string>
 	
 	cout << "=====" << endl;
 	for (auto car_vec : results) {
-		cout << " " << car_vec.size() << " " << endl;
+		cout << " " << car_vec.size() << "   ";
 		for (Car& car : car_vec) {
-			cout << car.id;
+			cout << car.id << " " << _car_dict[car.id].state << " | ";
 		}
+		cout << endl;
 	}
 	cout << endl;
 
@@ -390,6 +392,7 @@ map<string, vector<Node_in_Path>> routing(const vector<reference_wrapper<Car>>& 
 
 		// Push the src node into the queue
 		Node_in_Heap src_node_in_heap(nodes_arrival_time_data[src_node].arrival_time_stamp, src_node, car.position_at_offset);
+
 		unvisited_queue.push(src_node_in_heap);
 
 		Node_ID dst_node;
@@ -452,11 +455,13 @@ map<string, vector<Node_in_Path>> routing(const vector<reference_wrapper<Car>>& 
 					// ###############################
 
 					time_in_GZ += 1;
+
 					position_at_offset -= (double(_schedule_period) * _V_MAX);
 				}
 
 				Intersection* intersection_GZ_ptr = &(get_intersection(time_in_GZ, intersection_id));
 				tuple<bool, double>result = intersection_GZ_ptr->is_GZ_full(car, position_at_offset);
+
 				position_at_offset = get<1>(result);
 				while (get<0>(result) == false) {
 					// The intersection is full
@@ -470,10 +475,13 @@ map<string, vector<Node_in_Path>> routing(const vector<reference_wrapper<Car>>& 
 					// ###############################
 
 					time_in_GZ += 1;
+
 					intersection_GZ_ptr = &(get_intersection(time_in_GZ, intersection_id));
 					result = intersection_GZ_ptr->is_GZ_full(car, position_at_offset);
+
 					position_at_offset = get<1>(result);
 				}
+
 
 				car.position = position_at_offset;
 				double car_exiting_time = intersection_GZ_ptr->scheduling(car);
@@ -516,9 +524,13 @@ map<string, vector<Node_in_Path>> routing(const vector<reference_wrapper<Car>>& 
 					tmp_node_record.turning = turning;
 					tmp_node_record.last_intersection_id = current_node;
 					tmp_node_record.recordings = recordings;
+
 					nodes_arrival_time_data[next_node] = tmp_node_record;
 
 					Node_in_Heap node_in_heap(next_time_step, next_node, next_position_at_offset);
+
+					if (position_at_offset > 1000)
+						cout << next_position_at_offset << " >>> " << double(_schedule_period) * _V_MAX << endl;
 					unvisited_queue.push(node_in_heap);
 				}
 			}
@@ -529,10 +541,23 @@ map<string, vector<Node_in_Path>> routing(const vector<reference_wrapper<Car>>& 
 
 		if (nodes_arrival_time_data.find(dst_node) == nodes_arrival_time_data.end()) {
 			cout << "No route is found for " << car.id << endl;
+			cout << get<0>(_car_dict[car.id].src_coord) << "," << get<1>(_car_dict[car.id].src_coord) << " ";
+			cout << get<0>(_car_dict[car.id].dst_coord) << "," << get<1>(_car_dict[car.id].dst_coord) << " ";
+			cout << (int)_car_dict[car.id].direction_of_src_intersection << " ";
+			cout << (int)_car_dict[car.id].time_offset_step << " ";
+			cout << _car_dict[car.id].position_at_offset << endl;
+
+
 			exit(-1);
 		}
 		Node_Record node_data = nodes_arrival_time_data[dst_node];
 		while (node_data.is_src == false) {
+
+			for (auto record : node_data.recordings) {
+				if (record.car_in_database.position > _GZ_BZ_CCZ_len && record.car_state.compare("scheduling") == 0)
+					cout << "    >>>   " << _GZ_BZ_CCZ_len << "  " << record.car_in_database.position << "  | " << record.car_in_database.id << endl;
+			}
+
 			path_list.insert(path_list.begin(), Node_in_Path(node_data.turning, node_data.recordings, node_data.arrival_time_stamp));
 			node_data = nodes_arrival_time_data[node_data.last_intersection_id];
 		}
@@ -680,12 +705,12 @@ void add_car_to_database(Car& target_car, const vector<Node_in_Path>& path_list,
 		
 		Intersection& intersection = get_intersection(time, intersection_id);
 
-		if (state.compare("lane_advising")) {
+		if (state.compare("lane_advising") == 0) {
 			intersection.add_advising_car(car, target_car);
 			Node_in_Car to_save_key(time, intersection_id);
 			target_car.records_intersection_in_database[&intersection] = "lane_advising";
 		}
-		else if (state.compare("scheduling")) {
+		else if (state.compare("scheduling") == 0) {
 			intersection.add_scheduling_cars(car, target_car);
 			Node_in_Car to_save_key(time, intersection_id);
 			target_car.records_intersection_in_database[&intersection] = "scheduling";

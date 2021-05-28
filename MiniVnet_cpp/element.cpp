@@ -197,16 +197,35 @@ uint8_t Intersection::advise_lane(const Car& car) {
 
 tuple<bool, double> Intersection::is_GZ_full(const Car& car, const double& position_at_offset) {
 	shared_lock<shared_mutex> rLock(rwlock_mutex);
-
-	// Tell if the intersection is fulland the car have to wait
+	// Tell if the intersection is full and the car have to wait
 	if (GZ_accumulated_size > _GZ_BZ_CCZ_len) {
 		return tuple<bool, double>(false, position_at_offset);
 	}
-	else if (position_at_offset > GZ_accumulated_size) {
-		return tuple<bool, double>(true, position_at_offset);
-	}
 	else {
-		return tuple<bool, double>(true, GZ_accumulated_size + car.length + _HEADWAY);
+		// Check if the position offset is valid
+		double tmp_position_at_offset = position_at_offset;
+		for (const auto [check_car_id, check_car] : *scheduling_cars) {
+			if (car.lane == check_car.lane) {
+				if (position_at_offset < check_car.position + check_car.length + _HEADWAY && check_car.position < position_at_offset + car.length + _HEADWAY) {
+					if (position_at_offset < check_car.position + check_car.length + _HEADWAY) {
+						tmp_position_at_offset = check_car.position + check_car.length + _HEADWAY;
+					}
+					else {
+						tmp_position_at_offset = check_car.position - car.length + _HEADWAY;
+					}
+				}
+			}
+		}
+
+		if (tmp_position_at_offset > _GZ_BZ_CCZ_len) {
+			return tuple<bool, double>(false, tmp_position_at_offset- (double(_schedule_period) * _V_MAX));
+		}
+		else if (tmp_position_at_offset > GZ_accumulated_size) {
+			return tuple<bool, double>(true, tmp_position_at_offset);
+		}
+		else {
+			return tuple<bool, double>(true, GZ_accumulated_size);
+		}
 	}
 }
 void Intersection::add_sched_car(Car_in_database car, Car& target_car) {
@@ -301,7 +320,7 @@ void Car_in_database::set_turn(char turn) {
 	else if (current_turn == 'R')
 		out_direction = (in_direction + 1) % 4;
 	else if (current_turn == 'L')
-		out_direction = (in_direction - 1) % 4;
+		out_direction = (in_direction+4 - 1) % 4;
 
 	uint8_t out_sub_lane = (LANE_NUM_PER_DIRECTION - lane % LANE_NUM_PER_DIRECTION - 1);
 	dst_lane = int(out_direction * LANE_NUM_PER_DIRECTION + out_sub_lane);     // Destination lane before next lane change
