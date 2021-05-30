@@ -493,7 +493,7 @@ void IntersectionManager::run(double simu_step) {
 	sort(sorted_cars_list.begin(), sorted_cars_list.end(), [](pair<string, Car*> a, pair<string, Car*> b) -> bool {return a.second->position < b.second->position; });
 	for (auto& [car_id, car_ptr] : sorted_cars_list) {
 		// Cars perform their own CC
-		if (car_ptr->zone != "")
+		if (car_ptr->zone != "" && car_ptr->zone != "Intersection")
 			car_ptr->handle_CC_behavior(car_list);
 	}
 
@@ -560,7 +560,7 @@ void IntersectionManager::run(double simu_step) {
 
 	// ##########################################
 	// Update the road info after actions
-	double car_accumulate_len_lane[LANE_NUM_PER_DIRECTION * 4];
+	double car_accumulate_len_lane[LANE_NUM_PER_DIRECTION * 4] = { 0 };
 	fill_n(car_accumulate_len_lane, 4 * LANE_NUM_PER_DIRECTION, (CCZ_DEC2_LEN + CCZ_ACC_LEN));
 	double delay_lane[LANE_NUM_PER_DIRECTION * 4] = { 0 };
 	double car_position_with_delay_lane[LANE_NUM_PER_DIRECTION * 4] = { 0 };
@@ -568,6 +568,12 @@ void IntersectionManager::run(double simu_step) {
 
 	for (const auto& [car_id, car_ptr] : sorted_cars_list) {
 		Car& car = *car_ptr;
+
+		if (car.zone == "Intersection") {
+			// Skip cars that has entered the intersection
+			continue;
+		}
+
 		uint8_t lane = car.lane;
 		car_accumulate_len_lane[lane] += car.length + HEADWAY;
 		if (car.is_scheduled) {

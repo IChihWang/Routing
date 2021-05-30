@@ -529,8 +529,6 @@ map<string, vector<Node_in_Path>> routing(const vector<reference_wrapper<Car>>& 
 
 					Node_in_Heap node_in_heap(next_time_step, next_node, next_position_at_offset);
 
-					if (position_at_offset > 1000)
-						cout << next_position_at_offset << " >>> " << double(_schedule_period) * _V_MAX << endl;
 					unvisited_queue.push(node_in_heap);
 				}
 			}

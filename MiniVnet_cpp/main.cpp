@@ -137,6 +137,10 @@ string handle_request(string &in_str) {
 
 		auto route_time = duration<double>(end - begin);
 		cout << "Route_time: " << route_time.count() << " seconds" << endl;
+		if (route_time.count() > 100) {
+			cout << "wait" << endl;
+			system("Pause");
+		}
 
 		// Find the next top N congested list
 		add_intersection_to_reschedule_list();

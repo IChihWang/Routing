@@ -41,7 +41,7 @@ void Intersection::Roadrunner_P(vector<Car_in_database>& scheduling_cars, Car& t
 
 	// part 3: claim parameters
 	uint16_t pre_accumulate_car_len_lane[4 * LANE_NUM_PER_DIRECTION] = {};
-	fill_n(pre_accumulate_car_len_lane, 4 * LANE_NUM_PER_DIRECTION, _HEADWAY);
+	fill_n(pre_accumulate_car_len_lane, 4 * LANE_NUM_PER_DIRECTION, CAR_MAX_LEN + _HEADWAY);
 
 	// Compute accumulated car len
 	const map<string, Car_in_database>& my_sched_cars = (*sched_cars);
@@ -109,7 +109,7 @@ void Intersection::Roadrunner_P(vector<Car_in_database>& scheduling_cars, Car& t
 				const vector<Car_Delay_Position_Record>& dst_car_delay_position = (*(others_road_info[dst_lane_idx]))->car_delay_position;
 
 				car.is_spillback = true;
-				if (dst_car_delay_position.size() < 1 || (double(accumulate_car_len[dst_lane_idx]) > dst_car_delay_position.back().position)) {
+				if (dst_car_delay_position.size() < 1 || (double(accumulate_car_len[dst_lane_idx]) + double(CAR_MAX_LEN) + _HEADWAY > dst_car_delay_position.back().position)) {
 					// Skip because no records is found
 					car.is_spillback_strict = true;
 				}
@@ -123,10 +123,7 @@ void Intersection::Roadrunner_P(vector<Car_in_database>& scheduling_cars, Car& t
 						}
 					}
 
-					double back_delay = dst_car_delay_position[compare_dst_car_idx].delay;
-					double back_position = dst_car_delay_position[compare_dst_car_idx].position;
-					double spillback_delay_multiply_factor = back_delay / back_position;
-					spillback_delay = accumulate_car_len[dst_lane_idx] * spillback_delay_multiply_factor;
+					spillback_delay = dst_car_delay_position[compare_dst_car_idx].delay;
 				}
 			}
 
@@ -155,10 +152,7 @@ void Intersection::Roadrunner_P(vector<Car_in_database>& scheduling_cars, Car& t
 								}
 							}
 
-							double back_delay = dst_car_delay_position[compare_dst_car_idx].delay;
-							double back_position = dst_car_delay_position[compare_dst_car_idx].position;
-							double spillback_delay_multiply_factor = back_delay / back_position;
-							double spillback_delay_alter = accumulate_car_len[other_lane_idx] * spillback_delay_multiply_factor;
+							double spillback_delay_alter = dst_car_delay_position[compare_dst_car_idx].delay;
 							spillback_delay = max(spillback_delay, spillback_delay_alter);
 						}
 					}

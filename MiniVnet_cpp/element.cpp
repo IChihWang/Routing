@@ -221,9 +221,11 @@ tuple<bool, double> Intersection::is_GZ_full(const Car& car, const double& posit
 			return tuple<bool, double>(false, tmp_position_at_offset- (double(_schedule_period) * _V_MAX));
 		}
 		else if (tmp_position_at_offset > GZ_accumulated_size) {
+			cout << " aaa " << car.id << " | " << tmp_position_at_offset << endl;
 			return tuple<bool, double>(true, tmp_position_at_offset);
 		}
 		else {
+			cout << " bbb " << car.id << " | " << GZ_accumulated_size << endl;
 			return tuple<bool, double>(true, GZ_accumulated_size);
 		}
 	}

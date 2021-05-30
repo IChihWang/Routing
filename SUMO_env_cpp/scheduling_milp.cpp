@@ -45,7 +45,7 @@ void IntersectionManager::Roadrunner_P(map<string, Car*>& old_cars, map<string, 
 
 	// part 3: claim parameters
 	uint16_t pre_accumulate_car_len_lane[4 * LANE_NUM_PER_DIRECTION] = {};
-	fill_n(pre_accumulate_car_len_lane, 4 * LANE_NUM_PER_DIRECTION, HEADWAY);
+	fill_n(pre_accumulate_car_len_lane, 4 * LANE_NUM_PER_DIRECTION, CAR_MAX_LEN + HEADWAY);
 
 	// Compute accumulated car len
 	for (const auto& [car_id, old_car_ptr] : old_cars) {
@@ -64,12 +64,15 @@ void IntersectionManager::Roadrunner_P(map<string, Car*>& old_cars, map<string, 
 				pre_accumulate_car_len_lane[old_car.dst_lane_changed_to] += (old_car.length + HEADWAY);
 			}
 		}
-
 		*/
 		
+		
 		//pre_accumulate_car_len_lane[old_car.dst_lane_changed_to] += (old_car.length + HEADWAY);
+
+		
 		if (old_car.dst_lane != old_car.dst_lane_changed_to)
 			pre_accumulate_car_len_lane[old_car.dst_lane_changed_to] += (old_car.length + HEADWAY);
+		
 
 	}
 
@@ -115,9 +118,9 @@ void IntersectionManager::Roadrunner_P(map<string, Car*>& old_cars, map<string, 
 
 			if (accumulate_car_len[dst_lane_idx] > 0) {
 				const vector<Car_Delay_Position_Record>& dst_car_delay_position = (others_road_info[dst_lane_idx])->car_delay_position;
-
+				cout << "aaa " << car.id << " position: " << car.position << " lane: " << (int)car.dst_lane << endl;
 				car.is_spillback = true;
-				if (dst_car_delay_position.size() < 1 || (double(accumulate_car_len[dst_lane_idx]) > dst_car_delay_position.back().position)) {
+				if (dst_car_delay_position.size() < 1 || (double(accumulate_car_len[dst_lane_idx])+double(CAR_MAX_LEN) + HEADWAY > dst_car_delay_position.back().position)) {
 					// Skip because no records is found
 					car.is_spillback_strict = true;
 				}
@@ -126,17 +129,15 @@ void IntersectionManager::Roadrunner_P(map<string, Car*>& old_cars, map<string, 
 					uint32_t compare_dst_car_idx = 0;
 					for (uint32_t dst_car_idx = 0; dst_car_idx < (uint32_t)dst_car_delay_position.size(); dst_car_idx++) {
 
+						cout << "bbb " << dst_car_delay_position[dst_car_idx].car_id << " position: " << dst_car_delay_position[dst_car_idx].position << " delay: " << dst_car_delay_position[dst_car_idx].delay << endl;
 						if (accumulate_car_len[dst_lane_idx] < dst_car_delay_position[dst_car_idx].position) {
 							compare_dst_car_idx = dst_car_idx;
 							break;
 						}
 					}
 
-					double back_delay = dst_car_delay_position[compare_dst_car_idx].delay;
-					double back_position = dst_car_delay_position[compare_dst_car_idx].position;
-					double spillback_delay_multiply_factor = back_delay / back_position;
-					spillback_delay = accumulate_car_len[dst_lane_idx] * spillback_delay_multiply_factor;
-
+					spillback_delay = dst_car_delay_position[compare_dst_car_idx].delay;
+					cout << "bbb-1 " << " accumulate_car_len: " << accumulate_car_len[dst_lane_idx] << endl;
 				}
 
 				spillback_delay_record[dst_lane_idx] = recorded_delay[dst_lane_idx];
@@ -170,17 +171,16 @@ void IntersectionManager::Roadrunner_P(map<string, Car*>& old_cars, map<string, 
 								// Find the position in the list to compare
 								uint32_t compare_dst_car_idx = 0;
 								for (uint32_t dst_car_idx = 0; dst_car_idx < (uint32_t)dst_car_delay_position.size(); dst_car_idx++) {
+									cout << "ccc lane:" << (int)other_lane_idx << " " << dst_car_delay_position[dst_car_idx].car_id << " position: " << dst_car_delay_position[dst_car_idx].position << " delay: " << dst_car_delay_position[dst_car_idx].delay << endl;
 									if (accumulate_car_len[other_lane_idx] < dst_car_delay_position[dst_car_idx].position) {
 										compare_dst_car_idx = dst_car_idx;
 										break;
 									}
 								}
 
-								double back_delay = dst_car_delay_position[compare_dst_car_idx].delay;
-								double back_position = dst_car_delay_position[compare_dst_car_idx].position;
-								double spillback_delay_multiply_factor = back_delay / back_position;
-								double spillback_delay_alter = accumulate_car_len[other_lane_idx] * spillback_delay_multiply_factor;
+								double spillback_delay_alter = dst_car_delay_position[compare_dst_car_idx].delay;
 								spillback_delay = max(spillback_delay, spillback_delay_alter);
+								cout << "ccc-1 " << " accumulate_car_len: " << accumulate_car_len[other_lane_idx] << endl;
 							}
 							spillback_delay_record[other_lane_idx] = recorded_delay[other_lane_idx];
 						}
@@ -189,6 +189,11 @@ void IntersectionManager::Roadrunner_P(map<string, Car*>& old_cars, map<string, 
 						}
 					}
 				}
+			}
+
+			cout << "ddd " << car.id << " spillback_delay: " << spillback_delay << endl;
+			if (car.id == "car_2424" && car.is_spillback_strict == false) {
+				//system("Pause");
 			}
 
 			if (car.is_spillback_strict == true) {
