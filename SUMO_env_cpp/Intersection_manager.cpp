@@ -236,7 +236,7 @@ void IntersectionManager::update_car(string car_id, string lane_id, double simu_
 		double position = traci.lane.getLength(lane_id) - traci.vehicle.getLanePosition(car_id);
 		car_list[car_id]->position = position;
 
-		if ((car_list[car_id]->zone == "") && (position <= TOTAL_LEN - car_list[car_id]->length)) {
+		if ((car_list[car_id]->zone == "") && (position <= TOTAL_LEN - car_list[car_id]->length-HEADWAY)) {
 			car_list[car_id]->zone = "AZ";
 			car_list[car_id]->zone_state = "AZ_not_advised";
 		}

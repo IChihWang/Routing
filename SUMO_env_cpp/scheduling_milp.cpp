@@ -45,7 +45,7 @@ void IntersectionManager::Roadrunner_P(map<string, Car*>& old_cars, map<string, 
 
 	// part 3: claim parameters
 	uint16_t pre_accumulate_car_len_lane[4 * LANE_NUM_PER_DIRECTION] = {};
-	fill_n(pre_accumulate_car_len_lane, 4 * LANE_NUM_PER_DIRECTION, CAR_MAX_LEN + HEADWAY);
+	fill_n(pre_accumulate_car_len_lane, 4 * LANE_NUM_PER_DIRECTION, 2*CAR_MAX_LEN + HEADWAY);
 
 	// Compute accumulated car len
 	for (const auto& [car_id, old_car_ptr] : old_cars) {
