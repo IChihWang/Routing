@@ -26,13 +26,13 @@ void Car::set_turning(char turn, char next_turn) {
 	uint8_t out_sub_lane = (LANE_NUM_PER_DIRECTION - lane % LANE_NUM_PER_DIRECTION - 1);
 	dst_lane = uint8_t(out_direction * LANE_NUM_PER_DIRECTION + out_sub_lane);     // Destination lane before next lane change
 
-	if (current_turn == 'R') {
+	if (next_turn == 'R') {
 		out_sub_lane = 0;
 	}
-	else if (current_turn == 'L') {
+	else if (next_turn == 'L') {
 		out_sub_lane = LANE_NUM_PER_DIRECTION - 1;
 	}
-	else if (current_turn == 'S') {
+	else if (next_turn == 'S') {
 		out_sub_lane = uint8_t(LANE_NUM_PER_DIRECTION / 2);
 	}
 

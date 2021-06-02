@@ -44,8 +44,7 @@ void IntersectionManager::Roadrunner_P(map<string, Car*>& old_cars, map<string, 
 	map<string, const MPVariable*> D_solver_variables;
 
 	// part 3: claim parameters
-	uint16_t pre_accumulate_car_len_lane[4 * LANE_NUM_PER_DIRECTION] = {};
-	fill_n(pre_accumulate_car_len_lane, 4 * LANE_NUM_PER_DIRECTION, 2*CAR_MAX_LEN + HEADWAY);
+	uint16_t pre_accumulate_car_len_lane[4 * LANE_NUM_PER_DIRECTION] = {0};
 
 	// Compute accumulated car len
 	for (const auto& [car_id, old_car_ptr] : old_cars) {
@@ -86,13 +85,10 @@ void IntersectionManager::Roadrunner_P(map<string, Car*>& old_cars, map<string, 
 	fill_n(head_of_line_blocking_position, 4 * LANE_NUM_PER_DIRECTION, UINT16_MAX);
 	double accumulate_car_len[4 * LANE_NUM_PER_DIRECTION];
 	fill_n(accumulate_car_len, 4 * LANE_NUM_PER_DIRECTION, INT32_MIN);
-	double recorded_delay[4 * LANE_NUM_PER_DIRECTION];
-	fill_n(recorded_delay, 4 * LANE_NUM_PER_DIRECTION, 0);
 
 	for (uint8_t i = 0; i < 4 * LANE_NUM_PER_DIRECTION; i++) {
 		if (others_road_info[i] != nullptr) {
-			accumulate_car_len[i] = pre_accumulate_car_len_lane[i] - (others_road_info[i])->avail_len + CAR_MAX_LEN + HEADWAY + CCZ_ACC_LEN;
-			recorded_delay[i] = max(others_road_info[i]->delay, spillback_delay_record[i]);	// To record the dispatch speed
+			accumulate_car_len[i] = pre_accumulate_car_len_lane[i] - (others_road_info[i])->avail_len;
 		}
 	}
 
@@ -113,14 +109,14 @@ void IntersectionManager::Roadrunner_P(map<string, Car*>& old_cars, map<string, 
 				continue;
 			}
 
-			accumulate_car_len[dst_lane_idx] += (double(car.length) + HEADWAY);
 			double spillback_delay = 0;
 
+			accumulate_car_len[dst_lane_idx] += (double(car.length) + HEADWAY);
 			if (accumulate_car_len[dst_lane_idx] > 0) {
 				const vector<Car_Delay_Position_Record>& dst_car_delay_position = (others_road_info[dst_lane_idx])->car_delay_position;
-				cout << "aaa " << car.id << " position: " << car.position << " lane: " << (int)car.dst_lane << endl;
+				cout << "aaa " << car.id << " position: " << car.position << " dst_lane: " << (int)car.dst_lane << endl;
 				car.is_spillback = true;
-				if (dst_car_delay_position.size() < 1 || (double(accumulate_car_len[dst_lane_idx])+double(CAR_MAX_LEN) + HEADWAY > dst_car_delay_position.back().position)) {
+				if (dst_car_delay_position.size() < 1 || (double(accumulate_car_len[dst_lane_idx]) > dst_car_delay_position.back().position)) {
 					// Skip because no records is found
 					car.is_spillback_strict = true;
 				}
@@ -129,21 +125,22 @@ void IntersectionManager::Roadrunner_P(map<string, Car*>& old_cars, map<string, 
 					uint32_t compare_dst_car_idx = 0;
 					for (uint32_t dst_car_idx = 0; dst_car_idx < (uint32_t)dst_car_delay_position.size(); dst_car_idx++) {
 
-						cout << "bbb " << dst_car_delay_position[dst_car_idx].car_id << " position: " << dst_car_delay_position[dst_car_idx].position << " delay: " << dst_car_delay_position[dst_car_idx].delay << endl;
+						cout << "bbb " << dst_car_delay_position[dst_car_idx].car_id << " position: " << dst_car_delay_position[dst_car_idx].position << " ET: " << dst_car_delay_position[dst_car_idx].ET << endl;
 						if (accumulate_car_len[dst_lane_idx] < dst_car_delay_position[dst_car_idx].position) {
 							compare_dst_car_idx = dst_car_idx;
 							break;
 						}
 					}
 
-					spillback_delay = dst_car_delay_position[compare_dst_car_idx].delay;
+					double back_delay = dst_car_delay_position[compare_dst_car_idx].ET - car.OT;
+					double back_position = dst_car_delay_position[compare_dst_car_idx].position;
+					double spillback_delay_multiply_factor = back_delay / back_position;
+					spillback_delay = accumulate_car_len[dst_lane_idx] * spillback_delay_multiply_factor;
 					cout << "bbb-1 " << " accumulate_car_len: " << accumulate_car_len[dst_lane_idx] << endl;
 				}
 
-				spillback_delay_record[dst_lane_idx] = recorded_delay[dst_lane_idx];
 			}
 			else {
-				spillback_delay_record[dst_lane_idx] = 0;
 			}
 
 			if (dst_lane_changed_to_idx != dst_lane_idx) {
@@ -156,14 +153,15 @@ void IntersectionManager::Roadrunner_P(map<string, Car*>& old_cars, map<string, 
 				for (uint8_t other_lane_idx = dst_lane_changed_to_idx; other_lane_idx != dst_lane_idx; other_lane_idx += for_step) {
 
 					if (other_lane_idx != dst_lane_idx) {
-						accumulate_car_len[other_lane_idx] += (car.length + HEADWAY);
+						
 						double spillback_delay_dst_lane_changed_to = 0;
 						const vector<Car_Delay_Position_Record>& dst_car_delay_position = (others_road_info[other_lane_idx])->car_delay_position;
 
+						accumulate_car_len[other_lane_idx] += (car.length + HEADWAY);
 						if (accumulate_car_len[other_lane_idx] > 0) {
 							car.is_spillback = true;
 
-							if (dst_car_delay_position.size() < 1 || (double(accumulate_car_len[other_lane_idx]) + double(CAR_MAX_LEN) + HEADWAY > dst_car_delay_position.back().position)) {
+							if (dst_car_delay_position.size() < 1 || (double(accumulate_car_len[other_lane_idx]) > dst_car_delay_position.back().position)) {
 								// Skip because no records is found
 								car.is_spillback_strict = true;
 							}
@@ -171,27 +169,32 @@ void IntersectionManager::Roadrunner_P(map<string, Car*>& old_cars, map<string, 
 								// Find the position in the list to compare
 								uint32_t compare_dst_car_idx = 0;
 								for (uint32_t dst_car_idx = 0; dst_car_idx < (uint32_t)dst_car_delay_position.size(); dst_car_idx++) {
-									cout << "ccc lane:" << (int)other_lane_idx << " " << dst_car_delay_position[dst_car_idx].car_id << " position: " << dst_car_delay_position[dst_car_idx].position << " delay: " << dst_car_delay_position[dst_car_idx].delay << endl;
+									cout << "ccc lane:" << (int)other_lane_idx << " " << dst_car_delay_position[dst_car_idx].car_id << " position: " << dst_car_delay_position[dst_car_idx].position << " ET: " << dst_car_delay_position[dst_car_idx].ET << endl;
 									if (accumulate_car_len[other_lane_idx] < dst_car_delay_position[dst_car_idx].position) {
 										compare_dst_car_idx = dst_car_idx;
 										break;
 									}
 								}
 
-								double spillback_delay_alter = dst_car_delay_position[compare_dst_car_idx].delay;
+								double back_delay = dst_car_delay_position[compare_dst_car_idx].ET-car.OT;
+								double back_position = dst_car_delay_position[compare_dst_car_idx].position;
+								double spillback_delay_multiply_factor = back_delay / back_position;
+								double spillback_delay_alter = accumulate_car_len[other_lane_idx] * spillback_delay_multiply_factor;
+
 								spillback_delay = max(spillback_delay, spillback_delay_alter);
 								cout << "ccc-1 " << " accumulate_car_len: " << accumulate_car_len[other_lane_idx] << endl;
 							}
-							spillback_delay_record[other_lane_idx] = recorded_delay[other_lane_idx];
+
+							
 						}
 						else {
-							spillback_delay_record[other_lane_idx] = 0;
 						}
 					}
 				}
 			}
 
-			cout << "ddd " << car.id << " spillback_delay: " << spillback_delay << endl;
+			cout << "ddd " << car.id << " spillback_delay: " << spillback_delay << " dst_lane_changed_to_idx: " << (int)dst_lane_changed_to_idx << " dst_lane_idx: " << (int)dst_lane_idx << endl;
+			cout << "ddd " << car.id << " current_turn: " << car.current_turn << " next_turn: " << car.next_turn << " car_lane:" << car.lane << endl;
 			if (car.id == "car_2424" && car.is_spillback_strict == false) {
 				//system("Pause");
 			}

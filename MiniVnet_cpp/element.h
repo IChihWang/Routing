@@ -22,13 +22,43 @@ class Car_in_database;
 class Intersection;
 class Lane_Adviser;
 
+
+class Car_in_database {
+public:
+	string id = "";
+	uint8_t lane = 0;
+	uint8_t length = 0;
+	char current_turn = 'S';
+	double position = 0;
+
+
+	// temporary variables for routing
+	double D = 0;
+	double OT = 0;
+	uint8_t dst_lane = 0;
+	uint8_t dst_lane_changed_to = 0;
+	double speed_in_intersection = 0;
+
+	bool is_spillback = false;
+	bool is_spillback_strict = false;
+
+	Car_in_database() {};
+	Car_in_database(const string in_id, const uint8_t in_length);
+	Car_in_database(const Car_in_database& car);
+	~Car_in_database() {};
+
+	void update_dst_lane_and_data();
+	void set_turn(char current_turn);
+};
+
 class Car_Delay_Position_Record {
 public:
 	double position = 0;
 	double delay = 0;
+	double ET = 0;
 
 	Car_Delay_Position_Record(){}
-	Car_Delay_Position_Record(double in_position, double in_delay): position(in_position), delay(in_delay){}
+	Car_Delay_Position_Record(double in_position, const Car_in_database& car): position(in_position), delay(car.D), ET(car.D+car.OT+(car.length+_HEADWAY)/car.speed_in_intersection){}
 };
 
 class Road_Info {
@@ -40,8 +70,8 @@ public:
 class Intersection {
 public:
 	Coord id;
-	int32_t AZ_accumulated_size = 0;
-	int32_t GZ_accumulated_size = 0;
+	int32_t AZ_accumulated_size[4 * LANE_NUM_PER_DIRECTION] = { 0 };
+	int32_t GZ_accumulated_size[4 * LANE_NUM_PER_DIRECTION] = { 0 };
 
 	int debug_tag;
 
@@ -85,33 +115,6 @@ private:
 	void update_my_spillback_info(const Car_in_database& car);
 };
 
-class Car_in_database {
-public:
-	string id = "";
-	uint8_t lane = 0;
-	uint8_t length = 0;
-	char current_turn = 'S';
-	double position = 0;
-
-
-	// temporary variables for routing
-	double D = 0;
-	double OT = 0;
-	uint8_t dst_lane = 0;
-	uint8_t dst_lane_changed_to = 0;
-	double speed_in_intersection = 0;
-
-	bool is_spillback = false;
-	bool is_spillback_strict = false;
-
-	Car_in_database() {};
-	Car_in_database(const string in_id, const uint8_t in_length);
-	Car_in_database(const Car_in_database& car);
-	~Car_in_database() {};
-
-	void update_dst_lane_and_data();
-	void set_turn(char current_turn);
-};
 
 class Node_in_Path;
 class Node_in_Car;

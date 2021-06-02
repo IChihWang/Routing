@@ -562,8 +562,7 @@ void IntersectionManager::run(double simu_step) {
 	// Update the road info after actions
 	double car_accumulate_len_lane[LANE_NUM_PER_DIRECTION * 4] = { 0 };
 	fill_n(car_accumulate_len_lane, 4 * LANE_NUM_PER_DIRECTION, (CCZ_DEC2_LEN + CCZ_ACC_LEN));
-	double delay_lane[LANE_NUM_PER_DIRECTION * 4] = { 0 };
-	double car_position_with_delay_lane[LANE_NUM_PER_DIRECTION * 4] = { 0 };
+	
 	map<uint8_t, vector<Car_Delay_Position_Record>>	lane_car_delay_position;
 
 	for (const auto& [car_id, car_ptr] : sorted_cars_list) {
@@ -577,24 +576,18 @@ void IntersectionManager::run(double simu_step) {
 		uint8_t lane = car.lane;
 		car_accumulate_len_lane[lane] += car.length + HEADWAY;
 		if (car.is_scheduled) {
-			lane_car_delay_position[lane].push_back(Car_Delay_Position_Record(car_accumulate_len_lane[lane], car.D, car.id));
+			lane_car_delay_position[lane].push_back(Car_Delay_Position_Record(car_accumulate_len_lane[lane], car));
 		}
 
-		if (car.position > TOTAL_LEN - AZ_LEN && lane != car.desired_lane) {
+		if (car.zone == "AZ" && lane != car.desired_lane) {
 			car_accumulate_len_lane[car.desired_lane] += car.length + HEADWAY;
 		}
 
-		if (car.position > car_position_with_delay_lane[lane] && car.is_scheduled) {
-			car_position_with_delay_lane[lane] = car.position;
-			delay_lane[lane] = car.D;
-		}
 	}
 
 	for (uint8_t lane_idx = 0; lane_idx < 4 * LANE_NUM_PER_DIRECTION; lane_idx++) {
-		my_road_info[lane_idx].avail_len = TOTAL_LEN - car_accumulate_len_lane[lane_idx] - HEADWAY;
-		my_road_info[lane_idx].delay = delay_lane[lane_idx];
-
-
+		my_road_info[lane_idx].avail_len = TOTAL_LEN - car_accumulate_len_lane[lane_idx] - (HEADWAY + CCZ_ACC_LEN + 2*CAR_MAX_LEN);
+		
 		my_road_info[lane_idx].car_delay_position = lane_car_delay_position[lane_idx];
 	}
 }

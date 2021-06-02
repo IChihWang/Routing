@@ -80,6 +80,10 @@ uint8_t Lane_Adviser::advise_lane(const Car& car, const bool spillback_lane_advi
 	}
 	advise_lane = ideal_lane;
 
+	if (car.id == "car_2347") {
+		cout << " adv: car_2347 " << (int)ideal_lane << endl;
+	}
+
 	// Scan through the candidates and see if we want to change our candidates
 	double ideal_timeMatrix[LANE_ADV_NUM][LANE_ADV_NUM];
 	copy(&timeMatrix[0][0], &timeMatrix[0][0] + LANE_ADV_NUM * LANE_ADV_NUM, &ideal_timeMatrix[0][0]);

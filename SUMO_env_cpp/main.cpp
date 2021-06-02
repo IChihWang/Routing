@@ -132,6 +132,7 @@ void run_sumo(Thread_Worker& router_thread) {
 
     // Start simulation
     while (traci.simulation.getMinExpectedNumber() > 0) {
+
         // Early terminate the simulation
         if (int(simu_step * 10) / 10.0 >= _N_TIME_STEP) {
             router_thread.route_request = "End Connection";

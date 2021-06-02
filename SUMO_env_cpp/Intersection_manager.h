@@ -14,10 +14,11 @@ class Car_Delay_Position_Record {
 public:
 	double position = 0;
 	double delay = 0;
+	double ET = 0;		// Time that the space become available
 	string car_id = "";
 
 	Car_Delay_Position_Record() {}
-	Car_Delay_Position_Record(double in_position, double in_delay, string in_car_id) : position(in_position), delay(in_delay), car_id(in_car_id){}
+	Car_Delay_Position_Record(double in_position, Car& in_car) : position(in_position), delay(in_car.D), car_id(in_car.id), ET(in_car.D+in_car.OT+(in_car.length+HEADWAY)/in_car.speed_in_intersection){}
 };
 class Road_Info {
 public:
