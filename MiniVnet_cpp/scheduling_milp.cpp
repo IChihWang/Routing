@@ -125,7 +125,8 @@ void Intersection::Roadrunner_P(vector<Car_in_database>& scheduling_cars, Car& t
 					double back_delay = dst_car_delay_position[compare_dst_car_idx].ET - car.OT;
 					double back_position = dst_car_delay_position[compare_dst_car_idx].position;
 					double spillback_delay_multiply_factor = back_delay / back_position;
-					spillback_delay = accumulate_car_len[dst_lane_idx] * spillback_delay_multiply_factor;
+					//spillback_delay = accumulate_car_len[dst_lane_idx] * spillback_delay_multiply_factor;
+					spillback_delay = back_delay;
 				}
 			}
 
@@ -158,7 +159,8 @@ void Intersection::Roadrunner_P(vector<Car_in_database>& scheduling_cars, Car& t
 							double back_delay = dst_car_delay_position[compare_dst_car_idx].ET - car.OT;
 							double back_position = dst_car_delay_position[compare_dst_car_idx].position;
 							double spillback_delay_multiply_factor = back_delay / back_position;
-							double spillback_delay_alter = accumulate_car_len[other_lane_idx] * spillback_delay_multiply_factor;
+							//double spillback_delay_alter = accumulate_car_len[other_lane_idx] * spillback_delay_multiply_factor;
+							double spillback_delay_alter = back_delay;
 							spillback_delay = max(spillback_delay, spillback_delay_alter);
 						}
 					}
@@ -223,13 +225,11 @@ void Intersection::Roadrunner_P(vector<Car_in_database>& scheduling_cars, Car& t
 				if (car.current_turn == 'S') {
 					MPVariable* const temp_D = solver->MakeNumVar(0, infinity, "d" + car.id);
 					D_solver_variables[car.id] = temp_D;
-					cout << "set_variable: " << car.id << " | bound: 0, inf" << endl;
 				}
 				else {
 					double min_d = (2 * CCZ_DEC2_LEN / (double(_V_MAX) + _TURN_SPEED)) - (CCZ_DEC2_LEN / _V_MAX);
 					MPVariable* const temp_D = solver->MakeNumVar(min_d, infinity, "d" + car.id);
 					D_solver_variables[car.id] = temp_D;
-					cout << "set_variable: " << car.id << " | bound: " << min_d <<", inf" << endl;
 				}
 			}
 		}
@@ -250,7 +250,6 @@ void Intersection::Roadrunner_P(vector<Car_in_database>& scheduling_cars, Car& t
 
 				MPConstraint* const tmp_conts = solver->MakeRowConstraint(bound, infinity);
 				tmp_conts->SetCoefficient(D_solver_variables[new_car.id], 1);
-				cout << "constraint 4-1: new_car: " << new_car.id << " | old_car: " << car_id << " | bound: " << bound << ", inf" << endl;
 			}
 		}
 	}
@@ -276,7 +275,6 @@ void Intersection::Roadrunner_P(vector<Car_in_database>& scheduling_cars, Car& t
 				tmp_conts->SetCoefficient(D_solver_variables[car_a_ptr->id], 1);
 				tmp_conts->SetCoefficient(D_solver_variables[car_b_ptr->id], -1);
 
-				cout << "constraint 4-2: new_car1: " << car_a_ptr->id << " | new_car2: " << car_b_ptr->id << " | bound: " << bound << ", inf" << endl;
 			}
 		}
 	}
@@ -303,14 +301,12 @@ void Intersection::Roadrunner_P(vector<Car_in_database>& scheduling_cars, Car& t
 				tmp_conts2->SetCoefficient(D_solver_variables[car_i.id], -1);
 				tmp_conts2->SetCoefficient(D_solver_variables[car_j.id], 1);
 				tmp_conts2->SetCoefficient(flag, -LARGE_NUM);
-				cout << "constraint 5-1: new_car1: " << car_i.id << " | new_car2: " << car_j.id << " | bound: " << bound_2 << ", inf | tau: " << tau_S1_S2 << endl;
 
 				double bound_1 = -car_i.OT + car_j.OT + tau_S2_S1;
 				MPConstraint* const tmp_conts1 = solver->MakeRowConstraint(bound_1, infinity);
 				tmp_conts1->SetCoefficient(D_solver_variables[car_i.id], 1);
 				tmp_conts1->SetCoefficient(D_solver_variables[car_j.id], -1);
 				tmp_conts1->SetCoefficient(flag, LARGE_NUM);
-				cout << "constraint 5-2: new_car1: " << car_i.id << " | new_car2: " << car_j.id << " | bound: " << bound_1 << ", inf | tau: " << tau_S2_S1 << endl;
 			}
 		}
 	}
@@ -334,13 +330,11 @@ void Intersection::Roadrunner_P(vector<Car_in_database>& scheduling_cars, Car& t
 				MPConstraint* const tmp_conts3 = solver->MakeRowConstraint(bound_3, infinity);
 				tmp_conts3->SetCoefficient(D_solver_variables[new_car.id], -1);
 				tmp_conts3->SetCoefficient(flag, -LARGE_NUM);
-				cout << "constraint 6-1: new_car: " << new_car.id << " | old_car: " << old_car.id << " | bound: " << bound_3 << ", inf | tau: " << tau_S1_S2 << endl;
 
 				double bound_4 = old_car.D + old_car.OT - new_car.OT + tau_S2_S1;
 				MPConstraint* const tmp_conts4 = solver->MakeRowConstraint(bound_4, infinity);
 				tmp_conts4->SetCoefficient(D_solver_variables[new_car.id], 1);
 				tmp_conts4->SetCoefficient(flag, LARGE_NUM);
-				cout << "constraint 6-2: new_car: " << new_car.id << " | old_car: " << old_car.id << " | bound: " << bound_4 << ", inf | tau: " << tau_S2_S1 << endl;
 			}
 		}
 	}
@@ -349,13 +343,12 @@ void Intersection::Roadrunner_P(vector<Car_in_database>& scheduling_cars, Car& t
 	MPObjective* const objective = solver->MutableObjective();
 	for (const Car_in_database& new_car : scheduling_cars) {
 		objective->SetCoefficient(D_solver_variables[new_car.id], 1);
-		cout << "objective: new_car: " << new_car.id << endl;
 	}
 	objective->SetMinimization();
 
 
 	
-	cout << "===============  " << get<0>(id) << "," << get<1>(id) << endl;
+	
 	cout << "scheduling size: " << (int)scheduling_cars.size() << "  old car size: " << (int)sched_cars->size() << endl;
 	for (const Car_in_database& new_car : scheduling_cars) {
 		cout << new_car.id << " | " << new_car.OT << " | " << new_car.position << " | " << (int)new_car.length << " | " << (int)new_car.lane << " | " << new_car.current_turn << endl;

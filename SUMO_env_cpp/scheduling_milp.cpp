@@ -135,7 +135,8 @@ void IntersectionManager::Roadrunner_P(map<string, Car*>& old_cars, map<string, 
 					double back_delay = dst_car_delay_position[compare_dst_car_idx].ET - car.OT;
 					double back_position = dst_car_delay_position[compare_dst_car_idx].position;
 					double spillback_delay_multiply_factor = back_delay / back_position;
-					spillback_delay = accumulate_car_len[dst_lane_idx] * spillback_delay_multiply_factor;
+					//spillback_delay = accumulate_car_len[dst_lane_idx] * spillback_delay_multiply_factor;
+					spillback_delay = back_delay;
 					cout << "bbb-1 " << " accumulate_car_len: " << accumulate_car_len[dst_lane_idx] << endl;
 				}
 
@@ -179,7 +180,8 @@ void IntersectionManager::Roadrunner_P(map<string, Car*>& old_cars, map<string, 
 								double back_delay = dst_car_delay_position[compare_dst_car_idx].ET-car.OT;
 								double back_position = dst_car_delay_position[compare_dst_car_idx].position;
 								double spillback_delay_multiply_factor = back_delay / back_position;
-								double spillback_delay_alter = accumulate_car_len[other_lane_idx] * spillback_delay_multiply_factor;
+								//double spillback_delay_alter = accumulate_car_len[other_lane_idx] * spillback_delay_multiply_factor;
+								double spillback_delay_alter = back_delay;
 
 								spillback_delay = max(spillback_delay, spillback_delay_alter);
 								cout << "ccc-1 " << " accumulate_car_len: " << accumulate_car_len[other_lane_idx] << endl;

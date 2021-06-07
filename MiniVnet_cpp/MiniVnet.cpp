@@ -709,7 +709,7 @@ void add_car_to_database(Car& target_car, const vector<Node_in_Path>& path_list,
 			target_car.records_intersection_in_database[&intersection] = "lane_advising";
 		}
 		else if (state.compare("scheduling") == 0) {
-			intersection.add_scheduling_cars(car, target_car);
+			intersection.add_sched_car(car, target_car);
 			Node_in_Car to_save_key(time, intersection_id);
 			target_car.records_intersection_in_database[&intersection] = "scheduling";
 

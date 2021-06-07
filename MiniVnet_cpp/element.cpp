@@ -255,7 +255,7 @@ void Intersection::add_sched_car(Car_in_database car, Car& target_car) {
 			cout << ">> ?????   " << check_car.id << endl;
 		}
 	}
-	sort(sorted_sched_car_list.begin(), sorted_sched_car_list.end(), [](Car_in_database a, Car_in_database b) -> bool {return a.OT < b.OT; });
+	sort(sorted_sched_car_list.begin(), sorted_sched_car_list.end(), [](Car_in_database a, Car_in_database b) -> bool {return a.OT+a.D < b.OT+b.D; });
 	for (const auto check_car_ptr : sorted_sched_car_list) {
 		if (car.id == "car_1111" || car.id == "car_1119") {
 			cout << "?????   " << car.id << " |  " << check_car_ptr.id << "  |  " << car.OT << "  |  " << check_car_ptr.OT + (check_car_ptr.length + _HEADWAY) / _V_MAX << " | " << (int)car.lane << endl;
@@ -263,8 +263,8 @@ void Intersection::add_sched_car(Car_in_database car, Car& target_car) {
 		}
 		if (car.lane == check_car_ptr.lane) {
 			
-			if (car.OT < check_car_ptr.OT + (check_car_ptr.length + _HEADWAY)/_V_MAX && check_car_ptr.OT < car.OT + (car.length + _HEADWAY)/_V_MAX) {
-				car.OT = check_car_ptr.OT + (check_car_ptr.length + _HEADWAY)/ _V_MAX;
+			if (car.OT+car.D < check_car_ptr.OT+ check_car_ptr.D + (check_car_ptr.length + _HEADWAY)/_V_MAX && check_car_ptr.OT+check_car_ptr.D < car.OT+car.D + (car.length + _HEADWAY)/_V_MAX) {
+				car.OT = check_car_ptr.OT+ check_car_ptr.D + (check_car_ptr.length + _HEADWAY)/ _V_MAX - car.D;
 			}
 		}
 	}
