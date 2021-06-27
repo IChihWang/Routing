@@ -73,4 +73,17 @@ public:
 	string route = "";
 	
 	double enter_time = 0;
+	double shortest_travel_time = 0;
+	double start_routing_timestamp = 0;
+	double estimated_traval_time = 0;
+
+	double compute_shortest_time(string in_lane_str, string dst_node_str) {
+		int link_num = 1;
+		link_num += abs(stoi(in_lane_str.substr(0, 3)) - stoi(dst_node_str.substr(0, 3)));
+		link_num += abs(stoi(in_lane_str.substr(4, 3)) - stoi(dst_node_str.substr(4, 3)));
+		
+		int mid_road_length = 200;
+		int outter_road_length = 500;
+		shortest_travel_time = ((link_num - 2) * mid_road_length + outter_road_length * 2) / V_MAX;
+	}
 };

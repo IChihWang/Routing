@@ -20,8 +20,11 @@ float _TIME_STEP;
 uint8_t _CHOOSE_CAR_OPTION;
 uint8_t _TOP_N_CONGESTED;
 uint8_t _THREAD_NUM;
+string _ARRIVAL_RATE;
+string _RANDOM_SEED;
+uint8_t _ITERATION_NUM;
 
-map<string, string> src_dst_dict;
+unordered_map<string, string> src_dst_dict;
 
 void initial_sumo();
 void read_src_dst_file(string src_dst_file_name);
@@ -29,7 +32,7 @@ void run_sumo(Thread_Worker& router_thread);
 
 int main(int argc, char* argv[])
 {
-    cout << "Usage: ./main <grid_size> <src_dst_file.json> <_N_TIME_STEP> <_TIME_STEP>" << endl;
+    cout << "Usage: ./main <grid_size> <src_dst_file.json> <_N_TIME_STEP> <_TIME_STEP> <_TOP_N_CONGESTED> <_CHOOSE_CAR_OPTION> <_THREAD_NUM> <_ITERATION_NUM> <_ARRIVAL_RATE> <_RANDOM_SEED>" << endl;
     string src_dst_file_name = "data/routes/";
     // Parse the input
     if (argc >= 5) {
@@ -41,6 +44,9 @@ int main(int argc, char* argv[])
         _TOP_N_CONGESTED = stoi(argv[5]);
         _CHOOSE_CAR_OPTION = stoi(argv[6]);
         _THREAD_NUM = stoi(argv[7]);
+        _ITERATION_NUM = stoi(argv[8]);
+        _ARRIVAL_RATE = argv[9];
+        _RANDOM_SEED = argv[10];
     }
     else {
         cout << "Wrong number of arguments" << endl;
@@ -101,6 +107,7 @@ void read_src_dst_file(string src_dst_file_name) {
 
 void run_sumo(Thread_Worker& router_thread) {
     double simu_step = 0;
+    
 
     // Create a list with intersection managers
     map<My_Coord, IntersectionManager*> intersection_map;
@@ -127,8 +134,14 @@ void run_sumo(Thread_Worker& router_thread) {
         }
     }
 
-    map<string, Car_Info> car_info_dict;            // Record car states
+    unordered_map<string, Car_Info> car_info_dict;            // Record car states
     vector<string> to_delete_car_in_database;     // Car exit the network
+
+    unordered_map<string, double> all_travel_time;      // Record the travel time for experimental evaluation
+    unordered_map<string, double> all_delay_time;      // Record the travel delay time for experimental evaluation
+    unordered_map<string, double> all_shortest_time;      // Record the travel delay time for experimental evaluation
+    unordered_map<string, double> all_diff_exit_time;      // Record the difference between estimated travel time and actual travel time
+    int arrival_car_num = 0;
 
     // Start simulation
     while (traci.simulation.getMinExpectedNumber() > 0) {
@@ -172,6 +185,8 @@ void run_sumo(Thread_Worker& router_thread) {
                             server_send_str += to_string(time_offset_step) + ",";               // Step that the datacenter needs to take
                             server_send_str += get_string_from_double(position_at_offset, 2) + ",";       // The position at the specific time
                             server_send_str += car_info.dst_node_idx + ";";
+
+                            car_info.start_routing_timestamp = simu_step + car_data.time_offset;
                         }
                         else {
                             server_send_str += car_id + ",";
@@ -222,6 +237,9 @@ void run_sumo(Thread_Worker& router_thread) {
                     getline(ss_car_data, car_id, ',');
                     string car_path;
                     getline(ss_car_data, car_path, ',');
+                    string car_estimated_travel_time;
+                    getline(ss_car_data, car_estimated_travel_time, ',');
+                    car_info_dict[car_id].estimated_traval_time = stod(car_estimated_travel_time);
 
                     // Update the path
                     uint8_t src_shift_num = car_info_dict[car_id].src_shift_num;
@@ -253,6 +271,9 @@ void run_sumo(Thread_Worker& router_thread) {
                 car_info_dict[car_id].enter_time = simu_step;
                 car_info_dict[car_id].car_length = uint8_t(traci.vehicle.getLength(car_id));
                 car_info_dict[car_id].src_shift_num = 0;
+
+                car_info_dict[car_id].compute_shortest_time(lane_id, dst_node_str);
+                arrival_car_num++;
             }
 
             // Hnadle the car in each intersection
@@ -312,6 +333,12 @@ void run_sumo(Thread_Worker& router_thread) {
             }
         }
         for (const auto& car_id : car_to_delete) {
+            double car_travel_time = simu_step - car_info_dict[car_id].enter_time;
+            all_travel_time[car_id] = car_travel_time;
+            all_delay_time[car_id] = car_travel_time - car_info_dict[car_id].shortest_travel_time;
+            all_shortest_time[car_id] = car_info_dict[car_id].shortest_travel_time;
+            all_diff_exit_time[car_id] = simu_step - (car_info_dict[car_id].start_routing_timestamp + car_info_dict[car_id].estimated_traval_time);
+
             car_info_dict.erase(car_id);
             to_delete_car_in_database.push_back(car_id);    // This is for telling the router to delete the car
         }
@@ -327,6 +354,41 @@ void run_sumo(Thread_Worker& router_thread) {
             system("Pause");
         }
     }
+
+    // Statistics
+    string file_name_prefix = string("result/") + to_string(_grid_size) + "_" + 
+        to_string(_TOP_N_CONGESTED) + "_" + to_string(_CHOOSE_CAR_OPTION) + "_" + 
+        to_string(_THREAD_NUM) + "_" + _ARRIVAL_RATE + "_" + _RANDOM_SEED + "_";
+    ofstream all_car_file(file_name_prefix + "allCars.csv");
+    ofstream statistic_file("result/statistic.csv", ofstream::app);
+
+    all_car_file << "ID, shortest_travel_time, travel_time, delay_time, simu_diff_exit_time" << endl;
+    double avg_travel_time = 0;
+    double avg_delay_time = 0;
+    double avg_diff_exit_time = 0;
+    double avg_shortest_travel_time = 0;
+
+    for (auto& [car_id, travel_time] : all_travel_time) {
+        avg_shortest_travel_time += all_shortest_time[car_id];
+        avg_travel_time += travel_time;
+        avg_delay_time += all_delay_time[car_id];
+        avg_diff_exit_time += all_diff_exit_time[car_id];
+
+        all_car_file << car_id << ',' << all_shortest_time[car_id] << ',' << travel_time << ',' << all_delay_time[car_id] << ',' << all_diff_exit_time[car_id] << endl;
+    }
+
+    avg_travel_time /= all_travel_time.size();
+    avg_delay_time /= all_delay_time.size();
+    avg_diff_exit_time /= all_diff_exit_time.size();
+    avg_shortest_travel_time /= all_shortest_time.size();
+
+    statistic_file << "Grid size, top N, choose_car, thread_num, arrival_rate, rand_seed, avg_shortest_travel_time, avg_travel, avg_delay, arrival_car_num, departured_car_num, diff_exit_time" << endl;
+    statistic_file << (int)_grid_size << ',' << (int)_TOP_N_CONGESTED << ',' << (int)_CHOOSE_CAR_OPTION << ',' << (int)_THREAD_NUM << ',';
+    statistic_file << _ARRIVAL_RATE << ',' << _RANDOM_SEED << ',' << avg_shortest_travel_time << ',' << avg_travel_time << ',' << avg_delay_time << ',' << arrival_car_num << ',' << all_travel_time.size() << ',' << avg_diff_exit_time << endl;
+    
+    all_car_file.close();
+    statistic_file.close();
+
 
     // Delete the intersection manager
     for (const auto& [intersection_id, manager_ptr] : intersection_map) {

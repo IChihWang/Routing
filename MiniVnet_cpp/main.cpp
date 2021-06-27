@@ -12,15 +12,24 @@ uint8_t _thread_num;
 map<string, map<string, double> > inter_info;
 map<string, vector< map<char, uint8_t> >> lane_dict;
 map<string, double> inter_length_dict;
+uint8_t _ITERATION_NUM;
+string _ARRIVAL_RATE;
+string _RANDOM_SEED;
 
 
 
 ofstream route_result_file;
+ofstream all_computation_time_file;
+ofstream statistic_file;
+
+int routing_count = 0;
+double total_compuation_time = 0;
+long total_routing_car_num = 0;
+long total_new_car_num = 0;
 
 
 int main(int argc, char const* argv[]) {
 
-	route_result_file.open("result/route_result.csv");
 	read_load_adv_data();
 	read_inter_info_data();
 	read_inter_length_data();
@@ -32,20 +41,36 @@ int main(int argc, char const* argv[]) {
 	create_grid_network();
 	init_thread_pool();
 
+	// Create files for writing the results
+	string file_name_prefix = string("result/") + to_string(_grid_size) + "_" +
+		to_string(_TOP_N_CONGESTED) + "_" + to_string(_CHOOSE_CAR_OPTION) + "_" +
+		to_string(_thread_num) + "_" + _ARRIVAL_RATE + "_" + _RANDOM_SEED + "_";
+	route_result_file.open(file_name_prefix + "routes.csv");
+	all_computation_time_file.open(file_name_prefix + "computation_time.csv");
+	statistic_file.open("result/statistic.csv", ofstream::app);
+
+	route_result_file << "car_id, path, estimated_travel_timie" << endl;
+	all_computation_time_file << "new_car_num, all_car_num, compuation_time" << endl;
+
 	// Receiving requests/sending replies
 	while (true) {
 
 		string in_str = "";
+		bool is_connected = true;
 
 		while (in_str.length() == 0 || in_str.back() != '@') {
 			char buffer[1024] = { 0 };
 			int n_recv = recv(new_socket, buffer, 1023, 0);
 			if (n_recv <= 0) {
-				return 0;
+				is_connected = false;
+				break;
 			}
 			in_str += buffer;
 		}
 		in_str.pop_back();
+
+		if (!is_connected)
+			break;
 
 
 		string out_str = "";
@@ -57,11 +82,23 @@ int main(int argc, char const* argv[]) {
 		send(new_socket, out_str.c_str(), (int)out_str.length(), 0);
 
 		if (out_str == "end") {
-			return 0;
+			break;
 		}
 	}
 
-	terminate_thread_pool();
+	statistic_file << "Grid size, top N, choose_car, thread_num, arrival_rate, rand_seed, avg_compuation_time, avg_route_num, avg_new_car_num, total_new_car_num, compuation_time_per_car, compuation_time_per_new_car, routing_count" << endl;
+	statistic_file << (int)_grid_size << ',' << (int)_TOP_N_CONGESTED << ',' << (int)_CHOOSE_CAR_OPTION << ',' << (int)_thread_num << ',';
+	statistic_file << _ARRIVAL_RATE << ',' << _RANDOM_SEED << ',' << total_compuation_time / routing_count << ','; 
+	statistic_file << total_routing_car_num / routing_count << ',' << total_new_car_num / routing_count << ',';
+	statistic_file << total_new_car_num << ',' << total_compuation_time/ total_routing_car_num << ',' << total_compuation_time / total_new_car_num << ',' << routing_count << endl;
+	statistic_file.close();
+
+	route_result_file.close();
+	all_computation_time_file.close();
+
+
+
+	//terminate_thread_pool();
 
 	return 0;
 }
@@ -117,37 +154,48 @@ string handle_request(string &in_str) {
 				old_car_ids.push_back(car_id);
 			}
 		}
-
-		
 	}
 
-	map<string, string> routes_dict;
+	// Record the new car number
+	all_computation_time_file << new_car_ids.size() << ',';
+	total_new_car_num += new_car_ids.size();
+	int count_scheduling_car_num = 0;
 
-	for (int iter_i = 0; iter_i < 1; iter_i++) {
+	map<string, string> routes_dict;
+	map<string, double> traveling_time_dict;
+	vector<double> computation_time_list;
+
+	auto begin = high_resolution_clock::now();
+	for (int iter_i = 0; iter_i < _ITERATION_NUM; iter_i++) {
 		vector<vector<reference_wrapper<Car>>> route_groups;
 		route_groups = choose_car_to_thread_group(new_car_ids, old_car_ids);
+		new_car_ids.clear();	//Remove the new cars after first routing
 
 		// Clear affected_intersection_list before routing starts 
 		affected_intersections.clear();
 
-		auto begin = high_resolution_clock::now();
 		// routing_with_groups(route_groups, routes_dict);
 		routing_with_groups_thread(route_groups, routes_dict);
-		auto end = high_resolution_clock::now();
-
-		auto route_time = duration<double>(end - begin);
-		cout << "Route_time: " << route_time.count() << " seconds" << endl;
-		if (route_time.count() > 100) {
-			cout << "wait" << endl;
-			system("Pause");
-		}
-
+		
 		// Find the next top N congested list
 		add_intersection_to_reschedule_list();
 
 		// Updated during routing, so no need to update database here
 		// router.update_database_after_routing(route_groups)
+
+		// Get the traveling time of cars
+		for (uint8_t i = 0; i < _thread_num; i++) {
+			for (Car& car : route_groups[i]) {
+				traveling_time_dict[car.id] = car.traveling_time;
+				count_scheduling_car_num++;
+			}
+		}
 	}
+	auto end = high_resolution_clock::now();
+
+	auto route_time = duration<double>(end - begin);
+	cout << "Route_time: " << route_time.count() << " seconds" << endl;
+	computation_time_list.push_back(route_time.count());
 
 
 	// Finalize the results
@@ -158,10 +206,16 @@ string handle_request(string &in_str) {
 		out_str += car_id;
 		out_str += ',';
 		out_str += path;
+		out_str += ',';
+		out_str += to_string(traveling_time_dict[car_id]);
 		out_str += ';';
 		route_result_file << car_id << ',' << path << endl;
 	}
 
+	all_computation_time_file << count_scheduling_car_num << ',' << route_time.count() << endl;
+	routing_count++;
+	total_compuation_time += route_time.count();
+	total_routing_car_num += count_scheduling_car_num;
 
 	move_a_time_step();
 

@@ -32,7 +32,7 @@ public:
 	vector<Car_in_Node_Record> recordings;
 
 	Node_Record() {}
-	Node_Record(bool in_is_src, uint16_t arrival_time_stamp) : is_src(in_is_src), arrival_time_stamp(arrival_time_stamp) {}
+	Node_Record(bool in_is_src, uint16_t arrival_time_stamp) : is_src(in_is_src), arrival_time_stamp(arrival_time_stamp){}
 };
 
 class Node_in_Heap {

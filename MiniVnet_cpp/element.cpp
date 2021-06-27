@@ -29,10 +29,12 @@ Intersection::Intersection(const Coord &in_coordinate) : others_road_info() {
 	}
 
 	id = in_coordinate;
+	id_str = to_string(get<0>(in_coordinate)) + "_" + to_string(get<1>(in_coordinate));
 }
 
 Intersection::Intersection(const Intersection& in_intersection) {
 	id = in_intersection.id;
+	id_str = in_intersection.id_str;
 
 	for (uint8_t i = 0; i < 4 * LANE_NUM_PER_DIRECTION; i++) {
 		AZ_accumulated_size[i] = in_intersection.AZ_accumulated_size[i];
@@ -135,7 +137,7 @@ void Intersection::update_my_spillback_info(const Car_in_database& car) {
 
 	// Store cars into the list
 	vector<Car_Delay_Position_Record> car_delay_position;
-	double car_accumulate_len_lane = CCZ_DEC2_LEN + 2*CCZ_ACC_LEN;
+	double car_accumulate_len_lane = CCZ_DEC2_LEN + CCZ_ACC_LEN;
 	for (const Car_in_database& sched_car : scheduled_car_list) {
 		car_accumulate_len_lane += double(sched_car.length) + _HEADWAY;
 		car_delay_position.push_back(Car_Delay_Position_Record(car_accumulate_len_lane, sched_car));
@@ -240,7 +242,6 @@ tuple<bool, double> Intersection::is_GZ_full(const Car& car, const double& posit
 			return tuple<bool, double>(false, tmp_position_at_offset- (double(_schedule_period) * _V_MAX));
 		}
 		else {
-			cout << " aaa " << car.id << " | " << tmp_position_at_offset << endl;
 			return tuple<bool, double>(true, tmp_position_at_offset);
 		}
 	}
@@ -251,16 +252,9 @@ void Intersection::add_sched_car(Car_in_database car, Car& target_car) {
 	vector<Car_in_database> sorted_sched_car_list;
 	for (const auto [check_car_id, check_car] : *sched_cars) {
 		sorted_sched_car_list.push_back(check_car);
-		if (car.id == "car_1111" || car.id == "car_1119") {
-			cout << ">> ?????   " << check_car.id << endl;
-		}
 	}
 	sort(sorted_sched_car_list.begin(), sorted_sched_car_list.end(), [](Car_in_database a, Car_in_database b) -> bool {return a.OT+a.D < b.OT+b.D; });
 	for (const auto check_car_ptr : sorted_sched_car_list) {
-		if (car.id == "car_1111" || car.id == "car_1119") {
-			cout << "?????   " << car.id << " |  " << check_car_ptr.id << "  |  " << car.OT << "  |  " << check_car_ptr.OT + (check_car_ptr.length + _HEADWAY) / _V_MAX << " | " << (int)car.lane << endl;
-			cout << "  ?????   " << car.id << " |  " << check_car_ptr.id << "  |  " << check_car_ptr.OT << "  |  " << car.OT + (car.length + _HEADWAY) / _V_MAX << endl;
-		}
 		if (car.lane == check_car_ptr.lane) {
 			
 			if (car.OT+car.D < check_car_ptr.OT+ check_car_ptr.D + (check_car_ptr.length + _HEADWAY)/_V_MAX && check_car_ptr.OT+check_car_ptr.D < car.OT+car.D + (car.length + _HEADWAY)/_V_MAX) {

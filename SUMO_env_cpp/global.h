@@ -63,6 +63,9 @@ extern float _TIME_STEP;
 extern uint8_t _CHOOSE_CAR_OPTION;
 extern uint8_t _TOP_N_CONGESTED;
 extern uint8_t _THREAD_NUM;
+extern uint8_t _ITERATION_NUM;
+extern string _RANDOM_SEED;
+extern string _ARRIVAL_RATE;
 
 
 // Claim in main.cpp

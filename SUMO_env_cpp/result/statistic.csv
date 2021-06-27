@@ -1,0 +1,18 @@
+Grid size, top N, choose_car, thread_num, arrival_rate, rand_seed, avg_travel, avg_delay, arrival_car_num, departured_car_num, diff_exit_time
+2,10,1,1,0.5,0,257.455,147.61,11982,10916,-16.3429
+Grid size, top N, choose_car, thread_num, arrival_rate, rand_seed, avg_travel, avg_delay, arrival_car_num, departured_car_num, diff_exit_time
+2,10,0,3,0.5,0,207.057,97.1757,12328,11497,-1311.36
+Grid size, top N, choose_car, thread_num, arrival_rate, rand_seed, avg_travel, avg_delay, arrival_car_num, departured_car_num, diff_exit_time
+2,10,0,3,0.5,1,115.593,5.67291,6030,5840,-28.6299
+Grid size, top N, choose_car, thread_num, arrival_rate, rand_seed, avg_travel, avg_delay, arrival_car_num, departured_car_num, diff_exit_time
+2,10,1,3,0.9,1,147.789,37.8846,10362,9960,-29.1071
+Grid size, top N, choose_car, thread_num, arrival_rate, rand_seed, avg_travel, avg_delay, arrival_car_num, departured_car_num, diff_exit_time
+2,10,1,3,0.9,2,243.967,134.145,11662,10856,-25.0801
+Grid size, top N, choose_car, thread_num, arrival_rate, rand_seed, avg_travel, avg_delay, arrival_car_num, departured_car_num, diff_exit_time
+2,10,1,3,0.9,3,531.69,421.931,7246,6042,-4.52443
+Grid size, top N, choose_car, thread_num, arrival_rate, rand_seed, avg_travel, avg_delay, arrival_car_num, departured_car_num, diff_exit_time
+2,10,1,3,0.9,4,396.616,286.915,8437,7484,-15.7282
+Grid size, top N, choose_car, thread_num, arrival_rate, rand_seed, avg_travel, avg_delay, arrival_car_num, departured_car_num, diff_exit_time
+2,10,1,3,0.5,4,332.63,222.874,9110,8178,-18.3012
+Grid size, top N, choose_car, thread_num, arrival_rate, rand_seed, avg_travel, avg_delay, arrival_car_num, departured_car_num, diff_exit_time
+2,10,1,3,0.3,4,116.912,6.95737,8221,7962,-32.8484

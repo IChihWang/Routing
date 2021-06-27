@@ -21,7 +21,7 @@ uint8_t Lane_Adviser::advise_lane(const Car& car, const bool spillback_lane_advi
 	uint8_t advise_lane = 0;
 
 	// If spillback detected, avoid the other lanes
-	if (spillback_lane_advise_avoid[car.dst_lane] == true || spillback_lane_advise_avoid[car.dst_lane_changed_to] == true) {
+	if (spillback_lane_advise_avoid[car.lane / LANE_NUM_PER_DIRECTION] == true) {
 		uint8_t start_lane = (car.lane / LANE_NUM_PER_DIRECTION) * LANE_NUM_PER_DIRECTION;
 		uint8_t ideal_lane = start_lane;
 		if (car.current_turn == 'R') {

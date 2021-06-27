@@ -5,7 +5,7 @@ import sys
 k = 0
 
 length = 227.2  # Length inside the network: actual length = length - 27.2
-attach = 236.4  # Additional length around the network: actual length = attach + 13.6
+attach = 286.4  # Additional length around the network: actual length = attach + 213.6
 def gen_node(x, y):
     with open("./tmp/lane.nod.xml", "w") as nets:
         print('<nodes>', file=nets)

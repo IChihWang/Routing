@@ -173,7 +173,7 @@ Car_Info_In_Intersection IntersectionManager::get_car_info_for_route(const strin
 	time_offset = double(time_offset_step + 1) * SCHEDULING_PERIOD - time_offset;
 	double position_at_offset = TOTAL_LEN - time_offset * V_MAX;
 
-	return Car_Info_In_Intersection(position_at_offset, time_offset_step, src_intersection_id, direction_of_src_intersection, src_shift_num);
+	return Car_Info_In_Intersection(position_at_offset, time_offset_step, src_intersection_id, direction_of_src_intersection, src_shift_num, time_offset);
 }
 
 string IntersectionManager::check_in_my_region(string lane_id) {
@@ -502,26 +502,31 @@ void IntersectionManager::run(double simu_step) {
 
 	// Check whether there is a spillback
 	uint32_t accumulate_car_len_lane[4 * LANE_NUM_PER_DIRECTION] = {0};
-	bool spillback_lane_advise_avoid[4 * LANE_NUM_PER_DIRECTION] = {0};
+	//bool spillback_lane_advise_avoid[4 * LANE_NUM_PER_DIRECTION] = {0};
+	bool spillback_lane_advise_avoid[4] = { 0 };
 
 	for (const auto& [car_id, car_ptr] : car_list) {
 		Car& car = *car_ptr;
 		uint8_t lane_idx = car.dst_lane;
 		uint8_t lane_changed_to_idx = car.dst_lane_changed_to;
 
+		/*
 		if (others_road_info[lane_idx] != nullptr)
 			accumulate_car_len_lane[lane_idx] += (car.length + HEADWAY);
 		if (others_road_info[lane_changed_to_idx] != nullptr)
 			accumulate_car_len_lane[lane_changed_to_idx] += (car.length + HEADWAY);
+			*/
 		if (car.is_spillback == true)
-			spillback_lane_advise_avoid[lane_idx] = true;
+			spillback_lane_advise_avoid[car.lane/LANE_NUM_PER_DIRECTION] = true;
 	}
+	/*
 	for (uint8_t lane_idx = 0; lane_idx < 4 * LANE_NUM_PER_DIRECTION; lane_idx++) {
 		if (others_road_info[lane_idx] != nullptr) {
 			if (accumulate_car_len_lane[lane_idx] >= others_road_info[lane_idx]->avail_len)
 				spillback_lane_advise_avoid[lane_idx] = true;
 		}
 	}
+	*/
 
 	for (const auto& [car_id, car_ptr] : car_list) {
 		Car& car = *car_ptr;

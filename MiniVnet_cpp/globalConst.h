@@ -16,6 +16,8 @@
 #define CCZ_DEC2_LEN 2.5
 #define LARGE_NUM 65535
 
+#include <string>
+
 // Defined in server.cpp
 extern uint8_t _thread_num;
 extern uint8_t _grid_size;
@@ -29,7 +31,10 @@ extern uint16_t _TOTAL_LEN;
 extern float _routing_period;
 extern uint8_t _CHOOSE_CAR_OPTION;
 extern uint8_t _TOP_N_CONGESTED;
+extern uint8_t _ITERATION_NUM;
 
+extern std::string _RANDOM_SEED;
+extern std::string _ARRIVAL_RATE;
 
 #ifndef COORD
 #define COORD

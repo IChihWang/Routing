@@ -162,6 +162,8 @@ vector<vector<reference_wrapper<Car>>> choose_car_to_thread_group(vector<string>
 		vector<pair<uint32_t, Intersection*>> not_yet_searched_list(_top_congested_intersections.begin(), _top_congested_intersections.end());
 		vector<pair<uint32_t, Intersection*>> searched_list;
 		vector<pair<uint32_t, Intersection*>> searching_list;
+		vector<string> car_added_list;
+
 		while (not_yet_searched_list.size() > 0) {
 			// Find the thread with minimum size to store the current tree
 			vector<reference_wrapper<Car>>& target_result = *min_element(results.begin(), results.end(),
@@ -193,7 +195,7 @@ vector<vector<reference_wrapper<Car>>> choose_car_to_thread_group(vector<string>
 
 					for (auto item : *(visiting_intersection_ptr->scheduling_cars)) {
 						string car_id = item.first;
-						if ((checking_intersection_ptr->scheduling_cars)->find(car_id) != (checking_intersection_ptr->scheduling_cars)->end()) {
+						if ((checking_intersection_ptr->scheduling_cars)->find(car_id) != (checking_intersection_ptr->sched_cars)->end()) {
 							// Find car in another intersection, correlated
 							searching_list.push_back(checking_intersection);
 							to_be_deleted_idx.push_back(idx);
@@ -210,12 +212,16 @@ vector<vector<reference_wrapper<Car>>> choose_car_to_thread_group(vector<string>
 				// Record the car results
 				for (auto item : *(visiting_intersection_ptr->scheduling_cars)) {
 					string car_id = item.first;
-					if (_car_dict[car_id].state.compare("OLD") == 0 || _car_dict[car_id].state.compare("NEW") == 0) {
-						target_result.push_back(_car_dict[car_id]);
+					if (_car_dict[car_id].state == "OLD" || _car_dict[car_id].state == "NEW") {
+						if (find(car_added_list.begin(), car_added_list.end(), car_id) == car_added_list.end()) {
+							target_result.push_back(_car_dict[car_id]);
+							car_added_list.push_back(car_id);
+						}
 					}
 				}
 			}
 		}
+
 	}
 	else if (_CHOOSE_CAR_OPTION == 1) {
 		set<string> cars_to_add;
@@ -270,6 +276,7 @@ vector<vector<reference_wrapper<Car>>> choose_car_to_thread_group(vector<string>
 		// Do nothing with the old cars
 	}
 	
+	/*
 	cout << "=====" << endl;
 	for (auto car_vec : results) {
 		cout << " " << car_vec.size() << "   ";
@@ -279,6 +286,7 @@ vector<vector<reference_wrapper<Car>>> choose_car_to_thread_group(vector<string>
 		cout << endl;
 	}
 	cout << endl;
+	*/
 
 	// Handling the new cars
 	auto min_max_result = minmax_element(results.begin(), results.end(), 
@@ -419,7 +427,7 @@ map<string, vector<Node_in_Path>> routing(const vector<reference_wrapper<Car>>& 
 			
 			// Terminate when finding shortest path
 			if (intersection_id == car.dst_coord) {
-				car.traveling_time = double(current_arrival_time) * _schedule_period + position_at_offset / _V_MAX + double(_TOTAL_LEN) / _V_MAX; // additional time for car to leave sumo
+				car.traveling_time = double(current_arrival_time) * _schedule_period - (500 - (_TOTAL_LEN - position_at_offset)) / _V_MAX; // additional time for car to leave sumo
 				dst_node = current_node;
 				break;
 			}
@@ -513,8 +521,8 @@ map<string, vector<Node_in_Path>> routing(const vector<reference_wrapper<Car>>& 
 				recordings.push_back(tmp_record);
 				// ###############################
 
-				uint16_t next_time_step = time_in_GZ + int(car_exiting_time / _schedule_period);
-				double next_position_at_offset = _TOTAL_LEN - ((floor(car_exiting_time / _schedule_period) + 1) * _schedule_period - car_exiting_time) * _V_MAX;
+				uint16_t next_time_step = time_in_GZ + ceil(car_exiting_time / _schedule_period);
+				double next_position_at_offset = _TOTAL_LEN - (ceil(car_exiting_time / _schedule_period) * _schedule_period - car_exiting_time) * _V_MAX;
 
 				Node_ID next_node = node_id;
 
@@ -550,12 +558,6 @@ map<string, vector<Node_in_Path>> routing(const vector<reference_wrapper<Car>>& 
 		}
 		Node_Record node_data = nodes_arrival_time_data[dst_node];
 		while (node_data.is_src == false) {
-
-			for (auto record : node_data.recordings) {
-				if (record.car_in_database.position > _GZ_BZ_CCZ_len && record.car_state.compare("scheduling") == 0)
-					cout << "    >>>   " << _GZ_BZ_CCZ_len << "  " << record.car_in_database.position << "  | " << record.car_in_database.id << endl;
-			}
-
 			path_list.insert(path_list.begin(), Node_in_Path(node_data.turning, node_data.recordings, node_data.arrival_time_stamp));
 			node_data = nodes_arrival_time_data[node_data.last_intersection_id];
 		}
@@ -655,7 +657,34 @@ void add_intersection_to_reschedule_list() {
 		affected_intersections.insert(thread_affected_intersections.begin(), thread_affected_intersections.end());
 	}
 
+	// /*
+	vector<pair<uint16_t, Intersection*>> sorted_affected_intersections(affected_intersections.begin(), affected_intersections.end());
+	sorted_affected_intersections.insert(sorted_affected_intersections.end(), _top_congested_intersections.begin(), _top_congested_intersections.end());
+	sort(sorted_affected_intersections.begin(), sorted_affected_intersections.end(), [](pair<uint16_t, Intersection*> a, pair<uint16_t, Intersection*> b) -> bool {return (a.second)->get_car_num() > (b.second)->get_car_num(); });
 
+	//_top_congested_intersections = vector<pair<int32_t, Intersection*>>(sorted_affected_intersections.begin(), sorted_affected_intersections.begin()+ _TOP_N_CONGESTED);
+	_top_congested_intersections.clear();
+	uint8_t count = 0;
+	for (auto sorted_item : sorted_affected_intersections) {
+		bool is_skip = false;
+		for (auto item : _top_congested_intersections) {
+			if (sorted_item.second->id_str == item.second->id_str && abs(sorted_item.first - item.first) < 2*double(_TOTAL_LEN)/_V_MAX){
+				is_skip = true;
+				break;
+			}
+		}
+		
+		if (!is_skip) {
+			_top_congested_intersections.push_back(sorted_item);
+
+			if (++count >= _TOP_N_CONGESTED)
+				break;
+		}
+	}
+
+
+	// */
+	 /*
 	for (auto item : affected_intersections) {
 		const uint16_t time = item.first;
 		Intersection* intersection_ptr = item.second;
@@ -679,7 +708,9 @@ void add_intersection_to_reschedule_list() {
 			_top_congested_intersections.pop_back();
 		}
 	}
-	cout << endl;
+
+
+	// */
 }
 
 void add_car_to_database(Car& target_car, const vector<Node_in_Path>& path_list, set< pair<uint16_t, Intersection*> >& thread_affected_intersections) {
@@ -709,7 +740,7 @@ void add_car_to_database(Car& target_car, const vector<Node_in_Path>& path_list,
 			target_car.records_intersection_in_database[&intersection] = "lane_advising";
 		}
 		else if (state.compare("scheduling") == 0) {
-			intersection.add_sched_car(car, target_car);
+			intersection.add_scheduling_cars(car, target_car);
 			Node_in_Car to_save_key(time, intersection_id);
 			target_car.records_intersection_in_database[&intersection] = "scheduling";
 

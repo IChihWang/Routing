@@ -70,6 +70,7 @@ public:
 class Intersection {
 public:
 	Coord id;
+	string id_str;
 	int32_t AZ_accumulated_size[4 * LANE_NUM_PER_DIRECTION] = { 0 };
 	int32_t GZ_accumulated_size[4 * LANE_NUM_PER_DIRECTION] = { 0 };
 

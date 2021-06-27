@@ -1,6 +1,8 @@
 #include <string>
 #include <sstream>
 #include "server.h"
+#include <chrono>
+#include <thread>
 
 using namespace std;
 
@@ -39,11 +41,12 @@ SOCKET initial_client_handler() {
 	sockAddr.sin_port = htons(ROUTER_PORT);
 
 	// Connect socket to the port
-	if (connect(client_sock, (SOCKADDR*)&sockAddr, sizeof(sockAddr)) < 0) {
-		cout << "socket connect failed." << endl;
-		closesocket(client_sock);
-		ClearWinSock();
-		exit(EXIT_FAILURE);
+	while (connect(client_sock, (SOCKADDR*)&sockAddr, sizeof(sockAddr)) < 0) {
+		cout << "trying to connect" << endl;
+		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+		// closesocket(client_sock);
+		// ClearWinSock();
+		// exit(EXIT_FAILURE);
 	}
 
 	string init_info = "";
@@ -58,6 +61,9 @@ SOCKET initial_client_handler() {
 	init_info += ":CHOOSE_CAR_OPTION:" + to_string(_CHOOSE_CAR_OPTION);
 	init_info += ":TOP_N_CONGESTED:" + to_string(_TOP_N_CONGESTED);
 	init_info += ":_THREAD_NUM:" + to_string(_THREAD_NUM);
+	init_info += ":_ITERATION_NUM:" + to_string(_ITERATION_NUM);
+	init_info += ":_ARRIVAL_RATE:" + _ARRIVAL_RATE;
+	init_info += ":_RANDOM_SEED:" + _RANDOM_SEED;
 
 	send(client_sock, init_info.c_str(), int(init_info.length()), 0);
 
