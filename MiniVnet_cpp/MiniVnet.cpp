@@ -427,7 +427,7 @@ map<string, vector<Node_in_Path>> routing(const vector<reference_wrapper<Car>>& 
 			
 			// Terminate when finding shortest path
 			if (intersection_id == car.dst_coord) {
-				car.traveling_time = double(current_arrival_time) * _schedule_period - (500 - (_TOTAL_LEN - position_at_offset)) / _V_MAX; // additional time for car to leave sumo
+				car.traveling_time = double(current_arrival_time) * _schedule_period + (500 - (_TOTAL_LEN - position_at_offset)) / _V_MAX; // additional time for car to leave sumo
 				dst_node = current_node;
 				break;
 			}
