@@ -131,3 +131,11 @@ Grid size, top N, choose_car, thread_num, arrival_rate, rand_seed, avg_compuatio
 2,10,1,3,0.5,4,1.20176,89,20,10967,0.0134513,0.0587346,536
 Grid size, top N, choose_car, thread_num, arrival_rate, rand_seed, avg_compuation_time, avg_route_num, avg_new_car_num, total_new_car_num, compuation_time_per_car, compuation_time_per_new_car, routing_count
 2,10,1,3,0.6,4,1.20237,83,18,9872,0.0143955,0.0652827,536
+Grid size, top N, choose_car, thread_num, arrival_rate, rand_seed, avg_compuation_time, avg_route_num, avg_new_car_num, total_new_car_num, compuation_time_per_car, compuation_time_per_new_car, routing_count
+2,10,1,3,0.3,4,0.630108,57,15,8211,0.0109899,0.0412091,537
+Grid size, top N, choose_car, thread_num, arrival_rate, rand_seed, avg_compuation_time, avg_route_num, avg_new_car_num, total_new_car_num, compuation_time_per_car, compuation_time_per_new_car, routing_count
+2,10,1,3,0.3,0,0.566597,47,14,7803,0.0118381,0.038993,537
+Grid size, top N, choose_car, thread_num, arrival_rate, rand_seed, avg_compuation_time, avg_route_num, avg_new_car_num, total_new_car_num, compuation_time_per_car, compuation_time_per_new_car, routing_count
+2,10,1,3,0.1,0,0.250572,19,5,58,0.0129403,0.0475223,11
+Grid size, top N, choose_car, thread_num, arrival_rate, rand_seed, avg_compuation_time, avg_route_num, avg_new_car_num, total_new_car_num, compuation_time_per_car, compuation_time_per_new_car, routing_count
+2,10,1,3,0.1,1,0.160434,11,2,41,0.0143786,0.0743477,19

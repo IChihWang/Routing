@@ -4,6 +4,7 @@
 #define GLOBAL_H
 
 #include <map>
+#include <unordered_map>
 #include <tuple>
 #include <vector>
 #include <shared_mutex>	// C++ 17
@@ -44,7 +45,7 @@ extern set< pair<uint16_t, Intersection*> > affected_intersections;
 void add_intersection_to_reschedule_list();
 
 void create_grid_network();
-void add_time_step();
+void add_time_step(double time_stamp);
 void connect_intersections(map< Coord, Intersection* >& intersection_map);
 void move_a_time_step();
 void update_car(const string& car_id, const uint8_t& car_length, const string& src_intersection_id,

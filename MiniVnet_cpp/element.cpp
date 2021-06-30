@@ -16,7 +16,7 @@ Intersection::Intersection() : others_road_info() {
 		my_road_info[i] = new Road_Info;
 	}
 }
-Intersection::Intersection(const Coord &in_coordinate) : others_road_info() {
+Intersection::Intersection(const Coord &in_coordinate, const double& time_stamp) : others_road_info(), time_stamp(time_stamp) {
 
 	sched_cars = new map<string, Car_in_database>;
 	scheduling_cars = new map<string, Car_in_database>;
@@ -32,7 +32,7 @@ Intersection::Intersection(const Coord &in_coordinate) : others_road_info() {
 	id_str = to_string(get<0>(in_coordinate)) + "_" + to_string(get<1>(in_coordinate));
 }
 
-Intersection::Intersection(const Intersection& in_intersection) {
+Intersection::Intersection(const Intersection& in_intersection, const double& time_stamp): time_stamp(time_stamp) {
 	id = in_intersection.id;
 	id_str = in_intersection.id_str;
 

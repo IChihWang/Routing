@@ -71,6 +71,7 @@ class Intersection {
 public:
 	Coord id;
 	string id_str;
+	double time_stamp;	// "absolute" time stamp (From the start of the simulation)
 	int32_t AZ_accumulated_size[4 * LANE_NUM_PER_DIRECTION] = { 0 };
 	int32_t GZ_accumulated_size[4 * LANE_NUM_PER_DIRECTION] = { 0 };
 
@@ -91,8 +92,8 @@ public:
 	shared_mutex rwlock_mutex;
 
 	Intersection();
-	Intersection(const Coord& in_coordinate);
-	Intersection(const Intersection& in_intersection);
+	Intersection(const Coord& in_coordinate, const double& time_stamp);
+	Intersection(const Intersection& in_intersection, const double& time_stamp);
 	~Intersection();		// Don't use!
 	void my_own_destructure();	// Build this because "vector" copy/reallocate memory and call ~Intersection
 	void connect(const uint8_t& my_direction, Intersection& target_intersection, const uint8_t& its_direction);
@@ -123,8 +124,7 @@ class Car : public Car_in_database {
 public:
 	Coord dst_coord;
 	string state = "";
-	double get_request_time = 0;
-	map<Intersection*, string> records_intersection_in_database;
+	unordered_map<Intersection*, pair<string, double>> records_intersection_in_database;	// intersection_ptr, car_state, absolute_time_stamp
 	
 	// temporary variables for routing
 	Coord src_coord;

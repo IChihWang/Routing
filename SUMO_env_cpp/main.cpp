@@ -158,6 +158,7 @@ void run_sumo(Thread_Worker& router_thread) {
         // Send route requests
         if (fmod(simu_step, ROUTING_PERIOD) < _TIME_STEP) {
             string server_send_str = "";
+            server_send_str += to_string(simu_step) + ";";
             for (auto& [car_id, car_info] : car_info_dict) {
                 IntersectionManager* intersection_manager_ptr = car_info.intersection_manager_ptr;
                 if (intersection_manager_ptr != nullptr) {
@@ -180,8 +181,7 @@ void run_sumo(Thread_Worker& router_thread) {
                             server_send_str += to_string(direction_of_src_intersection) + ",";
                             server_send_str += to_string(time_offset_step) + ",";               // Step that the datacenter needs to take
                             server_send_str += get_string_from_double(position_at_offset, 2) + ",";       // The position at the specific time
-                            server_send_str += car_info.dst_node_idx + ",";
-                            server_send_str += to_string(simu_step) + ";";
+                            server_send_str += car_info.dst_node_idx + ";";
 
                         }
                         else {

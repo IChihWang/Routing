@@ -32,6 +32,7 @@ extern float _routing_period;
 extern uint8_t _CHOOSE_CAR_OPTION;
 extern uint8_t _TOP_N_CONGESTED;
 extern uint8_t _ITERATION_NUM;
+extern double _NOW_SIMU_TIME;
 
 extern std::string _RANDOM_SEED;
 extern std::string _ARRIVAL_RATE;

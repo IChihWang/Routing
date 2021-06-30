@@ -24,16 +24,16 @@ set<pair<uint16_t, Intersection*>> affected_intersections;
 
 void create_grid_network() {
 	for (int idx = 0; idx < DEFAULT_DATA_LENGTH; idx++) {
-		add_time_step();
+		add_time_step(idx*_schedule_period);
 	}
 }
 
-void add_time_step() {
+void add_time_step(double time_stamp) {
 	map< Coord, Intersection* >* intersection_map = new map< Coord, Intersection* >;
 	for (int i = 1; i <= _grid_size; i++) {
 		for (int j = 1; j <= _grid_size; j++) {
 			Coord coordinate(i, j);
-			Intersection* intersection = new Intersection(coordinate);
+			Intersection* intersection = new Intersection(coordinate, time_stamp);
 			(*intersection_map)[coordinate] = intersection;
 		}
 	}
@@ -61,6 +61,30 @@ void connect_intersections(map< Coord, Intersection* >& intersection_map) {
 }
 
 void move_a_time_step() {
+	while (_database.size() > 0) {
+		map< Coord, Intersection* >* intersection_map = _database[0];
+		if ((*intersection_map)[Coord(1,1)]->time_stamp < _NOW_SIMU_TIME) {
+			for (auto& [intersection_id, intersection_ptr] : (*intersection_map)) {
+				intersection_ptr->my_own_destructure();
+				delete intersection_ptr;
+			}
+			delete intersection_map;
+			_database.erase(_database.begin());
+		}
+		else {
+			break;
+		}
+	}
+
+	_top_congested_intersections.erase(
+		std::remove_if(
+			_top_congested_intersections.begin(),
+			_top_congested_intersections.end(),
+			[](pair<int32_t, Intersection*> const& p) { return p.second->time_stamp < _NOW_SIMU_TIME; }
+		),
+		_top_congested_intersections.end()
+	);
+	/*
 	for (uint16_t i = 0; i < _routing_period_num; i++) {
 		map< Coord, Intersection* >* intersection_map = _database[0];
 		for (auto& [intersection_id, intersection_ptr] : (*intersection_map)) {
@@ -83,13 +107,15 @@ void move_a_time_step() {
 		),
 		_top_congested_intersections.end()
 	);
+
+	*/
 }
 
 shared_mutex database_mutex;
 Intersection& get_intersection(const uint16_t current_arrival_time, const Coord &intersection_id) {
 	while (current_arrival_time >= int(_database.size())) {
 		lock_guard<shared_mutex> database_write_lock(database_mutex);
-		add_time_step();
+		add_time_step(_NOW_SIMU_TIME + current_arrival_time);
 	}
 
 	map< Coord, Intersection* >* intersection_map = _database[current_arrival_time];
@@ -338,15 +364,16 @@ vector<vector<reference_wrapper<Car>>> choose_car_to_thread_group(vector<string>
 
 void delete_car_from_database(Car &car) {
 
-	vector<tuple<Intersection*, string>> record_to_delete;
-	for (const pair<Intersection*, string>& record : car.records_intersection_in_database) {
-		record_to_delete.push_back(tuple<Intersection*, string>(record.first, record.second));
-	}
-
-	for (const tuple<Intersection*, string>& record : record_to_delete) {
-		const string& type = get<1>(record);
+	vector<Intersection*> time_out_inter_ptr;
+	double car_abs_time_offset =  _NOW_SIMU_TIME + car.time_offset_step * _schedule_period - 0.1;
+	for (const pair<Intersection*, pair<string, double>>& record : car.records_intersection_in_database) {
+		const string& type = get<0>(get<1>(record));
+		const double& time_stamp = get<1>(get<1>(record));
 		Intersection* intersection = get<0>(record);
-		intersection->delete_car_from_intersection(car, type);
+
+		if (time_stamp >= _NOW_SIMU_TIME and intersection->time_stamp >= car_abs_time_offset) {
+			intersection->delete_car_from_intersection(car, type);
+		}
 	}
 }
 
@@ -425,10 +452,11 @@ map<string, vector<Node_in_Path>> routing(const vector<reference_wrapper<Car>>& 
 
 			Coord intersection_id = get<0>(current_node);
 			uint8_t intersection_dir = get<1>(current_node);
+
 			
 			// Terminate when finding shortest path
 			if (intersection_id == car.dst_coord) {
-				car.traveling_time = car.get_request_time + double(current_arrival_time) * _schedule_period + (500 - (_TOTAL_LEN - position_at_offset)) / _V_MAX; // additional time for car to leave sumo
+				car.traveling_time = _NOW_SIMU_TIME + double(current_arrival_time) * _schedule_period + (500 - (_TOTAL_LEN - position_at_offset)) / _V_MAX; // additional time for car to leave sumo
 				dst_node = current_node;
 				break;
 			}
@@ -752,12 +780,12 @@ void add_car_to_database(Car& target_car, const vector<Node_in_Path>& path_list,
 		if (state.compare("lane_advising") == 0) {
 			intersection.add_advising_car(car, target_car);
 			Node_in_Car to_save_key(time, intersection_id);
-			target_car.records_intersection_in_database[&intersection] = "lane_advising";
+			target_car.records_intersection_in_database[&intersection] = { "lane_advising", intersection.time_stamp };
 		}
 		else if (state.compare("scheduling") == 0) {
 			intersection.add_scheduling_cars(car, target_car);
 			Node_in_Car to_save_key(time, intersection_id);
-			target_car.records_intersection_in_database[&intersection] = "scheduling";
+			target_car.records_intersection_in_database[&intersection] = {"scheduling", intersection.time_stamp };
 
 			thread_affected_intersections.insert(pair(time, &intersection));
 		}
@@ -773,7 +801,7 @@ void add_car_to_database(Car& target_car, const vector<Node_in_Path>& path_list,
 					Intersection& intersection_to_save = get_intersection(time_idx, intersection_id);
 					intersection_to_save.add_sched_car(saving_car, target_car);
 					Node_in_Car to_save_key(time_idx, intersection_id);
-					target_car.records_intersection_in_database[&intersection_to_save] = "scheduled";
+					target_car.records_intersection_in_database[&intersection_to_save] = { "scheduled", intersection_to_save.time_stamp };
 
 					thread_affected_intersections.insert(pair(time_idx, &intersection_to_save));
 				}
@@ -794,7 +822,7 @@ void add_car_to_database(Car& target_car, const vector<Node_in_Path>& path_list,
 			Intersection& intersection_to_save = get_intersection(time_idx, intersection_id);
 			intersection_to_save.add_sched_car(saving_car, target_car);
 			Node_in_Car to_save_key(time_idx, intersection_id);
-			target_car.records_intersection_in_database[&intersection_to_save] = "scheduled";
+			target_car.records_intersection_in_database[&intersection_to_save] = { "scheduled", intersection_to_save.time_stamp };
 
 			thread_affected_intersections.insert(pair(time_idx, &intersection_to_save));
 		}
