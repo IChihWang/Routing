@@ -141,11 +141,14 @@ string handle_request(string &in_str) {
 			double position_at_offset = stod(car_data);
 			getline(ss_car_data, car_data, ',');
 			string dst_node_str = car_data;
+			getline(ss_car_data, car_data, ',');
+			double simu_time = stod(car_data);
 
 			update_car(car_id, car_length, src_intersection_id,
 				direction_of_src_intersection, time_offset_step,
 				position_at_offset, dst_node_str);
 			_car_dict[car_id].state = car_state;
+			_car_dict[car_id].get_request_time = simu_time;
 
 			if (car_state.compare("NEW") == 0) {
 				new_car_ids.push_back(car_id);

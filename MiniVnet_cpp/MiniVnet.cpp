@@ -414,6 +414,7 @@ map<string, vector<Node_in_Path>> routing(const vector<reference_wrapper<Car>>& 
 			Node_ID current_node = node_in_heap.current_node;
 			double position_at_offset = node_in_heap.position_at_offset;
 
+
 			// Skip if the node is visited, prevent multiple push into the heap
 			if (find(visited_nodes.begin(), visited_nodes.end(), current_node) != visited_nodes.end()){
 				continue;
@@ -427,7 +428,7 @@ map<string, vector<Node_in_Path>> routing(const vector<reference_wrapper<Car>>& 
 			
 			// Terminate when finding shortest path
 			if (intersection_id == car.dst_coord) {
-				car.traveling_time = double(current_arrival_time) * _schedule_period + (500 - (_TOTAL_LEN - position_at_offset)) / _V_MAX; // additional time for car to leave sumo
+				car.traveling_time = car.get_request_time + double(current_arrival_time) * _schedule_period + (500 - (_TOTAL_LEN - position_at_offset)) / _V_MAX; // additional time for car to leave sumo
 				dst_node = current_node;
 				break;
 			}
@@ -521,6 +522,15 @@ map<string, vector<Node_in_Path>> routing(const vector<reference_wrapper<Car>>& 
 				recordings.push_back(tmp_record);
 				// ###############################
 
+				// Add time in intersection (number by measuring the travel time in min trajectory)
+				if (turning == 'L')
+					car_exiting_time += 2.4;
+				else if(turning == 'S')
+					car_exiting_time += 2.4;
+				else if (turning == 'R')
+					car_exiting_time += 0.9;
+
+
 				uint16_t next_time_step = time_in_GZ + ceil(car_exiting_time / _schedule_period);
 				double next_position_at_offset = _TOTAL_LEN - (ceil(car_exiting_time / _schedule_period) * _schedule_period - car_exiting_time) * _V_MAX;
 
@@ -558,6 +568,11 @@ map<string, vector<Node_in_Path>> routing(const vector<reference_wrapper<Car>>& 
 		}
 		Node_Record node_data = nodes_arrival_time_data[dst_node];
 		while (node_data.is_src == false) {
+			
+			//if (car.id == "car_0") {
+				//cout << car.id << " " << car.get_request_time + car.time_offset_step* _schedule_period << " " << get<0>(get<0>(node_data.last_intersection_id)) << "," << get<1>(get<0>(node_data.last_intersection_id)) << " " << (int)get<1>(node_data.last_intersection_id) << " " << car.get_request_time + node_data.arrival_time_stamp* _schedule_period << endl;
+			//}
+
 			path_list.insert(path_list.begin(), Node_in_Path(node_data.turning, node_data.recordings, node_data.arrival_time_stamp));
 			node_data = nodes_arrival_time_data[node_data.last_intersection_id];
 		}

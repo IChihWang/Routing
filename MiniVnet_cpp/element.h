@@ -123,6 +123,7 @@ class Car : public Car_in_database {
 public:
 	Coord dst_coord;
 	string state = "";
+	double get_request_time = 0;
 	map<Intersection*, string> records_intersection_in_database;
 	
 	// temporary variables for routing

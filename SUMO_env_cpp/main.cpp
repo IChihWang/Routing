@@ -66,9 +66,6 @@ int main(int argc, char* argv[])
 
     Thread_Worker router_thread;     // New thread to send/receive routing requests/results  (do this after initial_client_handler();)
 
-    // Run sumo simulation (run_sumo in python version)
-    traci.simulationStep(5);
-
     // SUMO simulation
     run_sumo(router_thread);
 
@@ -145,7 +142,6 @@ void run_sumo(Thread_Worker& router_thread) {
 
     // Start simulation
     while (traci.simulation.getMinExpectedNumber() > 0) {
-
         // Early terminate the simulation
         if (int(simu_step * 10) / 10.0 >= _N_TIME_STEP) {
             router_thread.route_request = "End Connection";
@@ -159,7 +155,6 @@ void run_sumo(Thread_Worker& router_thread) {
 
         traci.simulationStep();
         vector<string> all_c = traci.vehicle.getIDList();
-
         // Send route requests
         if (fmod(simu_step, ROUTING_PERIOD) < _TIME_STEP) {
             string server_send_str = "";
@@ -167,6 +162,7 @@ void run_sumo(Thread_Worker& router_thread) {
                 IntersectionManager* intersection_manager_ptr = car_info.intersection_manager_ptr;
                 if (intersection_manager_ptr != nullptr) {
                     IntersectionManager& intersection_manager = *intersection_manager_ptr;
+
                     Car_Info_In_Intersection car_data = intersection_manager.get_car_info_for_route(car_id);
                     if (car_data.is_skip_car == false) {
                         double position_at_offset = car_data.position_at_offset;
@@ -184,9 +180,9 @@ void run_sumo(Thread_Worker& router_thread) {
                             server_send_str += to_string(direction_of_src_intersection) + ",";
                             server_send_str += to_string(time_offset_step) + ",";               // Step that the datacenter needs to take
                             server_send_str += get_string_from_double(position_at_offset, 2) + ",";       // The position at the specific time
-                            server_send_str += car_info.dst_node_idx + ";";
+                            server_send_str += car_info.dst_node_idx + ",";
+                            server_send_str += to_string(simu_step) + ";";
 
-                            car_info.start_routing_timestamp = simu_step + car_data.time_offset;
                         }
                         else {
                             server_send_str += car_id + ",";
@@ -239,7 +235,7 @@ void run_sumo(Thread_Worker& router_thread) {
                     getline(ss_car_data, car_path, ',');
                     string car_estimated_travel_time;
                     getline(ss_car_data, car_estimated_travel_time, ',');
-                    car_info_dict[car_id].estimated_traval_time = stod(car_estimated_travel_time);
+                    car_info_dict[car_id].estimated_exit_time = stod(car_estimated_travel_time);
 
                     // Update the path
                     uint8_t src_shift_num = car_info_dict[car_id].src_shift_num;
@@ -337,7 +333,9 @@ void run_sumo(Thread_Worker& router_thread) {
             all_travel_time[car_id] = car_travel_time;
             all_delay_time[car_id] = car_travel_time - car_info_dict[car_id].shortest_travel_time;
             all_shortest_time[car_id] = car_info_dict[car_id].shortest_travel_time;
-            all_diff_exit_time[car_id] = simu_step - (car_info_dict[car_id].start_routing_timestamp + car_info_dict[car_id].estimated_traval_time);
+            all_diff_exit_time[car_id] = simu_step - (car_info_dict[car_id].estimated_exit_time);
+            if (car_id == "car_0")
+                cout << car_id << " " << all_diff_exit_time[car_id] << endl;
 
             car_info_dict.erase(car_id);
             to_delete_car_in_database.push_back(car_id);    // This is for telling the router to delete the car

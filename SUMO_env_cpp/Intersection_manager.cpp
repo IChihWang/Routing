@@ -169,9 +169,9 @@ Car_Info_In_Intersection IntersectionManager::get_car_info_for_route(const strin
 		}
 	}
 
-	int time_offset_step = int(time_offset / SCHEDULING_PERIOD);
-	time_offset = double(time_offset_step + 1) * SCHEDULING_PERIOD - time_offset;
-	double position_at_offset = TOTAL_LEN - time_offset * V_MAX;
+	int time_offset_step = ceil(time_offset / SCHEDULING_PERIOD);
+	double left_time_offset = (double)ceil(time_offset / SCHEDULING_PERIOD) * SCHEDULING_PERIOD - time_offset;
+	double position_at_offset = TOTAL_LEN - left_time_offset * V_MAX;
 
 	return Car_Info_In_Intersection(position_at_offset, time_offset_step, src_intersection_id, direction_of_src_intersection, src_shift_num, time_offset);
 }

@@ -74,8 +74,7 @@ public:
 	
 	double enter_time = 0;
 	double shortest_travel_time = 0;
-	double start_routing_timestamp = 0;
-	double estimated_traval_time = 0;
+	double estimated_exit_time = 0;
 
 	double compute_shortest_time(string in_lane_str, string dst_node_str) {
 		int link_num = 1;
