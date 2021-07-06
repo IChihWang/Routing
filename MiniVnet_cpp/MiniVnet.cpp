@@ -441,6 +441,9 @@ map<string, vector<Node_in_Path>> routing(const vector<reference_wrapper<Car>>& 
 			Node_ID current_node = node_in_heap.current_node;
 			double position_at_offset = node_in_heap.position_at_offset;
 
+			car.is_spillback = false;
+			car.is_spillback_strict = false;
+
 
 			// Skip if the node is visited, prevent multiple push into the heap
 			if (find(visited_nodes.begin(), visited_nodes.end(), current_node) != visited_nodes.end()){
@@ -597,9 +600,9 @@ map<string, vector<Node_in_Path>> routing(const vector<reference_wrapper<Car>>& 
 		Node_Record node_data = nodes_arrival_time_data[dst_node];
 		while (node_data.is_src == false) {
 			
-			//if (car.id == "car_0") {
-				//cout << car.id << " " << car.get_request_time + car.time_offset_step* _schedule_period << " " << get<0>(get<0>(node_data.last_intersection_id)) << "," << get<1>(get<0>(node_data.last_intersection_id)) << " " << (int)get<1>(node_data.last_intersection_id) << " " << car.get_request_time + node_data.arrival_time_stamp* _schedule_period << endl;
-			//}
+			if (car.id == "car_466") {
+				cout << car.id << " " << _NOW_SIMU_TIME + car.time_offset_step* _schedule_period << " " << get<0>(get<0>(node_data.last_intersection_id)) << "," << get<1>(get<0>(node_data.last_intersection_id)) << " " << (int)get<1>(node_data.last_intersection_id) << " " << _NOW_SIMU_TIME + node_data.arrival_time_stamp* _schedule_period << endl;
+			}
 
 			path_list.insert(path_list.begin(), Node_in_Path(node_data.turning, node_data.recordings, node_data.arrival_time_stamp));
 			node_data = nodes_arrival_time_data[node_data.last_intersection_id];

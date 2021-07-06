@@ -66,6 +66,16 @@ void Intersection::Roadrunner_P(vector<Car_in_database>& old_cars, Car& target_c
 	int32_t accumulate_car_len[4 * LANE_NUM_PER_DIRECTION];
 	fill_n(accumulate_car_len, 4 * LANE_NUM_PER_DIRECTION, INT32_MIN);
 
+
+	// Update head of line blocking position from the cars
+	for (auto& [car_id, car] : (*advising_car)) {
+		if (car.is_spillback_strict) {
+			if (head_of_line_blocking_position[car.lane] > car.position) {
+				head_of_line_blocking_position[car.lane] = car.position;
+			}
+		}
+	}
+
 	for (uint8_t i = 0; i < 4 * LANE_NUM_PER_DIRECTION; i++) {
 		if (others_road_info[i] != nullptr) {
 			accumulate_car_len[i] = pre_accumulate_car_len_lane[i] - (*(others_road_info[i]))->avail_len + CAR_MAX_LEN + _HEADWAY + CCZ_ACC_LEN;
@@ -111,7 +121,13 @@ void Intersection::Roadrunner_P(vector<Car_in_database>& old_cars, Car& target_c
 				const vector<Car_Delay_Position_Record>& dst_car_delay_position = (*(others_road_info[dst_lane_idx]))->car_delay_position;
 
 				car.is_spillback = true;
-				if (dst_car_delay_position.size() < 1 || (double(accumulate_car_len[dst_lane_idx]) > dst_car_delay_position.back().position)) {
+				if (dst_car_delay_position.size() < 1 && car.position <= CCZ_DEC2_LEN + CCZ_ACC_LEN && car.current_turn == 'L' && car.lane % LANE_NUM_PER_DIRECTION == 0 && (*(others_road_info[dst_lane_idx]))->avail_len > -(CAR_MAX_LEN)) {
+					// Spillback happed in the front too, go aggressively
+					if (car.position < head_of_line_blocking_position[lane_idx]) {
+						head_of_line_blocking_position[lane_idx] = car.position;
+					}
+				}
+				else if (dst_car_delay_position.size() < 1 || (double(accumulate_car_len[dst_lane_idx]) > dst_car_delay_position.back().position)) {
 					// Skip because no records is found
 					car.is_spillback_strict = true;
 				}
@@ -145,7 +161,13 @@ void Intersection::Roadrunner_P(vector<Car_in_database>& old_cars, Car& target_c
 					if (accumulate_car_len[other_lane_idx] > 0) {
 						car.is_spillback = true;
 
-						if (dst_car_delay_position.size() < 1 || (double(accumulate_car_len[other_lane_idx]) > dst_car_delay_position.back().position)) {
+						if (dst_car_delay_position.size() < 1 && car.position <= CCZ_DEC2_LEN + CCZ_ACC_LEN && car.current_turn == 'L' && car.lane % LANE_NUM_PER_DIRECTION == 0 && (*(others_road_info[other_lane_idx]))->avail_len > -(CAR_MAX_LEN)) {
+							// Spillback happed in the front too, go aggressively
+							if (car.position < head_of_line_blocking_position[lane_idx]) {
+								head_of_line_blocking_position[lane_idx] = car.position;
+							}
+						}
+						else if (dst_car_delay_position.size() < 1 || (double(accumulate_car_len[other_lane_idx]) > dst_car_delay_position.back().position)) {
 							// Skip because no records is found
 							car.is_spillback_strict = true;
 						}
@@ -171,6 +193,10 @@ void Intersection::Roadrunner_P(vector<Car_in_database>& old_cars, Car& target_c
 				}
 			}
 
+			//if (car.is_spillback or car.is_spillback_strict) {
+				//cout << car.id << " " << car.is_spillback << " " << car.is_spillback_strict << " " << head_of_line_blocking_position[lane_idx] << endl;
+			//}
+
 			if (car.is_spillback_strict == true) {
 				// remove car from scheduling_cars
 				uint32_t idx_in_scheduling_cars = -1;
@@ -190,6 +216,7 @@ void Intersection::Roadrunner_P(vector<Car_in_database>& old_cars, Car& target_c
 
 				if (deleted_car_id.compare(target_car.id) == 0) {
 					target_car.D = SCHEDULE_POSPONDED;
+					target_car.is_spillback_strict = true;
 					return;
 				}
 			}
@@ -221,6 +248,7 @@ void Intersection::Roadrunner_P(vector<Car_in_database>& old_cars, Car& target_c
 
 				if (deleted_car_id.compare(target_car.id) == 0) {
 					target_car.D = SCHEDULE_POSPONDED;
+					target_car.is_spillback_strict = true;
 					return;
 				}
 			}

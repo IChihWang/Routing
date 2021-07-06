@@ -307,7 +307,12 @@ void Intersection::add_advising_car(Car_in_database car, Car& target_car) {
 	lock_guard<shared_mutex> wLock(rwlock_mutex);
 	(*advising_car)[car.id] = car;
 	(*stored_cars)[car.id] = &target_car;
-	AZ_accumulated_size[car.lane] += (car.length + _HEADWAY);
+
+	if (car.is_spillback_strict)	// Scheduling posponded
+		GZ_accumulated_size[car.lane] += (car.length + _HEADWAY);
+	else							// Not yet scheduled
+		AZ_accumulated_size[car.lane] += (car.length + _HEADWAY);
+
 	update_my_spillback_info(car);
 
 }

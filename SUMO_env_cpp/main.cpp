@@ -356,7 +356,7 @@ void run_sumo(Thread_Worker& router_thread) {
     // Statistics
     string file_name_prefix = string("result/") + to_string(_grid_size) + "_" + 
         to_string(_TOP_N_CONGESTED) + "_" + to_string(_CHOOSE_CAR_OPTION) + "_" + 
-        to_string(_THREAD_NUM) + "_" + _ARRIVAL_RATE + "_" + _RANDOM_SEED + "_";
+        to_string(_THREAD_NUM) + "_" + to_string(_ITERATION_NUM) + "_" + _ARRIVAL_RATE + "_" + _RANDOM_SEED + "_";
     ofstream all_car_file(file_name_prefix + "allCars.csv");
     ofstream statistic_file("result/statistic.csv", ofstream::app);
 
@@ -380,8 +380,8 @@ void run_sumo(Thread_Worker& router_thread) {
     avg_diff_exit_time /= all_diff_exit_time.size();
     avg_shortest_travel_time /= all_shortest_time.size();
 
-    statistic_file << "Grid size, top N, choose_car, thread_num, arrival_rate, rand_seed, avg_shortest_travel_time, avg_travel, avg_delay, arrival_car_num, departured_car_num, diff_exit_time" << endl;
-    statistic_file << (int)_grid_size << ',' << (int)_TOP_N_CONGESTED << ',' << (int)_CHOOSE_CAR_OPTION << ',' << (int)_THREAD_NUM << ',';
+    statistic_file << "Grid size, top N, choose_car, thread_num, iteration_num, arrival_rate, rand_seed, avg_shortest_travel_time, avg_travel, avg_delay, arrival_car_num, departured_car_num, diff_exit_time" << endl;
+    statistic_file << (int)_grid_size << ',' << (int)_TOP_N_CONGESTED << ',' << (int)_CHOOSE_CAR_OPTION << ',' << (int)_THREAD_NUM << ',' << (int)_ITERATION_NUM << ',';
     statistic_file << _ARRIVAL_RATE << ',' << _RANDOM_SEED << ',' << avg_shortest_travel_time << ',' << avg_travel_time << ',' << avg_delay_time << ',' << arrival_car_num << ',' << all_travel_time.size() << ',' << avg_diff_exit_time << endl;
     
     all_car_file.close();
