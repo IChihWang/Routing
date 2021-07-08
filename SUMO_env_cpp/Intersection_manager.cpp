@@ -64,25 +64,76 @@ Car_Info_In_Intersection IntersectionManager::get_car_info_for_route(const strin
 
 	// Not yet enter Roadrunner
 	if (car_list[car_id]->zone == "") {
-		double diff_pos = position - TOTAL_LEN;
-		time_offset = diff_pos / V_MAX;
+		// Check if not yet entered the Roadrunner region
+		int accumulate_length = 0;
+		for (const auto& [local_car_id, car] : car_list) {
+			if (car->lane == car_list[car_id]->lane && car->position < car_list[car_id]->position) {
+				accumulate_length += (car->length + HEADWAY);
+			}
+		}
+		if (accumulate_length > TOTAL_LEN) {
+			int exceed_length = accumulate_length - TOTAL_LEN;
+			Road_Info& lane_info = my_road_info[car_list[car_id]->lane];
+			int compare_car_idx;
+			for (compare_car_idx = 0; compare_car_idx < lane_info.car_delay_position.size(); compare_car_idx++) {
+				if (lane_info.car_delay_position[compare_car_idx].position > exceed_length) {
+					break;
+				}
+			}
 
-		if (time_offset > ROUTING_PERIOD) {
-			// Get the origin intersection id
-			uint8_t lane = car_list[car_id]->lane;
-			uint8_t direction = lane / LANE_NUM_PER_DIRECTION;
+			if (compare_car_idx == lane_info.car_delay_position.size()) {
+				if (car_id == "car_384") {
+					cout << car_id << " a " << time_offset << " " << 2.5 * ROUTING_PERIOD << endl;
+				}
+				// No referenced delay (spillback_strict or exceed GZ), pospond routing
+				return Car_Info_In_Intersection(true);
+			}
+			else if (lane_info.car_delay_position[compare_car_idx].ET > 2.5 * ROUTING_PERIOD) {
+				if (car_id == "car_384") {
+					cout << car_id << " b " << time_offset << " " << 2.5 * ROUTING_PERIOD << endl;
+				}
+				// Able to wait until next routing period
+				return Car_Info_In_Intersection(true);
+			}
+			else {
+				// Otherwise, route now!
+				double diff_pos = position - TOTAL_LEN;
+				time_offset = max(diff_pos / V_MAX, lane_info.car_delay_position[compare_car_idx].ET);
 
-			direction_of_src_intersection = direction;
-			src_intersection_id = id_str;
+				if (car_id == "car_384") {
+					cout << car_id << " c " << time_offset << " " << 2.5 * ROUTING_PERIOD << endl;
+				}
+
+				if (time_offset > 2.5 * ROUTING_PERIOD) {
+					// Too far away from the start of routing
+					return Car_Info_In_Intersection(true);
+				}
+			}
 		}
 		else {
-			time_offset = -1;
-		}
-	}
+			double diff_pos = position - TOTAL_LEN;
+			time_offset = diff_pos / V_MAX;
 
+			if (car_id == "car_384") {
+				cout << car_id << " d " << time_offset << " " << 2.5 * ROUTING_PERIOD << endl;
+			}
+
+			if (time_offset > 2.5 * ROUTING_PERIOD) {
+				// Too far away from the start of routing
+				return Car_Info_In_Intersection(true);
+			}
+		}
+
+		// Get the origin intersection id
+		uint8_t lane = car_list[car_id]->lane;
+		uint8_t direction = lane / LANE_NUM_PER_DIRECTION;
+
+		direction_of_src_intersection = direction;
+		src_intersection_id = id_str;
+	}
 	// 1. Not yet but about to enter the intersection region
 	// 2. Already inside the intersection region
-	if (time_offset == -1) {
+	else {
 		src_shift_num = 1;
 
 		// Find lane of the car
@@ -96,6 +147,14 @@ Car_Info_In_Intersection IntersectionManager::get_car_info_for_route(const strin
 
 		// Compute the time_offset
 		if (!car_list[car_id]->is_scheduled) {
+
+			// Pause the routing when head-of-line blocking (is_spillback_strict) happen
+			for (const auto& [local_car_id, car] : car_list) {
+				if (car->lane == car_list[car_id]->lane && car->position < car_list[car_id]->position && car->is_spillback_strict) {
+					return Car_Info_In_Intersection(true);
+				}
+			}
+
 			// Delay is not computed yet
 			time_offset = position / V_MAX;
 			// Estimate by borrowing the known delay
@@ -168,6 +227,7 @@ Car_Info_In_Intersection IntersectionManager::get_car_info_for_route(const strin
 			src_intersection_id = x + "_" + y;
 		}
 	}
+	
 
 	int time_offset_step = ceil(time_offset / SCHEDULING_PERIOD);
 	double left_time_offset = (double)ceil(time_offset / SCHEDULING_PERIOD) * SCHEDULING_PERIOD - time_offset;

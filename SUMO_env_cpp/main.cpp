@@ -245,6 +245,10 @@ void run_sumo(Thread_Worker& router_thread) {
                     }
                     car_info_dict[car_id].route = pre_route_part + car_path + "SS";     //Add "next turn" at the end
 
+                    if (car_info_dict[car_id].route_state == "NEW" && car_info_dict[car_id].intersection_manager_ptr->car_list[car_id]->position <= TOTAL_LEN) {
+                        cout << "warning!!! " << car_id << " " << car_info_dict[car_id].intersection_manager_ptr->car_list[car_id]->position << endl;
+                    }
+
                     car_info_dict[car_id].route_state = "OLD";
                 }
 
@@ -334,8 +338,8 @@ void run_sumo(Thread_Worker& router_thread) {
             all_delay_time[car_id] = car_travel_time - car_info_dict[car_id].shortest_travel_time;
             all_shortest_time[car_id] = car_info_dict[car_id].shortest_travel_time;
             all_diff_exit_time[car_id] = simu_step - (car_info_dict[car_id].estimated_exit_time);
-            if (car_id == "car_0")
-                cout << car_id << " " << all_diff_exit_time[car_id] << endl;
+            //if (car_id == "car_0")
+                //cout << car_id << " " << all_diff_exit_time[car_id] << endl;
 
             car_info_dict.erase(car_id);
             to_delete_car_in_database.push_back(car_id);    // This is for telling the router to delete the car

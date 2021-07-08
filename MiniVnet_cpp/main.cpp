@@ -69,7 +69,6 @@ int main(int argc, char const* argv[]) {
 			in_str += buffer;
 		}
 		in_str.pop_back();
-
 		if (!is_connected)
 			break;
 
@@ -130,9 +129,11 @@ string handle_request(string &in_str) {
 		}
 		else if (car_state.compare("PAUSE") == 0) {
 			// Cannot reroute the car due to the lower lever control
-			_car_dict[car_id].state = car_state;
+			if (_car_dict.find(car_id) != _car_dict.end())
+				_car_dict[car_id].state = car_state;
 		}
 		else if (car_state.compare("NEW") == 0 || car_state.compare("OLD") == 0) {
+			
 			string car_data;
 			getline(ss_car_data, car_data, ',');
 			uint8_t car_length = stoi(car_data);
@@ -174,6 +175,7 @@ string handle_request(string &in_str) {
 	for (int iter_i = 0; iter_i < _ITERATION_NUM; iter_i++) {
 		vector<vector<reference_wrapper<Car>>> route_groups;
 		route_groups = choose_car_to_thread_group(new_car_ids, old_car_ids);
+
 		new_car_ids.clear();	//Remove the new cars after first routing
 
 		// Clear affected_intersection_list before routing starts 
