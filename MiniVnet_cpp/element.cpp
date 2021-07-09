@@ -109,6 +109,7 @@ void Intersection::delete_car_from_intersection(Car& car, const string& type) {
 		sched_cars->erase(car.id);
 		update_my_spillback_info(car_in_database);
 		GZ_accumulated_size[car.lane] -= (car.length + _HEADWAY);
+		sched_accumulated_size[car.lane] -= (car.length + _HEADWAY);
 	}
 
 	stored_cars->erase(car.id);
@@ -201,14 +202,30 @@ uint8_t Intersection::advise_lane(const Car& car) {
 tuple<bool, double> Intersection::is_GZ_full(const Car& car, const double& position_at_offset) {
 	shared_lock<shared_mutex> rLock(rwlock_mutex);
 	// Tell if the intersection is full and the car have to wait
-	if (GZ_accumulated_size[car.lane] > _GZ_BZ_CCZ_len) {
+
+	if (sched_accumulated_size[car.lane] > _GZ_BZ_CCZ_len) {
+		if (car.id == "car_153") {
+			cout << "      11> " << car.id << " " << sched_accumulated_size[car.lane] << " " << _GZ_BZ_CCZ_len << endl;
+			int add_length = 0;
+			for (auto& [car_idd, carr] : *(sched_cars)) {
+				if (carr.lane == car.lane) {
+					cout << car_idd << " " << carr.length << " | ";
+					add_length += carr.length + _HEADWAY;
+				}
+			}
+			cout << endl << "-------- " << add_length << endl;
+		}
 		return tuple<bool, double>(false, position_at_offset);
 	}
 	else {
-		// Check if the position offset is valid
-		double tmp_position_at_offset = max(position_at_offset, double(GZ_accumulated_size[car.lane]));
-
 		
+		// Check if the position offset is valid
+		double tmp_position_at_offset = max(position_at_offset, double(sched_accumulated_size[car.lane]));
+		
+		if (car.id == "car_153") {
+			cout << "      22> " << car.id << " " << position_at_offset << " " << sched_accumulated_size[car.lane] << " " << _GZ_BZ_CCZ_len << endl;
+		}
+		/*
 		vector<Car_in_database> sorted_sched_car_list;
 		for (const auto [check_car_id, check_car] : *sched_cars) {
 			sorted_sched_car_list.push_back(check_car);
@@ -239,11 +256,16 @@ tuple<bool, double> Intersection::is_GZ_full(const Car& car, const double& posit
 		}
 
 		if (tmp_position_at_offset > _GZ_BZ_CCZ_len) {
+			if (car.id == "car_153") {
+				cout << "      33> " << car.id << " " << tmp_position_at_offset << " " << _GZ_BZ_CCZ_len << endl;
+			}
 			return tuple<bool, double>(false, tmp_position_at_offset- (double(_schedule_period) * _V_MAX));
 		}
 		else {
 			return tuple<bool, double>(true, tmp_position_at_offset);
 		}
+		*/
+		return tuple<bool, double>(true, tmp_position_at_offset);
 	}
 }
 void Intersection::add_sched_car(Car_in_database car, Car& target_car) {
@@ -266,6 +288,7 @@ void Intersection::add_sched_car(Car_in_database car, Car& target_car) {
 	(*sched_cars)[car.id] = car;
 	(*stored_cars)[car.id] = &target_car;
 	GZ_accumulated_size[car.lane] += (car.length + _HEADWAY);
+	sched_accumulated_size[car.lane] += (car.length + _HEADWAY);
 	update_my_spillback_info(car);
 }
 void Intersection::add_scheduling_cars(Car_in_database car, Car& target_car) {

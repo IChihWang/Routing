@@ -445,8 +445,25 @@ void IntersectionManager::Roadrunner_P(map<string, Car*>& old_cars, map<string, 
 	}
 
 	// Update the delays
+
+	bool has_car = false;
 	for (const auto& [car_id, D_variable] : D_solver_variables) {
 		new_cars[car_id]->D = D_solver_variables[car_id]->solution_value();
 		new_cars[car_id]->is_scheduled = true;
+
+		if (car_id == "car_153")
+			has_car = true;
+	}
+
+	if (has_car) {
+		for (const auto& [car_id, D_variable] : D_solver_variables) {
+			cout << car_id << " " << new_cars[car_id]->D + new_cars[car_id]->OT << " " << new_cars[car_id]->D << endl;
+		}
+		cout << "-------------" << endl;
+		for (const auto& [car_id, car] : old_cars) {
+			cout << car_id << " " << car->D + car->OT << " " << car->D << endl;
+		}
+
+		
 	}
 }

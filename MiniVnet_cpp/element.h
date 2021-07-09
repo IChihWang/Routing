@@ -73,7 +73,8 @@ public:
 	string id_str;
 	double time_stamp;	// "absolute" time stamp (From the start of the simulation)
 	int32_t AZ_accumulated_size[4 * LANE_NUM_PER_DIRECTION] = { 0 };
-	int32_t GZ_accumulated_size[4 * LANE_NUM_PER_DIRECTION] = { 0 };
+	int32_t GZ_accumulated_size[4 * LANE_NUM_PER_DIRECTION] = { 0 };	// For spillback handling
+	int32_t sched_accumulated_size[4 * LANE_NUM_PER_DIRECTION] = { 0 };
 
 	int debug_tag;
 

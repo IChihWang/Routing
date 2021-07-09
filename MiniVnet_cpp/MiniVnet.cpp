@@ -63,7 +63,7 @@ void connect_intersections(map< Coord, Intersection* >& intersection_map) {
 void move_a_time_step() {
 	while (_database.size() > 0) {
 		map< Coord, Intersection* >* intersection_map = _database[0];
-		if ((*intersection_map)[Coord(1,1)]->time_stamp < _NOW_SIMU_TIME) {
+		if ((*intersection_map)[Coord(1,1)]->time_stamp < _NOW_SIMU_TIME + _routing_period) {
 			for (auto& [intersection_id, intersection_ptr] : (*intersection_map)) {
 				intersection_ptr->my_own_destructure();
 				delete intersection_ptr;
@@ -80,7 +80,7 @@ void move_a_time_step() {
 		std::remove_if(
 			_top_congested_intersections.begin(),
 			_top_congested_intersections.end(),
-			[](pair<int32_t, Intersection*> const& p) { return p.second->time_stamp < _NOW_SIMU_TIME; }
+			[](pair<int32_t, Intersection*> const& p) { return p.second->time_stamp < _NOW_SIMU_TIME+_routing_period; }
 		),
 		_top_congested_intersections.end()
 	);
@@ -115,7 +115,7 @@ shared_mutex database_mutex;
 Intersection& get_intersection(const uint16_t current_arrival_time, const Coord &intersection_id) {
 	while (current_arrival_time >= int(_database.size())) {
 		lock_guard<shared_mutex> database_write_lock(database_mutex);
-		add_time_step(_NOW_SIMU_TIME + current_arrival_time);
+		add_time_step(_NOW_SIMU_TIME + _database.size()*_schedule_period);
 	}
 
 	map< Coord, Intersection* >* intersection_map = _database[current_arrival_time];
@@ -485,10 +485,14 @@ map<string, vector<Node_in_Path>> routing(const vector<reference_wrapper<Car>>& 
 				car.position = position_at_offset;
 				car.update_dst_lane_and_data();
 
-				if (car.id == "car_217") {
+				if (car.id == "car_153") {
 					cout << " =============================== 111------1 " << endl;
-					cout << car.id << "      " << position_at_offset << " " << turning << " " << _GZ_BZ_CCZ_len << endl;
+					cout << car.id << "      " << position_at_offset << " " << turning << " " << _GZ_BZ_CCZ_len << " " << _NOW_SIMU_TIME + current_arrival_time * _schedule_period << endl;
 					cout << endl << "=============================== 111-------1 " << endl << endl;
+					cout << "Zero timestamp: " << (*(_database[0]))[Coord(1, 1)]->time_stamp << " Now from SUMO:" << _NOW_SIMU_TIME << endl;
+					for (auto& veccc : _database) {
+						cout << "Timestamps: " << (*veccc)[Coord(1, 1)]->time_stamp << endl;
+					}
 				}
 
 				// Determine the time arrive in Grouping Zone
@@ -508,7 +512,7 @@ map<string, vector<Node_in_Path>> routing(const vector<reference_wrapper<Car>>& 
 
 					position_at_offset -= (double(_schedule_period) * _V_MAX);
 
-					if (car.id == "car_217") {
+					if (car.id == "car_153") {
 						cout << " =============================== 111 " << endl;
 						cout << car.id << "    " << time_in_GZ << " " << turning << " " << position_at_offset << " " << _NOW_SIMU_TIME + time_in_GZ * _schedule_period << endl;
 						cout << endl << "=============================== 111 " << endl << endl;
@@ -518,9 +522,10 @@ map<string, vector<Node_in_Path>> routing(const vector<reference_wrapper<Car>>& 
 				Intersection* intersection_GZ_ptr = &(get_intersection(time_in_GZ, intersection_id));
 				tuple<bool, double>result = intersection_GZ_ptr->is_GZ_full(car, position_at_offset);
 
-				if (car.id == "car_217") {
+				if (car.id == "car_153") {
 					cout << " =============================== 222 " << endl;
 					cout << car.id << " " << turning << " " << intersection_GZ_ptr->id_str << " " << _NOW_SIMU_TIME + time_in_GZ * _schedule_period << endl;
+					cout << "time_stamp: " << intersection_GZ_ptr->time_stamp << " time step_shift: " << time_in_GZ << " " << _schedule_period << endl;
 					cout << "-------------------" << endl;
 					for (auto [car_id, local_car] : *(intersection_GZ_ptr->sched_cars)) {
 						cout << car_id << " | ";
@@ -553,9 +558,10 @@ map<string, vector<Node_in_Path>> routing(const vector<reference_wrapper<Car>>& 
 					intersection_GZ_ptr = &(get_intersection(time_in_GZ, intersection_id));
 					result = intersection_GZ_ptr->is_GZ_full(car, position_at_offset);
 
-					if (car.id == "car_217") {
+					if (car.id == "car_153") {
 						cout << "============================ 222-2 " << endl;
 						cout << car.id << " " << turning << " " << intersection_GZ_ptr->id_str << " " << _NOW_SIMU_TIME + time_in_GZ * _schedule_period << endl;
+						cout << "time_stamp: " << intersection_GZ_ptr->time_stamp << " time step_shift: " << time_in_GZ << " " << _schedule_period << endl;
 						cout << "-------------------" << endl;
 						for (auto [car_id, local_car] : *(intersection_GZ_ptr->sched_cars)) {
 							cout << car_id << " | ";
@@ -578,17 +584,18 @@ map<string, vector<Node_in_Path>> routing(const vector<reference_wrapper<Car>>& 
 				car.position = position_at_offset;
 				double car_exiting_time = intersection_GZ_ptr->scheduling(car);
 
-				if (car.id == "car_217") {
+				if (car.id == "car_153") {
 					cout << endl << "============================ 333" << endl;
 					cout << car.id << " " << turning << " " << intersection_GZ_ptr->id_str << " " << _NOW_SIMU_TIME+ time_in_GZ*_schedule_period << endl;
+					cout << "time_stamp: " << intersection_GZ_ptr->time_stamp << " time step_shift: " << time_in_GZ << " " << _schedule_period << endl;
 					cout << car_exiting_time << endl;
 					cout << "-------------------" << endl;
 					for (auto [car_id, local_car] : *(intersection_GZ_ptr->sched_cars)) {
-						cout << car_id << " | ";
+						cout << car_id << " " << local_car.D+local_car.OT << " | ";
 					}
 					cout << endl << "-------------------" << endl;
 					for (auto [car_id, local_car] : *(intersection_GZ_ptr->scheduling_cars)) {
-						cout << car_id << " | ";
+						cout << car_id << " " << local_car.D + local_car.OT << " | ";
 					}
 					cout << endl << "-------------------" << endl;
 					for (auto [car_id, local_car] : *(intersection_GZ_ptr->advising_car)) {
@@ -615,9 +622,10 @@ map<string, vector<Node_in_Path>> routing(const vector<reference_wrapper<Car>>& 
 						car.position = get<1>(result);
 						car_exiting_time = intersection_GZ.scheduling(car);
 
-						if (car.id == "car_217") {
+						if (car.id == "car_153") {
 							cout << "=============================== 444" << endl;
 							cout << car.id << " " << turning << " " << intersection_GZ_ptr->id_str << " " << _NOW_SIMU_TIME + time_in_GZ * _schedule_period << endl;
+							cout << "time_stamp: " << intersection_GZ_ptr->time_stamp << endl;
 							cout << "-------------------" << endl;
 							for (auto [car_id, local_car] : *(intersection_GZ_ptr->sched_cars)) {
 								cout << car_id << " | ";
@@ -689,7 +697,7 @@ map<string, vector<Node_in_Path>> routing(const vector<reference_wrapper<Car>>& 
 		Node_Record node_data = nodes_arrival_time_data[dst_node];
 		while (node_data.is_src == false) {
 			
-			if (car.id == "car_217") {
+			if (car.id == "car_153") {
 				cout << car.id << " " << node_data.turning << " " << _NOW_SIMU_TIME + car.time_offset_step * _schedule_period << " " << get<0>(get<0>(node_data.last_intersection_id)) << "," << get<1>(get<0>(node_data.last_intersection_id)) << " " << (int)get<1>(node_data.last_intersection_id) << " " << _NOW_SIMU_TIME + node_data.arrival_time_stamp * _schedule_period << endl;
 			}
 
@@ -874,8 +882,8 @@ void add_car_to_database(Car& target_car, const vector<Node_in_Path>& path_list,
 			Node_in_Car to_save_key(time, intersection_id);
 			target_car.records_intersection_in_database[&intersection] = { "lane_advising", intersection.time_stamp };
 
-			if (car.id == "car_217")
-				cout << " lane_advising: " << _NOW_SIMU_TIME + time * _schedule_period << " " << time << " " << intersection.id_str << " " << car.id << " " << car.D + car.OT << " " << car.OT << endl;
+			if (car.id == "car_153")
+				cout << " lane_advising: " << intersection.time_stamp << " " << _NOW_SIMU_TIME + time * _schedule_period << " " << time << " " << intersection.id_str << " " << car.id << " " << car.D + car.OT << " " << car.OT << endl;
 		}
 		else if (state.compare("scheduling") == 0) {
 			intersection.add_scheduling_cars(car, target_car);
@@ -884,8 +892,8 @@ void add_car_to_database(Car& target_car, const vector<Node_in_Path>& path_list,
 
 			thread_affected_intersections.insert(pair(time, &intersection));
 
-			if (car.id == "car_217")
-				cout << " scheduling: " << _NOW_SIMU_TIME + time * _schedule_period << " " << time << " " << intersection.id_str << " " << car.id << " " << car.D + car.OT << " " << car.OT << endl;
+			if (car.id == "car_153")
+				cout << " scheduling: " << intersection.time_stamp << " " << _NOW_SIMU_TIME + time * _schedule_period << " " << time << " " << intersection.id_str << " " << car.id << " " << car.D + car.OT << " " << car.OT << endl;
 		}
 		// See if the record change to next intersection: add scheduled cars
 		if (pre_record != nullptr && intersection_id != pre_record->last_intersection_id) {
@@ -903,8 +911,8 @@ void add_car_to_database(Car& target_car, const vector<Node_in_Path>& path_list,
 
 					thread_affected_intersections.insert(pair(time_idx, &intersection_to_save));
 
-					if (saving_car.id == "car_217")
-						cout << " scheduled: " << _NOW_SIMU_TIME + time_idx * _schedule_period << " " << time_idx << " " << intersection_to_save.id_str << " " << saving_car.id << " " << saving_car.D + saving_car.OT << " " << saving_car.OT << endl;
+					if (saving_car.id == "car_153")
+						cout << " scheduled: " << intersection_to_save.time_stamp << " " << _NOW_SIMU_TIME + time_idx * _schedule_period << " " << time_idx << " " << intersection_to_save.id_str << " " << saving_car.id << " " << saving_car.D + saving_car.OT << " " << saving_car.OT << endl;
 				}
 			}
 		}
@@ -926,8 +934,8 @@ void add_car_to_database(Car& target_car, const vector<Node_in_Path>& path_list,
 			target_car.records_intersection_in_database[&intersection_to_save] = { "scheduled", intersection_to_save.time_stamp };
 
 			thread_affected_intersections.insert(pair(time_idx, &intersection_to_save));
-			if (saving_car.id == "car_217")
-				cout << " scheduled: " << _NOW_SIMU_TIME + time_idx * _schedule_period << " " << time_idx << " " << intersection_to_save.id_str << " " << saving_car.id << " " << saving_car.D + saving_car.OT << " " << saving_car.OT << endl;
+			if (saving_car.id == "car_153")
+				cout << " scheduled: " << intersection_to_save.time_stamp << " " << _NOW_SIMU_TIME + time_idx * _schedule_period << " " << time_idx << " " << intersection_to_save.id_str << " " << saving_car.id << " " << saving_car.D + saving_car.OT << " " << saving_car.OT << endl;
 		}
 	}
 
