@@ -33,8 +33,8 @@ double Intersection::scheduling(Car& target_car) {
 
 void Intersection::Roadrunner_P(vector<Car_in_database>& old_cars, Car& target_car) {
 	
-	vector<Car_in_database> scheduling_cars;
-	scheduling_cars.push_back(target_car);
+	vector<Car_in_database> local_scheduling_cars;
+	local_scheduling_cars.push_back(target_car);
 
 	// part 1: build the solver
 	unique_ptr<MPSolver> solver(MPSolver::CreateSolver("SCIP"));
@@ -47,7 +47,7 @@ void Intersection::Roadrunner_P(vector<Car_in_database>& old_cars, Car& target_c
 	uint16_t pre_accumulate_car_len_lane[4 * LANE_NUM_PER_DIRECTION] = {0};
 
 	// Compute accumulated car len
-	for (const auto& old_car : old_cars) {
+	for (const auto& [old_car_id, old_car] : (*sched_cars)) {
 		uint8_t lane_base_idx = old_car.dst_lane / LANE_NUM_PER_DIRECTION * LANE_NUM_PER_DIRECTION;
 
 		for (uint8_t i = 0; i < LANE_NUM_PER_DIRECTION; i++) {
@@ -56,7 +56,7 @@ void Intersection::Roadrunner_P(vector<Car_in_database>& old_cars, Car& target_c
 	}
 
 	vector<Car_in_database> sorted_scheduling_cars_list;
-	for (auto& car : scheduling_cars) {
+	for (auto& car : local_scheduling_cars) {
 		sorted_scheduling_cars_list.push_back(car);
 	}
 
@@ -78,7 +78,17 @@ void Intersection::Roadrunner_P(vector<Car_in_database>& old_cars, Car& target_c
 
 	for (uint8_t i = 0; i < 4 * LANE_NUM_PER_DIRECTION; i++) {
 		if (others_road_info[i] != nullptr) {
-			accumulate_car_len[i] = pre_accumulate_car_len_lane[i] - (*(others_road_info[i]))->avail_len + CAR_MAX_LEN + _HEADWAY + CCZ_ACC_LEN;
+			accumulate_car_len[i] = pre_accumulate_car_len_lane[i] - (*(others_road_info[i]))->avail_len;
+		}
+	}
+
+	for (auto& [car_id, car] : (*scheduling_cars)) {
+		if (car.position < target_car.position) {
+			uint8_t lane_base_idx = car.dst_lane / LANE_NUM_PER_DIRECTION * LANE_NUM_PER_DIRECTION;
+
+			for (uint8_t i = 0; i < LANE_NUM_PER_DIRECTION; i++) {
+				accumulate_car_len[i] += car.length + _HEADWAY;
+			}
 		}
 	}
 
@@ -99,14 +109,14 @@ void Intersection::Roadrunner_P(vector<Car_in_database>& old_cars, Car& target_c
 
 				// remove car from scheduling_cars
 				uint32_t idx_in_scheduling_cars = -1;
-				for (uint32_t idx = 0; idx < (uint32_t)scheduling_cars.size(); idx++) {
-					if (car.id.compare(scheduling_cars[idx].id) == 0) {
+				for (uint32_t idx = 0; idx < (uint32_t)local_scheduling_cars.size(); idx++) {
+					if (car.id.compare(local_scheduling_cars[idx].id) == 0) {
 						idx_in_scheduling_cars = idx;
 						break;
 					}
 				}
 				string deleted_car_id = car.id;
-				scheduling_cars.erase(scheduling_cars.begin() + idx_in_scheduling_cars);
+				local_scheduling_cars.erase(local_scheduling_cars.begin() + idx_in_scheduling_cars);
 
 				if (deleted_car_id.compare(target_car.id) == 0) {
 					target_car.D = SCHEDULE_POSPONDED;
@@ -117,9 +127,10 @@ void Intersection::Roadrunner_P(vector<Car_in_database>& old_cars, Car& target_c
 			}
 
 			accumulate_car_len[dst_lane_idx] += (car.length + _HEADWAY);
+
 			if (accumulate_car_len[dst_lane_idx] > 0) {
 				const vector<Car_Delay_Position_Record>& dst_car_delay_position = (*(others_road_info[dst_lane_idx]))->car_delay_position;
-
+				
 				car.is_spillback = true;
 				if (dst_car_delay_position.size() < 1 && car.position <= CCZ_DEC2_LEN + CCZ_ACC_LEN && car.current_turn == 'L' && car.lane % LANE_NUM_PER_DIRECTION == 0 && (*(others_road_info[dst_lane_idx]))->avail_len > -(CAR_MAX_LEN)) {
 					// Spillback happed in the front too, go aggressively
@@ -193,15 +204,11 @@ void Intersection::Roadrunner_P(vector<Car_in_database>& old_cars, Car& target_c
 				}
 			}
 
-			//if (car.is_spillback or car.is_spillback_strict) {
-				//cout << car.id << " " << car.is_spillback << " " << car.is_spillback_strict << " " << head_of_line_blocking_position[lane_idx] << endl;
-			//}
-
 			if (car.is_spillback_strict == true) {
 				// remove car from scheduling_cars
 				uint32_t idx_in_scheduling_cars = -1;
-				for (uint32_t idx = 0; idx < (uint32_t)scheduling_cars.size(); idx++) {
-					if (car.id.compare(scheduling_cars[idx].id) == 0) {
+				for (uint32_t idx = 0; idx < (uint32_t)local_scheduling_cars.size(); idx++) {
+					if (car.id.compare(local_scheduling_cars[idx].id) == 0) {
 						idx_in_scheduling_cars = idx;
 						break;
 					}
@@ -212,7 +219,7 @@ void Intersection::Roadrunner_P(vector<Car_in_database>& old_cars, Car& target_c
 				}
 
 				string deleted_car_id = car.id;
-				scheduling_cars.erase(scheduling_cars.begin() + idx_in_scheduling_cars);
+				local_scheduling_cars.erase(local_scheduling_cars.begin() + idx_in_scheduling_cars);
 
 				if (deleted_car_id.compare(target_car.id) == 0) {
 					target_car.D = SCHEDULE_POSPONDED;
@@ -236,15 +243,15 @@ void Intersection::Roadrunner_P(vector<Car_in_database>& old_cars, Car& target_c
 			if (car.position > head_of_line_blocking_position[lane_idx]) {
 				// remove car from scheduling_cars
 				uint32_t idx_in_scheduling_cars = -1;
-				for (uint32_t idx = 0; idx < (uint32_t)scheduling_cars.size(); idx++) {
-					if (car.id.compare(scheduling_cars[idx].id) == 0) {
+				for (uint32_t idx = 0; idx < (uint32_t)local_scheduling_cars.size(); idx++) {
+					if (car.id.compare(local_scheduling_cars[idx].id) == 0) {
 						idx_in_scheduling_cars = idx;
 						break;
 					}
 				}
 
 				string deleted_car_id = car.id;
-				scheduling_cars.erase(scheduling_cars.begin() + idx_in_scheduling_cars);
+				local_scheduling_cars.erase(local_scheduling_cars.begin() + idx_in_scheduling_cars);
 
 				if (deleted_car_id.compare(target_car.id) == 0) {
 					target_car.D = SCHEDULE_POSPONDED;
@@ -269,7 +276,7 @@ void Intersection::Roadrunner_P(vector<Car_in_database>& old_cars, Car& target_c
 
 	// part 4: set constrain (10) (Car on same lane, rear-end collision avoidance)
 	// (1) old car and new car
-	for (const Car_in_database& new_car : scheduling_cars) {
+	for (const Car_in_database& new_car : local_scheduling_cars) {
 		for (const auto& old_car : old_cars) {
 			if (new_car.lane == old_car.lane) {
 				double bound = old_car.length / old_car.speed_in_intersection + (old_car.OT + old_car.D);
@@ -286,10 +293,10 @@ void Intersection::Roadrunner_P(vector<Car_in_database>& old_cars, Car& target_c
 	}
 
 	// (2) two new cars
-	for (uint32_t i = 0; i < (uint32_t)scheduling_cars.size(); i++) {
-		for (uint32_t j = i+1; j < (uint32_t)scheduling_cars.size(); j++) {
-			Car_in_database* car_a_ptr = &(scheduling_cars[i]);
-			Car_in_database* car_b_ptr = &(scheduling_cars[j]);
+	for (uint32_t i = 0; i < (uint32_t)local_scheduling_cars.size(); i++) {
+		for (uint32_t j = i+1; j < (uint32_t)local_scheduling_cars.size(); j++) {
+			Car_in_database* car_a_ptr = &(local_scheduling_cars[i]);
+			Car_in_database* car_b_ptr = &(local_scheduling_cars[j]);
 			
 			if (car_a_ptr->lane == car_b_ptr->lane) {
 				// Ensure car_a_ptr->OT > car_b_ptr->OT
@@ -311,10 +318,10 @@ void Intersection::Roadrunner_P(vector<Car_in_database>& old_cars, Car& target_c
 	}
 
 	// part 5: set constrain (11) (two new cars in the intersection)
-	for (uint32_t i = 0; i < (uint32_t)scheduling_cars.size(); i++) {
-		for (uint32_t j = i + 1; j < (uint32_t)scheduling_cars.size(); j++) {
-			Car_in_database& car_i = scheduling_cars[i];
-			Car_in_database& car_j = scheduling_cars[j];
+	for (uint32_t i = 0; i < (uint32_t)local_scheduling_cars.size(); i++) {
+		for (uint32_t j = i + 1; j < (uint32_t)local_scheduling_cars.size(); j++) {
+			Car_in_database& car_i = local_scheduling_cars[i];
+			Car_in_database& car_j = local_scheduling_cars[j];
 
 			if (car_i.lane == car_j.lane) {
 				continue;
@@ -343,7 +350,7 @@ void Intersection::Roadrunner_P(vector<Car_in_database>& old_cars, Car& target_c
 	}
 
 	// part 6: set constrain (12) (one new car and one old car in the intersection)
-	for (const Car_in_database& new_car : scheduling_cars) {
+	for (const Car_in_database& new_car : local_scheduling_cars) {
 		for (const auto& old_car : old_cars) {
 
 			if (new_car.lane == old_car.lane) {
@@ -372,39 +379,11 @@ void Intersection::Roadrunner_P(vector<Car_in_database>& old_cars, Car& target_c
 
 	// part 7: set objective
 	MPObjective* const objective = solver->MutableObjective();
-	for (const Car_in_database& new_car : scheduling_cars) {
+	for (const Car_in_database& new_car : local_scheduling_cars) {
 		objective->SetCoefficient(D_solver_variables[new_car.id], 1);
 	}
 	objective->SetMinimization();
 
-
-
-	/*
-	
-	cout << "scheduling size: " << (int)scheduling_cars.size() << "  old car size: " << (int)sched_cars->size() << endl;
-	for (const Car_in_database& new_car : scheduling_cars) {
-		cout << new_car.id << " | " << new_car.OT << " | " << new_car.position << " | " << (int)new_car.length << " | " << (int)new_car.lane << " | " << new_car.current_turn << endl;
-	}
-	cout << "------------------  " << endl;
-	for (const auto& [car_id, old_car] : *sched_cars) {
-		cout << car_id << " | " << old_car.OT << " | " << old_car.position << " | " << (int)old_car.length << " | " << (int)old_car.lane << " | " << old_car.D << " | " << old_car.current_turn << endl;
-	}
-
-	if (get<0>(id) == 2 && get<1>(id) == 1) {
-		if (target_car.id
-		("car_898") == 0 || target_car.id.compare("car_805") == 0 || target_car.id.compare("car_816") == 0 || target_car.id.compare("car_745") == 0) {
-			cout << "===============  " << get<0>(id) << "," << get<1>(id) << endl;
-			cout << "scheduling size: " << (int)scheduling_cars.size() << "  old car size: " << (int)sched_cars->size() << endl;
-			for (const Car_in_database& new_car : scheduling_cars) {
-				cout << new_car.id << " | " << new_car.OT << " | " << new_car.position << " | " << (int)new_car.length << " | " << (int)new_car.lane << " | " << new_car.current_turn << endl;
-			}
-			cout << "------------------  " << endl;
-			for (const auto& [car_id, old_car] : *sched_cars) {
-				cout << car_id << " | " << old_car.OT << " | " << old_car.position << " | " << (int)old_car.length << " | " << (int)old_car.lane << " | " << old_car.D << " | " << old_car.current_turn << endl;
-			}
-		}
-	}
-	*/
 
 	// part 8: solve the problem
 	const MPSolver::ResultStatus result_status = solver->Solve();
@@ -414,7 +393,7 @@ void Intersection::Roadrunner_P(vector<Car_in_database>& old_cars, Car& target_c
 		cout << "The problem has no solution!" << endl;
 
 		cout << "==============" << endl;
-		for (auto& car : scheduling_cars) {
+		for (auto& car : local_scheduling_cars) {
 			cout << car.id << " | " << car.position << " | " << (int)car.length << " | " << car.OT << " ||| ";
 		}
 		cout << endl;

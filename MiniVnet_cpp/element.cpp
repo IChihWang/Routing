@@ -58,7 +58,6 @@ Intersection::~Intersection() {
 }
 
 void Intersection::my_own_destructure() {
-
 	for (const pair<string, Car*>& car_data : *stored_cars) {
 		Car* car_ptr = car_data.second;
 		delete_myself_from_car_record(*car_ptr);
@@ -113,8 +112,6 @@ void Intersection::delete_car_from_intersection(Car& car, const string& type) {
 	}
 
 	stored_cars->erase(car.id);
-	delete_myself_from_car_record(car);
-
 }
 
 void Intersection::delete_myself_from_car_record(Car& car) {
@@ -204,17 +201,6 @@ tuple<bool, double> Intersection::is_GZ_full(const Car& car, const double& posit
 	// Tell if the intersection is full and the car have to wait
 
 	if (sched_accumulated_size[car.lane] > _GZ_BZ_CCZ_len) {
-		if (car.id == "car_153") {
-			cout << "      11> " << car.id << " " << sched_accumulated_size[car.lane] << " " << _GZ_BZ_CCZ_len << endl;
-			int add_length = 0;
-			for (auto& [car_idd, carr] : *(sched_cars)) {
-				if (carr.lane == car.lane) {
-					cout << car_idd << " " << carr.length << " | ";
-					add_length += carr.length + _HEADWAY;
-				}
-			}
-			cout << endl << "-------- " << add_length << endl;
-		}
 		return tuple<bool, double>(false, position_at_offset);
 	}
 	else {
@@ -222,10 +208,7 @@ tuple<bool, double> Intersection::is_GZ_full(const Car& car, const double& posit
 		// Check if the position offset is valid
 		double tmp_position_at_offset = max(position_at_offset, double(sched_accumulated_size[car.lane]));
 		
-		if (car.id == "car_153") {
-			cout << "      22> " << car.id << " " << position_at_offset << " " << sched_accumulated_size[car.lane] << " " << _GZ_BZ_CCZ_len << endl;
-		}
-		/*
+		// /*
 		vector<Car_in_database> sorted_sched_car_list;
 		for (const auto [check_car_id, check_car] : *sched_cars) {
 			sorted_sched_car_list.push_back(check_car);
@@ -256,15 +239,12 @@ tuple<bool, double> Intersection::is_GZ_full(const Car& car, const double& posit
 		}
 
 		if (tmp_position_at_offset > _GZ_BZ_CCZ_len) {
-			if (car.id == "car_153") {
-				cout << "      33> " << car.id << " " << tmp_position_at_offset << " " << _GZ_BZ_CCZ_len << endl;
-			}
 			return tuple<bool, double>(false, tmp_position_at_offset- (double(_schedule_period) * _V_MAX));
 		}
 		else {
 			return tuple<bool, double>(true, tmp_position_at_offset);
 		}
-		*/
+		// */
 		return tuple<bool, double>(true, tmp_position_at_offset);
 	}
 }

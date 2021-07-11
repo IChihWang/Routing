@@ -56,9 +56,10 @@ public:
 	double position = 0;
 	double delay = 0;
 	double ET = 0;
+	string id;
 
 	Car_Delay_Position_Record(){}
-	Car_Delay_Position_Record(double in_position, const Car_in_database& car): position(in_position), delay(car.D), ET(car.D+car.OT+(car.length+_HEADWAY)/car.speed_in_intersection){}
+	Car_Delay_Position_Record(double in_position, const Car_in_database& car): position(in_position), delay(car.D), ET(car.D+car.OT+(car.length+_HEADWAY)/car.speed_in_intersection), id(car.id){}
 };
 
 class Road_Info {
@@ -110,11 +111,11 @@ public:
 	void add_scheduling_cars(Car_in_database car, Car& target_car);
 	void add_advising_car(Car_in_database car, Car& target_car);
 	void delete_car_from_intersection(Car& car, const string& type);
+	void delete_myself_from_car_record(Car& car);
 	uint16_t get_car_num();
 
 private:
 	void Roadrunner_P(vector<Car_in_database>& copied_scheduling_cars, Car& target_car);
-	void delete_myself_from_car_record(Car& car);
 	void update_my_spillback_info(const Car_in_database& car);
 };
 
@@ -125,7 +126,7 @@ class Car : public Car_in_database {
 public:
 	Coord dst_coord;
 	string state = "";
-	unordered_map<Intersection*, pair<string, double>> records_intersection_in_database;	// intersection_ptr, car_state, absolute_time_stamp
+	unordered_map<Intersection*, string> records_intersection_in_database;	// intersection_ptr, car_state, absolute_time_stamp
 	
 	// temporary variables for routing
 	Coord src_coord;

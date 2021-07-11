@@ -82,16 +82,10 @@ Car_Info_In_Intersection IntersectionManager::get_car_info_for_route(const strin
 			}
 
 			if (compare_car_idx == lane_info.car_delay_position.size()) {
-				if (car_id == "car_384") {
-					cout << car_id << " a " << time_offset << " " << 2.5 * ROUTING_PERIOD << endl;
-				}
 				// No referenced delay (spillback_strict or exceed GZ), pospond routing
 				return Car_Info_In_Intersection(true);
 			}
 			else if (lane_info.car_delay_position[compare_car_idx].ET > 2.5 * ROUTING_PERIOD) {
-				if (car_id == "car_384") {
-					cout << car_id << " b " << time_offset << " " << 2.5 * ROUTING_PERIOD << endl;
-				}
 				// Able to wait until next routing period
 				return Car_Info_In_Intersection(true);
 			}
@@ -99,10 +93,6 @@ Car_Info_In_Intersection IntersectionManager::get_car_info_for_route(const strin
 				// Otherwise, route now!
 				double diff_pos = position - TOTAL_LEN;
 				time_offset = max(diff_pos / V_MAX, lane_info.car_delay_position[compare_car_idx].ET);
-
-				if (car_id == "car_384") {
-					cout << car_id << " c " << time_offset << " " << 2.5 * ROUTING_PERIOD << endl;
-				}
 
 				if (time_offset > 2.5 * ROUTING_PERIOD) {
 					// Too far away from the start of routing
@@ -113,10 +103,6 @@ Car_Info_In_Intersection IntersectionManager::get_car_info_for_route(const strin
 		else {
 			double diff_pos = position - TOTAL_LEN;
 			time_offset = diff_pos / V_MAX;
-
-			if (car_id == "car_384") {
-				cout << car_id << " d " << time_offset << " " << 2.5 * ROUTING_PERIOD << endl;
-			}
 
 			if (time_offset > 2.5 * ROUTING_PERIOD) {
 				// Too far away from the start of routing
@@ -408,12 +394,6 @@ void IntersectionManager::run(double simu_step) {
 		string lane_id = traci.vehicle.getLaneID(car_id);
 		if (find(in_lanes.begin(), in_lanes.end(), lane_id) == in_lanes.end()) {
 			traci.vehicle.setSpeed(car_id, car_ptr->speed_in_intersection);
-
-			/*
-			if ((car_ptr->Leave_T == 0)) {
-				cout << car_id << "  " << car_ptr->OT + car_ptr->D << " : " << car_ptr->OT << " " << car_ptr->D << endl;
-			}
-			*/
 
 			car_ptr->Leave_T = simu_step;
 
