@@ -315,7 +315,7 @@ vector<vector<reference_wrapper<Car>>> choose_car_to_thread_group(vector<string>
 
 				if (abs(expected_arrive_timestamp - _car_dict[car_id].time_offset_step) > int(_CAR_TIME_ERROR / _schedule_period)) {
 					cars_to_add.insert(car_id);
-					cout << car_id << " " << abs(expected_arrive_timestamp - _car_dict[car_id].time_offset_step) << " " << int(_CAR_TIME_ERROR / _schedule_period) << endl;
+					//cout << car_id << " " << abs(expected_arrive_timestamp - _car_dict[car_id].time_offset_step) << " " << int(_CAR_TIME_ERROR / _schedule_period) << endl;
 				}
 			}
 		}
