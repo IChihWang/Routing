@@ -1,6 +1,7 @@
 #pragma once
 #include <tuple>
 #include <map>
+#include <cmath>
 #include "global.h"
 #include "LaneAdviser.h"
 using namespace std;

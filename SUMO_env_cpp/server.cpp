@@ -41,7 +41,7 @@ SOCKET initial_client_handler() {
 	sockAddr.sin_port = htons(ROUTER_PORT);
 
 	// Connect socket to the port
-	while (connect(client_sock, (SOCKADDR*)&sockAddr, sizeof(sockAddr)) < 0) {
+	while (connect(client_sock, (struct sockaddr*)&sockAddr, sizeof(sockAddr)) < 0) {
 		cout << "trying to connect" << endl;
 		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 		// closesocket(client_sock);
