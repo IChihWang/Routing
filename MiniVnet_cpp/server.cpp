@@ -79,7 +79,7 @@ SOCKET initial_server_handler() {
 
 	stringstream ss(buffer);
 	vector<float> results;
-	for (int i = 0; i < 12; i++) {
+	for (int i = 0; i < 13; i++) {
 		string substr;
 		getline(ss, substr, ':');
 		getline(ss, substr, ':');
@@ -101,18 +101,19 @@ SOCKET initial_server_handler() {
 	_TOP_N_CONGESTED = uint8_t(results[9]);
 	_thread_num = uint8_t(results[10]);
 	_ITERATION_NUM = uint8_t(results[11]);
+	_CAR_TIME_ERROR = results[12];
 
 	{
 		string substr;
 		getline(ss, substr, ':');
 		getline(ss, substr, ':');
-		stringstream tmp_ss(substr);
-		tmp_ss >> _ARRIVAL_RATE;
+		stringstream tmp_ss2(substr);
+		tmp_ss2 >> _ARRIVAL_RATE;
 
 		getline(ss, substr, ':');
 		getline(ss, substr, ':');
-		stringstream tmp_ss2(substr);
-		tmp_ss2 >> _RANDOM_SEED;
+		stringstream tmp_ss3(substr);
+		tmp_ss3 >> _RANDOM_SEED;
 	}
 
 	_routing_period = _schedule_period * _routing_period_num;

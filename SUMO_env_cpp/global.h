@@ -66,6 +66,7 @@ extern uint8_t _THREAD_NUM;
 extern uint8_t _ITERATION_NUM;
 extern string _RANDOM_SEED;
 extern string _ARRIVAL_RATE;
+extern string _CAR_TIME_ERROR;
 
 
 // Claim in main.cpp

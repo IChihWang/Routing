@@ -62,6 +62,7 @@ SOCKET initial_client_handler() {
 	init_info += ":TOP_N_CONGESTED:" + to_string(_TOP_N_CONGESTED);
 	init_info += ":_THREAD_NUM:" + to_string(_THREAD_NUM);
 	init_info += ":_ITERATION_NUM:" + to_string(_ITERATION_NUM);
+	init_info += ":_ITERATION_NUM:" + _CAR_TIME_ERROR;
 	init_info += ":_ARRIVAL_RATE:" + _ARRIVAL_RATE;
 	init_info += ":_RANDOM_SEED:" + _RANDOM_SEED;
 

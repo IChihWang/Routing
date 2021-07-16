@@ -23,6 +23,7 @@ uint8_t _THREAD_NUM;
 string _ARRIVAL_RATE;
 string _RANDOM_SEED;
 uint8_t _ITERATION_NUM;
+string _CAR_TIME_ERROR;
 
 unordered_map<string, string> src_dst_dict;
 
@@ -32,7 +33,7 @@ void run_sumo(Thread_Worker& router_thread);
 
 int main(int argc, char* argv[])
 {
-    cout << "Usage: ./main <grid_size> <src_dst_file.json> <_N_TIME_STEP> <_TIME_STEP> <_TOP_N_CONGESTED> <_CHOOSE_CAR_OPTION> <_THREAD_NUM> <_ITERATION_NUM> <_ARRIVAL_RATE> <_RANDOM_SEED>" << endl;
+    cout << "Usage: ./main <grid_size> <src_dst_file.json> <_N_TIME_STEP> <_TIME_STEP> <_TOP_N_CONGESTED> <_CHOOSE_CAR_OPTION> <_THREAD_NUM> <_ITERATION_NUM> <_CAR_TIME_ERROR> <_ARRIVAL_RATE> <_RANDOM_SEED>" << endl;
     string src_dst_file_name = "data/routes/";
     // Parse the input
     if (argc >= 5) {
@@ -45,8 +46,9 @@ int main(int argc, char* argv[])
         _CHOOSE_CAR_OPTION = stoi(argv[6]);
         _THREAD_NUM = stoi(argv[7]);
         _ITERATION_NUM = stoi(argv[8]);
-        _ARRIVAL_RATE = argv[9];
-        _RANDOM_SEED = argv[10];
+        _CAR_TIME_ERROR = argv[9];
+        _ARRIVAL_RATE = argv[10];
+        _RANDOM_SEED = argv[11];
     }
     else {
         cout << "Wrong number of arguments" << endl;
@@ -358,7 +360,7 @@ void run_sumo(Thread_Worker& router_thread) {
     // Statistics
     string file_name_prefix = string("result/") + to_string(_grid_size) + "_" + 
         to_string(_TOP_N_CONGESTED) + "_" + to_string(_CHOOSE_CAR_OPTION) + "_" + 
-        to_string(_THREAD_NUM) + "_" + to_string(_ITERATION_NUM) + "_" + _ARRIVAL_RATE + "_" + _RANDOM_SEED + "_";
+        to_string(_THREAD_NUM) + "_" + to_string(_ITERATION_NUM) + "_" + _CAR_TIME_ERROR + "_" + _ARRIVAL_RATE + "_" + _RANDOM_SEED + "_";
     ofstream all_car_file(file_name_prefix + "allCars.csv");
     ofstream statistic_file("result/statistic.csv", ofstream::app);
 
@@ -382,8 +384,8 @@ void run_sumo(Thread_Worker& router_thread) {
     avg_diff_exit_time /= all_diff_exit_time.size();
     avg_shortest_travel_time /= all_shortest_time.size();
 
-    statistic_file << "Grid size, top N, choose_car, thread_num, iteration_num, arrival_rate, rand_seed, avg_shortest_travel_time, avg_travel, avg_delay, arrival_car_num, departured_car_num, diff_exit_time" << endl;
-    statistic_file << (int)_grid_size << ',' << (int)_TOP_N_CONGESTED << ',' << (int)_CHOOSE_CAR_OPTION << ',' << (int)_THREAD_NUM << ',' << (int)_ITERATION_NUM << ',';
+    statistic_file << "Grid size, top N, choose_car, thread_num, iteration_num, _CAR_TIME_ERROR, arrival_rate, rand_seed, avg_shortest_travel_time, avg_travel, avg_delay, arrival_car_num, departured_car_num, diff_exit_time" << endl;
+    statistic_file << (int)_grid_size << ',' << (int)_TOP_N_CONGESTED << ',' << (int)_CHOOSE_CAR_OPTION << ',' << (int)_THREAD_NUM << ',' << (int)_ITERATION_NUM << ',' << _CAR_TIME_ERROR << ',';
     statistic_file << _ARRIVAL_RATE << ',' << _RANDOM_SEED << ',' << avg_shortest_travel_time << ',' << avg_travel_time << ',' << avg_delay_time << ',' << arrival_car_num << ',' << all_travel_time.size() << ',' << avg_diff_exit_time << endl;
     
     all_car_file.close();

@@ -16,6 +16,7 @@ uint8_t _ITERATION_NUM;
 string _ARRIVAL_RATE;
 string _RANDOM_SEED;
 double _NOW_SIMU_TIME = 0;
+double _CAR_TIME_ERROR = 0;
 
 
 
@@ -45,7 +46,7 @@ int main(int argc, char const* argv[]) {
 	// Create files for writing the results
 	string file_name_prefix = string("result/") + to_string(_grid_size) + "_" +
 		to_string(_TOP_N_CONGESTED) + "_" + to_string(_CHOOSE_CAR_OPTION) + "_" +
-		to_string(_thread_num) + "_" + _ARRIVAL_RATE + "_" + _RANDOM_SEED + "_";
+		to_string(_thread_num) + "_" + to_string(_ITERATION_NUM) + "_" + to_string(_CAR_TIME_ERROR) + "_" + _ARRIVAL_RATE + "_" + _RANDOM_SEED + "_";
 	route_result_file.open(file_name_prefix + "routes.csv");
 	all_computation_time_file.open(file_name_prefix + "computation_time.csv");
 	statistic_file.open("result/statistic.csv", ofstream::app);
@@ -86,8 +87,8 @@ int main(int argc, char const* argv[]) {
 		}
 	}
 
-	statistic_file << "Grid size, top N, choose_car, thread_num, arrival_rate, rand_seed, avg_compuation_time, avg_route_num, avg_new_car_num, total_new_car_num, compuation_time_per_car, compuation_time_per_new_car, routing_count" << endl;
-	statistic_file << (int)_grid_size << ',' << (int)_TOP_N_CONGESTED << ',' << (int)_CHOOSE_CAR_OPTION << ',' << (int)_thread_num << ',';
+	statistic_file << "Grid size, top N, choose_car, thread_num, iteration_num, _CAR_TIME_ERROR, arrival_rate, rand_seed, avg_compuation_time, avg_route_num, avg_new_car_num, total_new_car_num, compuation_time_per_car, compuation_time_per_new_car, routing_count" << endl;
+	statistic_file << (int)_grid_size << ',' << (int)_TOP_N_CONGESTED << ',' << (int)_CHOOSE_CAR_OPTION << ',' << (int)_thread_num << ',' << _ITERATION_NUM << ',' << _CAR_TIME_ERROR << ',';
 	statistic_file << _ARRIVAL_RATE << ',' << _RANDOM_SEED << ',' << total_compuation_time / routing_count << ','; 
 	statistic_file << total_routing_car_num / routing_count << ',' << total_new_car_num / routing_count << ',';
 	statistic_file << total_new_car_num << ',' << total_compuation_time/ total_routing_car_num << ',' << total_compuation_time / total_new_car_num << ',' << routing_count << endl;
@@ -182,7 +183,13 @@ string handle_request(string &in_str) {
 		affected_intersections.clear();
 
 		// routing_with_groups(route_groups, routes_dict);
-		routing_with_groups_thread(route_groups, routes_dict);
+		bool is_no_routing = true;
+		for (auto route_group : route_groups) {
+			if (route_group.size() > 0)
+				is_no_routing = false;
+		}
+		if (!is_no_routing)
+			routing_with_groups_thread(route_groups, routes_dict);
 		
 		// Find the next top N congested list
 		add_intersection_to_reschedule_list();

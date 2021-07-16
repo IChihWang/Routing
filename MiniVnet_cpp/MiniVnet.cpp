@@ -175,6 +175,7 @@ vector<vector<reference_wrapper<Car>>> choose_car_to_thread_group(vector<string>
 	* _CHOOSE_CAR_OPTION == 1: without BFS on rescheduling/ Not ideal but fast
 	* _CHOOSE_CAR_OPTION == 2: Round-robin all cars on rescheduling (one thread on rescheduling)/ most ideal but very slow
 	* _CHOOSE_CAR_OPTION == 3: No rescheduling
+	* _CHOOSE_CAR_OPTION == 4: Cars that have high errors
 	*/
 
 	for (int i = 0; i < _thread_num; i++) {
@@ -247,6 +248,42 @@ vector<vector<reference_wrapper<Car>>> choose_car_to_thread_group(vector<string>
 			}
 		}
 
+		set<string> cars_to_add;
+		for (const auto& [car_id, car] : _car_dict) {
+			if (find(car_added_list.begin(), car_added_list.end(), car_id) == car_added_list.end()) {
+				if (find(new_car_ids.begin(), new_car_ids.end(), car_id) != new_car_ids.end()) {
+					// New car, skip
+					continue;
+				}
+				if (_car_dict[car_id].state == "OLD" || _car_dict[car_id].state == "NEW") {
+					int expected_arrive_timestamp = -1;
+					for (const Node_in_Path& node_in_path_record : _car_dict[car_id].path_data) {
+						if (_car_dict[car_id].src_coord == node_in_path_record.recordings[0].last_intersection_id) {
+							expected_arrive_timestamp = node_in_path_record.recordings[0].time_stamp;
+							expected_arrive_timestamp -= _routing_period_num;
+							break;
+						}
+					}
+
+					if (abs(expected_arrive_timestamp - _car_dict[car_id].time_offset_step) > int(_CAR_TIME_ERROR / _schedule_period)) {
+						cars_to_add.insert(car_id);
+						cout << car_id << " " << abs(expected_arrive_timestamp - _car_dict[car_id].time_offset_step) << " " << int(_CAR_TIME_ERROR / _schedule_period) << endl;
+					}
+				}
+			}
+		}
+
+		for (const string& car_id : cars_to_add) {
+			// Find the thread with minimum size to store the current tree
+			vector<reference_wrapper<Car>>& target_result = *min_element(results.begin(), results.end(),
+				[](const vector<reference_wrapper<Car>>& a, const vector<reference_wrapper<Car>>& b) -> bool
+				{
+					return a.size() < b.size();
+				});
+
+			target_result.push_back(_car_dict[car_id]);
+		}
+
 	}
 	else if (_CHOOSE_CAR_OPTION == 1) {
 		set<string> cars_to_add;
@@ -258,6 +295,28 @@ vector<vector<reference_wrapper<Car>>> choose_car_to_thread_group(vector<string>
 					cars_to_add.insert(car_id);
 				}
 
+			}
+		}
+
+		for (const auto& [car_id, car] : _car_dict) {
+			if (find(new_car_ids.begin(), new_car_ids.end(), car_id) != new_car_ids.end()) {
+				// New car, skip
+				continue;
+			}
+			if (_car_dict[car_id].state == "OLD" || _car_dict[car_id].state == "NEW") {
+				int expected_arrive_timestamp = -1;
+				for (const Node_in_Path& node_in_path_record : _car_dict[car_id].path_data) {
+					if (_car_dict[car_id].src_coord == node_in_path_record.recordings[0].last_intersection_id) {
+						expected_arrive_timestamp = node_in_path_record.recordings[0].time_stamp;
+						expected_arrive_timestamp -= _routing_period_num;
+						break;
+					}
+				}
+
+				if (abs(expected_arrive_timestamp - _car_dict[car_id].time_offset_step) > int(_CAR_TIME_ERROR / _schedule_period)) {
+					cars_to_add.insert(car_id);
+					cout << car_id << " " << abs(expected_arrive_timestamp - _car_dict[car_id].time_offset_step) << " " << int(_CAR_TIME_ERROR / _schedule_period) << endl;
+				}
 			}
 		}
 
