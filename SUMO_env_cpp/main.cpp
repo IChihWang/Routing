@@ -353,8 +353,9 @@ void run_sumo(Thread_Worker& router_thread) {
 
         if (traci.simulation.getEndingTeleportNumber() > 0) {
             cout << "Collision warning!!" << endl;
-            system("Pause");
-        }
+            //system("Pause");
+            exit(-1);
+	}
     }
 
     // Statistics
