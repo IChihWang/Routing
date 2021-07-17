@@ -2,7 +2,7 @@ rm MiniVnet_cpp/result/*
 rm SUMO_env_cpp/result/*
 rm -rf result
 
-export LD_LIBRARY_PATH=/local/mwang/ortools/lib
+export LD_LIBRARY_PATH=~/ortools/lib
 
 for rSeed in $(seq 0 1 9)
 do

@@ -66,9 +66,9 @@ if __name__ == "__main__":
 
         os.system(background + sumo + " -c data/UDTA.sumocfg --step-length " + str(cfg.TIME_STEP)
                     + " --collision.mingap-factor 0 -n data/net/"+net_name
-                    + " -r data/routes/"+route_name + " --remote-port " + str(PORT))
+                    + " -r data/routes/"+route_name + " --remote-port " + str(PORT) + " &")
 
-        #'''
+        '''
         cpp_cmd = './x64/Release/main '
         cpp_cmd += str(cfg.INTER_SIZE) + " "
         cpp_cmd += "%i_%s_%i_src_dst.json " % (cfg.INTER_SIZE, arrival_rate, seed)
@@ -81,7 +81,8 @@ if __name__ == "__main__":
         cpp_cmd += sys.argv[8] + " "    # _CAR_TIME_ERROR
         cpp_cmd += str(arrival_rate) + " "
         cpp_cmd += str(seed) + " "
-        cpp_cmd += " &"
+        #cpp_cmd += " &"
+        print(cpp_cmd)
         os.system(cpp_cmd)
         #'''
 
