@@ -24,7 +24,7 @@ SOCKET initial_server_handler() {
 #endif
 
 	SOCKET server_fd;
-	server_fd = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
+	server_fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 	if (server_fd <= 0) {
 		cout << "socket creation failed." << endl;
 		closesocket(server_fd);
@@ -32,9 +32,13 @@ SOCKET initial_server_handler() {
 		exit(EXIT_FAILURE);
 	}
 
-	char opt = 1;
+	bool opt = false;
+	struct linger so_linger;
+	so_linger.l_onoff = true;
+	so_linger.l_linger = 0;
+
 	// Forcefully attaching socket to the port 8080
-	if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt))) {
+	if (setsockopt(server_fd, SOL_SOCKET, SO_LINGER, &so_linger, sizeof(so_linger)) < 0) {
 		cout << "socket setsockopt failed." << endl;
 		closesocket(server_fd);
 		ClearWinSock();
