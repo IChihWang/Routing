@@ -68,7 +68,7 @@ if __name__ == "__main__":
                     + " --collision.mingap-factor 0 -n data/net/"+net_name
                     + " -r data/routes/"+route_name + " --remote-port " + str(PORT) + " &")
 
-        '''
+        #'''
         cpp_cmd = './x64/Release/main '
         cpp_cmd += str(cfg.INTER_SIZE) + " "
         cpp_cmd += "%i_%s_%i_src_dst.json " % (cfg.INTER_SIZE, arrival_rate, seed)

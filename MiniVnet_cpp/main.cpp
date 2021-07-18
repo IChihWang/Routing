@@ -88,7 +88,7 @@ int main(int argc, char const* argv[]) {
 	}
 
 	statistic_file << "Grid size, top N, choose_car, thread_num, iteration_num, _CAR_TIME_ERROR, arrival_rate, rand_seed, avg_compuation_time, avg_route_num, avg_new_car_num, total_new_car_num, compuation_time_per_car, compuation_time_per_new_car, routing_count" << endl;
-	statistic_file << (int)_grid_size << ',' << (int)_TOP_N_CONGESTED << ',' << (int)_CHOOSE_CAR_OPTION << ',' << (int)_thread_num << ',' << _ITERATION_NUM << ',' << _CAR_TIME_ERROR << ',';
+	statistic_file << (int)_grid_size << ',' << (int)_TOP_N_CONGESTED << ',' << (int)_CHOOSE_CAR_OPTION << ',' << (int)_thread_num << ',' << (int)_ITERATION_NUM << ',' << _CAR_TIME_ERROR << ',';
 	statistic_file << _ARRIVAL_RATE << ',' << _RANDOM_SEED << ',' << total_compuation_time / routing_count << ','; 
 	statistic_file << total_routing_car_num / routing_count << ',' << total_new_car_num / routing_count << ',';
 	statistic_file << total_new_car_num << ',' << total_compuation_time/ total_routing_car_num << ',' << total_compuation_time / total_new_car_num << ',' << routing_count << endl;
