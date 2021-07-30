@@ -101,7 +101,7 @@ SOCKET initial_server_handler() {
 	_TOP_N_CONGESTED = uint8_t(results[9]);
 	_thread_num = uint8_t(results[10]);
 	_ITERATION_NUM = uint8_t(results[11]);
-	_CAR_TIME_ERROR = results[12];
+	_CAR_TIME_ERROR = uint8_t(results[12]);
 
 	{
 		string substr;

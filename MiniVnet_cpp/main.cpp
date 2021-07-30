@@ -16,7 +16,7 @@ uint8_t _ITERATION_NUM;
 string _ARRIVAL_RATE;
 string _RANDOM_SEED;
 double _NOW_SIMU_TIME = 0;
-double _CAR_TIME_ERROR = 0;
+int _CAR_TIME_ERROR = 0;
 
 
 
