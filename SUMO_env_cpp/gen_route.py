@@ -39,53 +39,53 @@ def generate_routefile_with_src_dst(inter_size, arrival_rate, rand_seed, time_st
 
         y_idx = 1
         route_id = (4*inter_size-1) - (0*inter_size + (x_idx-1))
-        src_lane = "00%i"%(y_idx) + "_" + "00%i"%(x_idx) + "_1"
+        src_lane = "%03d"%(y_idx) + "_" + "%03d"%(x_idx) + "_1"
         route_str += "\t<route id=\""
         route_str += str(route_id)
         route_str += "\" edges=\""
         route_str += " " + str(src_lane)
         route_str += "\"/>\n"
         route_list.append(str(route_id))
-        dst_id = "00%i"%(y_idx-1) + "_" + "00%i"%(x_idx)
+        dst_id = "%03d"%(y_idx-1) + "_" + "%03d"%(x_idx)
         dst_idx_dst_id_map[route_id] = dst_id
 
 
         y_idx = inter_size
         route_id = (4*inter_size-1) - (1*inter_size + (x_idx-1))
 
-        src_lane = "00%i"%(x_idx) + "_" + "00%i"%(y_idx) + "_2"
+        src_lane = "%03d"%(x_idx) + "_" + "%03d"%(y_idx) + "_2"
         route_str += "\t<route id=\""
         route_str += str(route_id)
         route_str += "\" edges=\""
         route_str += " " + str(src_lane)
         route_str += "\"/>\n"
         route_list.append(str(route_id))
-        dst_id = "00%i"%(x_idx) + "_" + "00%i"%(y_idx+1)
+        dst_id = "%03d"%(x_idx) + "_" + "%03d"%(y_idx+1)
         dst_idx_dst_id_map[route_id] = dst_id
 
 
         y_idx = inter_size
         route_id = (4*inter_size-1) - (2*inter_size + (inter_size - x_idx))
-        src_lane = "00%i"%(y_idx) + "_" + "00%i"%(x_idx) + "_3"
+        src_lane = "%03d"%(y_idx) + "_" + "%03d"%(x_idx) + "_3"
         route_str += "\t<route id=\""
         route_str += str(route_id)
         route_str += "\" edges=\""
         route_str += " " + str(src_lane)
         route_str += "\"/>\n"
         route_list.append(str(route_id))
-        dst_id = "00%i"%(y_idx+1) + "_" + "00%i"%(x_idx)
+        dst_id = "%03d"%(y_idx+1) + "_" + "%03d"%(x_idx)
         dst_idx_dst_id_map[route_id] = dst_id
 
         y_idx = 1
         route_id = (4*inter_size-1) - (3*inter_size + (inter_size - x_idx))
-        src_lane = "00%i"%(x_idx) + "_" + "00%i"%(y_idx) + "_4"
+        src_lane = "%03d"%(x_idx) + "_" + "%03d"%(y_idx) + "_4"
         route_str += "\t<route id=\""
         route_str += str(route_id)
         route_str += "\" edges=\""
         route_str += " " + str(src_lane)
         route_str += "\"/>\n"
         route_list.append(str(route_id))
-        dst_id = "00%i"%(x_idx) + "_" + "00%i"%(y_idx-1)
+        dst_id = "%03d"%(x_idx) + "_" + "%03d"%(y_idx-1)
         dst_idx_dst_id_map[route_id] = dst_id
 
     print(route_str, file=routes)
