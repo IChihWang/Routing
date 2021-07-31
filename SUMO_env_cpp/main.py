@@ -48,7 +48,7 @@ if __name__ == "__main__":
 
     # Initial SUMO
     #sumoBinary = checkBinary('sumo-gui')
-    sumo = "sumo-gui "
+    sumo = "sumo "
 
     # 0. Generate the intersection information files
     os.system("bash gen_intersection/gen_data.sh " + str(cfg.LANE_NUM_PER_DIRECTION))
