@@ -53,7 +53,7 @@ SOCKET initial_server_handler() {
 
 	// Forcefully attaching socket to the port 8080
 	if (bind(server_fd, (struct sockaddr*)&sockAddr, sizeof(sockAddr)) < 0) {
-		
+
 		cout << "socket bind failed." << endl;
 		closesocket(server_fd);
 		ClearWinSock();
@@ -106,7 +106,7 @@ SOCKET initial_server_handler() {
 	_TOP_N_CONGESTED = uint8_t(results[9]);
 	_thread_num = uint8_t(results[10]);
 	_ITERATION_NUM = uint8_t(results[11]);
-	_CAR_TIME_ERROR = results[12];
+	_CAR_TIME_ERROR = uint8_t(results[12]);
 
 	{
 		string substr;

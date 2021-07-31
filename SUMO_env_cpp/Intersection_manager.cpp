@@ -1,4 +1,4 @@
-#include "Intersection_manager.h"
+#include "intersection_manager.h"
 #include "Car.h"
 #include "global.h"
 #include <sstream>
@@ -411,11 +411,19 @@ void IntersectionManager::run(double simu_step) {
 	for (const auto& [car_id, car_ptr] : pz_list) {
 		if (car_ptr->position <= CCZ_LEN && car_ptr->is_scheduled == true) {
 			to_be_deleted_CC.push_back(car_id);
-
+			/*
 			if (car_ptr->CC_state == "Preseting_done") {
 				car_ptr->CC_state = "CruiseControl_ready";
 			}
 			else if (car_ptr->position <= CCZ_LEN) {
+				to_be_deleted_CC.push_back(car_id);
+
+				if ((car_ptr->CC_state == "") || (!(car_ptr->CC_state.find("Platoon") != string::npos || car_ptr->CC_state.find("Entering") != string::npos))) {
+					car_ptr->CC_state = "Keep_Max_speed";
+				}
+			}
+			*/
+			if (car_ptr->position <= CCZ_LEN) {
 				to_be_deleted_CC.push_back(car_id);
 
 				if ((car_ptr->CC_state == "") || (!(car_ptr->CC_state.find("Platoon") != string::npos || car_ptr->CC_state.find("Entering") != string::npos))) {
@@ -574,7 +582,7 @@ void IntersectionManager::run(double simu_step) {
 			az_list[car_id] = car_ptr;
 
 			traci.vehicle.setMinGap(car_id, 3);
-			traci.vehicle.setLaneChangeMode(car_id, 784);
+			traci.vehicle.setLaneChangeMode(car_id, 0b000100100000);
 
 			double time_in_AZ = 9999.91;
 			uint8_t advised_lane = lane_advisor.advise_lane(*(car_list[car_id]), spillback_lane_advise_avoid);
@@ -631,7 +639,7 @@ void IntersectionManager::run(double simu_step) {
 	}
 
 	for (uint8_t lane_idx = 0; lane_idx < 4 * LANE_NUM_PER_DIRECTION; lane_idx++) {
-		my_road_info[lane_idx].avail_len = TOTAL_LEN - car_accumulate_len_lane[lane_idx] - (HEADWAY + CCZ_ACC_LEN + 2*CAR_MAX_LEN);
+		my_road_info[lane_idx].avail_len = TOTAL_LEN - car_accumulate_len_lane[lane_idx] - (HEADWAY + CCZ_ACC_LEN + 3*CAR_MAX_LEN);
 		
 		my_road_info[lane_idx].car_delay_position = lane_car_delay_position[lane_idx];
 	}

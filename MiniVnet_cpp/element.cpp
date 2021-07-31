@@ -121,7 +121,7 @@ void Intersection::delete_myself_from_car_record(Car& car) {
 void Intersection::update_my_spillback_info(const Car_in_database& car) {
 
 	const uint8_t& lane_idx = car.lane;
-	(my_road_info[lane_idx])->avail_len = _TOTAL_LEN - (GZ_accumulated_size[car.lane] + AZ_accumulated_size[car.lane] + CCZ_ACC_LEN + _HEADWAY + 2 * CAR_MAX_LEN);
+	(my_road_info[lane_idx])->avail_len = _TOTAL_LEN - (GZ_accumulated_size[car.lane] + AZ_accumulated_size[car.lane] + CCZ_ACC_LEN + _HEADWAY + 3 * CAR_MAX_LEN);
 
 	// Filter out cars on the same lane
 	vector<reference_wrapper<const Car_in_database>> scheduled_car_list;

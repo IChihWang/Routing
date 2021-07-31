@@ -48,7 +48,7 @@ if __name__ == "__main__":
 
     # Initial SUMO
     #sumoBinary = checkBinary('sumo-gui')
-    sumo = "sumo"
+    sumo = "sumo "
 
     # 0. Generate the intersection information files
     os.system("bash gen_intersection/gen_data.sh " + str(cfg.LANE_NUM_PER_DIRECTION))
@@ -61,12 +61,12 @@ if __name__ == "__main__":
         # 3. Start TraCi
         net_name = "lane%iby%i.net.xml" % (cfg.INTER_SIZE, cfg.INTER_SIZE)
         route_name = "%i_%s_%i.rou.xml" % (cfg.INTER_SIZE, arrival_rate, seed)
-        #background = "START /B "
         background = ""
 
         os.system(background + sumo + " -c data/UDTA.sumocfg --step-length " + str(cfg.TIME_STEP)
                     + " --collision.mingap-factor 0 -n data/net/"+net_name
-                    + " -r data/routes/"+route_name + " --remote-port " + str(PORT) + " &")
+                    + " -r data/routes/"+route_name + " --remote-port " + str(PORT) + " &"
+                    + " --collision.action none")
 
         #'''
         cpp_cmd = './x64/Release/main '
@@ -82,7 +82,6 @@ if __name__ == "__main__":
         cpp_cmd += str(arrival_rate) + " "
         cpp_cmd += str(seed) + " "
         #cpp_cmd += " &"
-        print(cpp_cmd)
         os.system(cpp_cmd)
         #'''
 

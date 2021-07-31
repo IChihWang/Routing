@@ -9,6 +9,7 @@
 #include "server.h"
 #include "json.hpp"
 #include "thread_worker.h"
+#include <chrono>	// Measure runtime
 
 using namespace std;
 using json = nlohmann::json;
@@ -57,7 +58,7 @@ int main(int argc, char* argv[])
 
     // Read src_dst_dict
     read_src_dst_file(src_dst_file_name);
-    
+
     // Initialization
     initial_client_handler();
     initial_sumo();
@@ -136,6 +137,7 @@ void run_sumo(Thread_Worker& router_thread) {
     unordered_map<string, Car_Info> car_info_dict;            // Record car states
     vector<string> to_delete_car_in_database;     // Car exit the network
 
+    vector<string> first_1000_car_id; // First 1000 cars
     unordered_map<string, double> all_travel_time;      // Record the travel time for experimental evaluation
     unordered_map<string, double> all_delay_time;      // Record the travel delay time for experimental evaluation
     unordered_map<string, double> all_shortest_time;      // Record the travel delay time for experimental evaluation
@@ -247,9 +249,9 @@ void run_sumo(Thread_Worker& router_thread) {
                     }
                     car_info_dict[car_id].route = pre_route_part + car_path + "SS";     //Add "next turn" at the end
 
-                    if (car_info_dict[car_id].route_state == "NEW" && car_info_dict[car_id].intersection_manager_ptr->car_list[car_id]->position <= TOTAL_LEN) {
-                        cout << "warning!!! " << car_id << " " << car_info_dict[car_id].intersection_manager_ptr->car_list[car_id]->position << endl;
-                    }
+                    //if (car_info_dict[car_id].route_state == "NEW" && car_info_dict[car_id].intersection_manager_ptr->car_list[car_id]->position <= TOTAL_LEN) {
+                        //cout << "warning!!! " << car_id << " " << car_info_dict[car_id].intersection_manager_ptr->car_list[car_id]->position << endl;
+                    //}
 
                     car_info_dict[car_id].route_state = "OLD";
                 }
@@ -276,6 +278,10 @@ void run_sumo(Thread_Worker& router_thread) {
 
                 car_info_dict[car_id].compute_shortest_time(lane_id, dst_node_str);
                 arrival_car_num++;
+                
+                if (first_1000_car_id.size() <= 1000) {
+                    first_1000_car_id.push_back(car_id);
+                }
             }
 
             // Hnadle the car in each intersection
@@ -340,22 +346,25 @@ void run_sumo(Thread_Worker& router_thread) {
             all_delay_time[car_id] = car_travel_time - car_info_dict[car_id].shortest_travel_time;
             all_shortest_time[car_id] = car_info_dict[car_id].shortest_travel_time;
             all_diff_exit_time[car_id] = simu_step - (car_info_dict[car_id].estimated_exit_time);
-            
+                        
             car_info_dict.erase(car_id);
             to_delete_car_in_database.push_back(car_id);    // This is for telling the router to delete the car
         }
-
+        auto begin = chrono::high_resolution_clock::now();
         for (auto& [intersection_id, intersection_manager_ptr] : intersection_map) {
             intersection_manager_ptr->run(simu_step);
         }
+        auto end = chrono::high_resolution_clock::now();
+
+        auto route_time = chrono::duration<double>(end - begin);
+        //cout << "Route_time: " << route_time.count() << " seconds" << endl;
 
         simu_step += _TIME_STEP;
 
         if (traci.simulation.getEndingTeleportNumber() > 0) {
             cout << "Collision warning!!" << endl;
-            //system("Pause");
-            exit(-1);
-	}
+            system("Pause");
+        }
     }
 
     // Statistics
@@ -385,9 +394,25 @@ void run_sumo(Thread_Worker& router_thread) {
     avg_diff_exit_time /= all_diff_exit_time.size();
     avg_shortest_travel_time /= all_shortest_time.size();
 
-    statistic_file << "Grid size, top N, choose_car, thread_num, iteration_num, _CAR_TIME_ERROR, arrival_rate, rand_seed, avg_shortest_travel_time, avg_travel, avg_delay, arrival_car_num, departured_car_num, diff_exit_time" << endl;
+    double avg_first_1000_travel_time = 0;
+    double avg_first_1000_delay_time = 0;
+    double avg_first_1000_shortest_travel_time = 0;
+    for (auto& car_id : first_1000_car_id) {
+        avg_first_1000_shortest_travel_time += all_shortest_time[car_id];
+        avg_first_1000_travel_time += all_travel_time[car_id];
+        avg_first_1000_delay_time += all_delay_time[car_id];
+    }
+    avg_first_1000_travel_time /= first_1000_car_id.size();
+    avg_first_1000_delay_time /= first_1000_car_id.size();
+    avg_first_1000_shortest_travel_time /= first_1000_car_id.size();
+
+    statistic_file << "Grid size, top N, choose_car, thread_num, iteration_num, \
+        _CAR_TIME_ERROR, arrival_rate, rand_seed, avg_shortest_travel_time, avg_travel, \
+        avg_delay, arrival_car_num, departured_car_num, diff_exit_time, 1000_travel_time, \
+        1000_delay_time, 1000_shortest_travel_time, 1000_car_num" << endl;
     statistic_file << (int)_grid_size << ',' << (int)_TOP_N_CONGESTED << ',' << (int)_CHOOSE_CAR_OPTION << ',' << (int)_THREAD_NUM << ',' << (int)_ITERATION_NUM << ',' << _CAR_TIME_ERROR << ',';
-    statistic_file << _ARRIVAL_RATE << ',' << _RANDOM_SEED << ',' << avg_shortest_travel_time << ',' << avg_travel_time << ',' << avg_delay_time << ',' << arrival_car_num << ',' << all_travel_time.size() << ',' << avg_diff_exit_time << endl;
+    statistic_file << _ARRIVAL_RATE << ',' << _RANDOM_SEED << ',' << avg_shortest_travel_time << ',' << avg_travel_time << ',' << avg_delay_time << ',' << arrival_car_num << ',' << all_travel_time.size() << ',' << avg_diff_exit_time << ',';
+    statistic_file << avg_first_1000_travel_time << ',' << avg_first_1000_delay_time << ',' << avg_first_1000_shortest_travel_time << ',' << first_1000_car_id.size() << endl;
     
     all_car_file.close();
     statistic_file.close();

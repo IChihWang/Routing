@@ -6,7 +6,7 @@
         <net-file value="net/lane7by7.net.xml"/>
         <route-files value="routes/7_0.5_0.rou.xml"/>
     </input>
-    
+
     <processing>
         <time-to-teleport value="-1"/>
 		<lanechange.duration value="0"/>
@@ -21,7 +21,7 @@
         <verbose value="true"/>
         <no-step-log value="true"/>
     </report>
-    
+
     <gui_only>
         <start value = 't'/>
     </gui_only>

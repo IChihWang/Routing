@@ -48,6 +48,11 @@ void Car::set_turning(char turn, char next_turn) {
 }
 
 void Car::handle_CC_behavior(map<string, Car*>& car_list) {
+
+	if (is_scheduled and OT + D < -1) {
+		cout << id << " cc_state: " << CC_state << " " << OT + D << endl;;
+	}
+
 	Car* front_car_ptr = nullptr;
 	double front_distance = 0;
 	double front_speed = 0;
@@ -65,6 +70,7 @@ void Car::handle_CC_behavior(map<string, Car*>& car_list) {
 			}
 		}
 	}
+
 	CC_front_car = front_car_ptr;
 	front_speed = CC_get_front_speed();
 	
@@ -82,7 +88,12 @@ void Car::handle_CC_behavior(map<string, Car*>& car_list) {
 	}
 
 	// 2. If the car is ready for stopping
-	if ((position < (2 * CCZ_ACC_LEN + CCZ_DEC2_LEN)) && ((CC_state == "") || (!(CC_state.find("Entering") != string::npos)))) {
+	if (is_scheduled and OT + D < 0) {
+		string lane_id = traci.vehicle.getLaneID(id);
+		traci.vehicle.moveTo(id, lane_id, traci.lane.getLength(lane_id));
+		traci.vehicle.setSpeed(id, speed_in_intersection);
+	}
+	else if ((position < (2 * CCZ_ACC_LEN + CCZ_DEC2_LEN)) && ((CC_state == "") || (!(CC_state.find("Entering") != string::npos)))) {
 		CC_state = "Entering_decelerate";
 		double slow_down_speed = 0;
 		double my_speed = traci.vehicle.getSpeed(id);
@@ -126,6 +137,10 @@ void Car::handle_CC_behavior(map<string, Car*>& car_list) {
 	else if ((CC_state == "Entering_decelerate" || CC_state == "Entering_wait") && (CC_slowdown_timer <= 0)) {
 		traci.vehicle.setSpeed(id, CC_slow_speed);
 
+		if (is_scheduled and OT + D < -1) {
+			cout << id << " scheduled: " << is_scheduled << " " << CC_slowdown_timer << " " << ((position - CCZ_DEC2_LEN) / ((V_MAX + CC_slow_speed) / 2)) - ((CCZ_DEC2_LEN) / ((speed_in_intersection + V_MAX) / 2)) << endl;
+		}
+
 		double wait_time = 99999;   // inf and wait
 		if (is_scheduled)
 			wait_time = OT + D - ((position - CCZ_DEC2_LEN) / ((V_MAX + CC_slow_speed) / 2)) - ((CCZ_DEC2_LEN) / ((speed_in_intersection + V_MAX) / 2));
@@ -158,69 +173,24 @@ void Car::handle_CC_behavior(map<string, Car*>& car_list) {
 		traci.vehicle.setSpeed(id, speed_in_intersection);
 	}
 	else if (CC_state == "Platoon_catchup") {
-		if (front_car_ptr == nullptr) {
-			double my_speed = traci.vehicle.getSpeed(id);
-			double target_speed = min(V_MAX, my_speed + MAX_ACC * _TIME_STEP);
-			traci.vehicle.setSpeed(id, target_speed);
-			if (target_speed == V_MAX)
-				CC_state = "Keep_V_MAX";
-		}
-		else {
-			double my_speed = traci.vehicle.getSpeed(id);
-			double min_catch_up_time = (my_speed - 0) / MAX_ACC;
-			double min_distance = (my_speed - 0) * min_catch_up_time;
-
-			if (front_distance < min_distance) {
-				double target_speed = max(front_speed, my_speed - MAX_ACC * _TIME_STEP);
-
-				if (front_distance <= HEADWAY) {
-					CC_state = "Platoon_following";
-					traci.vehicle.setSpeed(id, front_speed);
-				}
-				else {
-					if (front_speed > target_speed) {
-						target_speed = min(V_MAX, my_speed + MAX_ACC * _TIME_STEP);
-						traci.vehicle.setSpeed(id, target_speed);
-					}
-					else {
-						target_speed = max(front_speed + MAX_ACC * _TIME_STEP, my_speed - MAX_ACC * _TIME_STEP);
-						traci.vehicle.setSpeed(id, target_speed);
-					}
-				}
-			}
-			else {
-				double target_speed = min(V_MAX, my_speed + MAX_ACC * _TIME_STEP);
-				traci.vehicle.setSpeed(id, target_speed);
-			}
-		}
+		traci.vehicle.moveTo(id, traci.vehicle.getLaneID(id), traci.vehicle.getLanePosition(id) + (front_distance - HEADWAY));
+		traci.vehicle.setSpeed(id, 0);
+		CC_state = "Platoon_following";
 	}
 	else if (CC_state == "Platoon_following") {
 
 		if (front_car_ptr == nullptr) {
-			double my_speed = traci.vehicle.getSpeed(id);
-			double target_speed = min(V_MAX, my_speed + MAX_ACC * _TIME_STEP);
-			traci.vehicle.setSpeed(id, target_speed);
-			if (target_speed == V_MAX)
-				CC_state = "Keep_V_MAX";
+			traci.vehicle.setSpeed(id, V_MAX);
+			CC_state = "Keep_V_MAX";
 		}
 		else {
-			if (front_distance > HEADWAY) {
-				double my_speed = traci.vehicle.getSpeed(id);
-				double target_speed = min(V_MAX, my_speed + MAX_ACC * _TIME_STEP);
-				traci.vehicle.setSpeed(id, target_speed);
-				CC_state = "Platoon_catchup";
-			}
-			else
-				traci.vehicle.setSpeed(id, front_speed);
+			traci.vehicle.moveTo(id, traci.vehicle.getLaneID(id), traci.vehicle.getLanePosition(id) + (front_distance - HEADWAY));
+			traci.vehicle.setSpeed(id, 0);
 		}
 	}
 	else if (CC_state == "Preseting_start") {
-		double my_speed = traci.vehicle.getSpeed(id);
-		traci.vehicle.setMaxSpeed(id, V_MAX);
-		double dec_time = (max(V_MAX - my_speed, my_speed - V_MAX)) / MAX_ACC;
-		CC_slowdown_timer = dec_time;
-		traci.vehicle.slowDown(id, V_MAX, dec_time);
-		CC_state = "Preseting_done";
+		traci.vehicle.setSpeed(id, V_MAX);
+		CC_state = "Keep_V_MAX";
 	}
 	else if ((CC_state == "Preseting_done") && (CC_slowdown_timer <= 0)) {
 		traci.vehicle.setSpeed(id, V_MAX);
@@ -279,13 +249,16 @@ void Car::handle_CC_behavior(map<string, Car*>& car_list) {
 
 double Car::CC_get_front_speed() {
 	if (CC_front_car != nullptr) {
-		if (CC_front_car->CC_state != "" && CC_front_car->CC_state.find("Platoon") != string::npos)
+		if (CC_front_car->CC_state != "" && CC_front_car->CC_state.find("Platoon") != string::npos) {
 			return CC_front_car->CC_get_front_speed();
-		else
+		}
+		else {
 			return traci.vehicle.getSpeed(CC_front_car->id) + traci.vehicle.getAcceleration(CC_front_car->id) * _TIME_STEP;
+		}
 	}
-	else
+	else {
 		return traci.vehicle.getSpeed(id) + traci.vehicle.getAcceleration(id) * _TIME_STEP;
+	}
 }
 
 pair<double, double> Car::CC_get_shifts(map<string, Car*>& car_list) {
