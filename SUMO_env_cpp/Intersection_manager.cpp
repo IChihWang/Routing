@@ -582,7 +582,7 @@ void IntersectionManager::run(double simu_step) {
 			az_list[car_id] = car_ptr;
 
 			traci.vehicle.setMinGap(car_id, 3);
-			traci.vehicle.setLaneChangeMode(car_id, 784);
+			traci.vehicle.setLaneChangeMode(car_id, 0b000100100000);
 
 			double time_in_AZ = 9999.91;
 			uint8_t advised_lane = lane_advisor.advise_lane(*(car_list[car_id]), spillback_lane_advise_avoid);
@@ -639,7 +639,7 @@ void IntersectionManager::run(double simu_step) {
 	}
 
 	for (uint8_t lane_idx = 0; lane_idx < 4 * LANE_NUM_PER_DIRECTION; lane_idx++) {
-		my_road_info[lane_idx].avail_len = TOTAL_LEN - car_accumulate_len_lane[lane_idx] - (HEADWAY + CCZ_ACC_LEN + 2*CAR_MAX_LEN);
+		my_road_info[lane_idx].avail_len = TOTAL_LEN - car_accumulate_len_lane[lane_idx] - (HEADWAY + CCZ_ACC_LEN + 3*CAR_MAX_LEN);
 		
 		my_road_info[lane_idx].car_delay_position = lane_car_delay_position[lane_idx];
 	}

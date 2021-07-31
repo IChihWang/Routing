@@ -203,7 +203,6 @@ void IntersectionManager::Roadrunner_P(map<string, Car*>& old_cars, map<string, 
 				}
 			}
 
-
 			if (car.is_spillback_strict == true) {
 				// remove car from scheduling_cars
 				new_cars.erase(car_id);

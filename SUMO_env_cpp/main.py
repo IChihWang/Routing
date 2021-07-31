@@ -65,7 +65,8 @@ if __name__ == "__main__":
 
         os.system(background + sumo + "-c data/UDTA.sumocfg --step-length " + str(cfg.TIME_STEP)
                     + " --collision.mingap-factor 0 -n data/net/"+net_name
-                    + " -r data/routes/"+route_name + " --remote-port " + str(PORT))
+                    + " -r data/routes/"+route_name + " --remote-port " + str(PORT)
+                    + " --collision.action none")
 
         #'''
         cpp_cmd = r'.\x64\Release\SUMO_env_cpp.exe '

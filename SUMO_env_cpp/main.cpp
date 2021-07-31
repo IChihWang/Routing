@@ -249,9 +249,9 @@ void run_sumo(Thread_Worker& router_thread) {
                     }
                     car_info_dict[car_id].route = pre_route_part + car_path + "SS";     //Add "next turn" at the end
 
-                    if (car_info_dict[car_id].route_state == "NEW" && car_info_dict[car_id].intersection_manager_ptr->car_list[car_id]->position <= TOTAL_LEN) {
-                        cout << "warning!!! " << car_id << " " << car_info_dict[car_id].intersection_manager_ptr->car_list[car_id]->position << endl;
-                    }
+                    //if (car_info_dict[car_id].route_state == "NEW" && car_info_dict[car_id].intersection_manager_ptr->car_list[car_id]->position <= TOTAL_LEN) {
+                        //cout << "warning!!! " << car_id << " " << car_info_dict[car_id].intersection_manager_ptr->car_list[car_id]->position << endl;
+                    //}
 
                     car_info_dict[car_id].route_state = "OLD";
                 }
@@ -357,7 +357,7 @@ void run_sumo(Thread_Worker& router_thread) {
         auto end = chrono::high_resolution_clock::now();
 
         auto route_time = chrono::duration<double>(end - begin);
-        cout << "Route_time: " << route_time.count() << " seconds" << endl;
+        //cout << "Route_time: " << route_time.count() << " seconds" << endl;
 
         simu_step += _TIME_STEP;
 
