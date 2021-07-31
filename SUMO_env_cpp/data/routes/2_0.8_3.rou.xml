@@ -1,10 +1,10 @@
 <routes>
 
-	<vType id="car5" accel="200.0" decel="200.0" speedFactor="2" sigma="0.0" length="5" minGap="3.000000" maxSpeed="11.180000" tau="0.100000" carFollowModel="CACC" color="255,255,255"/>
-	<vType id="car6" accel="200.0" decel="200.0" speedFactor="2" sigma="0.0" length="6" minGap="3.000000" maxSpeed="11.180000" tau="0.100000" carFollowModel="CACC" color="255,255,255"/>
-	<vType id="car7" accel="200.0" decel="200.0" speedFactor="2" sigma="0.0" length="7" minGap="3.000000" maxSpeed="11.180000" tau="0.100000" carFollowModel="CACC" color="255,255,255"/>
-	<vType id="car8" accel="200.0" decel="200.0" speedFactor="2" sigma="0.0" length="8" minGap="3.000000" maxSpeed="11.180000" tau="0.100000" carFollowModel="CACC" color="255,255,255"/>
-	<vType id="car9" accel="200.0" decel="200.0" speedFactor="2" sigma="0.0" length="9" minGap="3.000000" maxSpeed="11.180000" tau="0.100000" carFollowModel="CACC" color="255,255,255"/>
+	<vType id="car5" accel="200.0" decel="200.0" speedFactor="2" sigma="0.0" length="5" minGap="3.000000" maxSpeed="11.180000" tau="0.300000" carFollowModel="CACC" color="255,255,255"/>
+	<vType id="car6" accel="200.0" decel="200.0" speedFactor="2" sigma="0.0" length="6" minGap="3.000000" maxSpeed="11.180000" tau="0.300000" carFollowModel="CACC" color="255,255,255"/>
+	<vType id="car7" accel="200.0" decel="200.0" speedFactor="2" sigma="0.0" length="7" minGap="3.000000" maxSpeed="11.180000" tau="0.300000" carFollowModel="CACC" color="255,255,255"/>
+	<vType id="car8" accel="200.0" decel="200.0" speedFactor="2" sigma="0.0" length="8" minGap="3.000000" maxSpeed="11.180000" tau="0.300000" carFollowModel="CACC" color="255,255,255"/>
+	<vType id="car9" accel="200.0" decel="200.0" speedFactor="2" sigma="0.0" length="9" minGap="3.000000" maxSpeed="11.180000" tau="0.300000" carFollowModel="CACC" color="255,255,255"/>
 
 	<route id="7" edges=" 001_001_1"/>
 	<route id="5" edges=" 001_002_2"/>

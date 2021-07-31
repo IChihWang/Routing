@@ -411,11 +411,19 @@ void IntersectionManager::run(double simu_step) {
 	for (const auto& [car_id, car_ptr] : pz_list) {
 		if (car_ptr->position <= CCZ_LEN && car_ptr->is_scheduled == true) {
 			to_be_deleted_CC.push_back(car_id);
-
+			/*
 			if (car_ptr->CC_state == "Preseting_done") {
 				car_ptr->CC_state = "CruiseControl_ready";
 			}
 			else if (car_ptr->position <= CCZ_LEN) {
+				to_be_deleted_CC.push_back(car_id);
+
+				if ((car_ptr->CC_state == "") || (!(car_ptr->CC_state.find("Platoon") != string::npos || car_ptr->CC_state.find("Entering") != string::npos))) {
+					car_ptr->CC_state = "Keep_Max_speed";
+				}
+			}
+			*/
+			if (car_ptr->position <= CCZ_LEN) {
 				to_be_deleted_CC.push_back(car_id);
 
 				if ((car_ptr->CC_state == "") || (!(car_ptr->CC_state.find("Platoon") != string::npos || car_ptr->CC_state.find("Entering") != string::npos))) {
