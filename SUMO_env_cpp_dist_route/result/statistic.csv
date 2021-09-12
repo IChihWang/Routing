@@ -1,0 +1,2 @@
+Grid size, top N, choose_car, thread_num, iteration_num,         _CAR_TIME_ERROR, arrival_rate, rand_seed, avg_shortest_travel_time, avg_travel,         avg_delay, arrival_car_num, departured_car_num, diff_exit_time, 1000_travel_time,         1000_delay_time, 1000_shortest_travel_time, 1000_car_num
+2,10,1,6,1,10,0.8,0,109.821,235.262,125.441,8049,6956,957.167,146.718,36.739,109.979,1001

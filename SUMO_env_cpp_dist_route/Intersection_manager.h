@@ -1,0 +1,108 @@
+#pragma once
+#include <tuple>
+#include <map>
+#include "global.h"
+#include "LaneAdviser.h"
+using namespace std;
+
+#ifndef MY_COORD
+#define MY_COORD
+typedef tuple<uint16_t, uint16_t> My_Coord;
+#endif
+
+class Car_Delay_Position_Record {
+public:
+	double position = 0;
+	double delay = 0;
+	double ET = 0;		// Time that the space become available
+	string car_id = "";
+
+	Car_Delay_Position_Record() {}
+	Car_Delay_Position_Record(double in_position, Car& in_car) : position(in_position), delay(in_car.D), car_id(in_car.id), ET(in_car.D+in_car.OT+(in_car.length+HEADWAY)/in_car.speed_in_intersection){}
+};
+class Road_Info {
+public:
+	double avail_len = TOTAL_LEN;
+	double delay = 0;
+	vector<Car_Delay_Position_Record> car_delay_position;
+};
+class Car_Info_In_Intersection {
+public:
+	bool is_skip_car = false;
+	double position_at_offset = 0;
+	uint16_t time_offset_step = 0;
+	string src_intersection_id = "";
+	uint8_t direction_of_src_intersection = 0;
+	uint8_t src_shift_num = 0;
+
+	double time_offset = 0;
+
+	Car_Info_In_Intersection(){}
+	Car_Info_In_Intersection(bool is_skip_car):is_skip_car(is_skip_car){}
+	Car_Info_In_Intersection(double position_at_offset, uint16_t time_offset_step, 
+		string src_intersection_id, uint8_t direction_of_src_intersection, uint8_t src_shift_num, double time_offset) :
+		is_skip_car(false), position_at_offset(position_at_offset), time_offset_step(time_offset_step), 
+		src_intersection_id(src_intersection_id), direction_of_src_intersection(direction_of_src_intersection), src_shift_num(src_shift_num), time_offset(time_offset){}
+};
+
+class IntersectionManager {
+public:
+	My_Coord id;
+	string id_str = "";
+
+	// Break down to these to reduce the search space
+	map<string, Car*> car_list;		// Cars that needs to be handled
+	map<string, Car*> az_list;
+	map<string, Car*> pz_list;
+	map<string, Car*> cc_list;		// Cars under Cruse Control in CCZ
+	map<string, Car*> leaving_cars;	// Cars just entered the intersection (leave the CC zone)
+
+	double schedule_period_count = 0;
+
+	Lane_Adviser lane_advisor;
+	vector<string> in_lanes;
+	vector<string> out_lanes;
+
+	#ifdef EXP_FUEL
+	vector<double> total_fuel_consumption;
+	#endif
+
+	#ifdef EXP_DELAY
+	vector<double> total_delays;
+	vector<double> total_delays_by_sche;
+	#endif
+
+	#ifdef PEDESTRIAN
+	bool is_pedestrian_list[4];		// Whether there is a pedestrian request
+	double pedestrian_time_mark_list[4];	// Planned pedestrian time (In case some cars insterted and interrupt the pedestiran time)
+	void get_max_AT_direction(const vector<Car*>& sched_car, const bool* is_pedestrian_list, double* pedestrian_time_mark_list);
+	#endif
+
+	// For front car
+	map<uint8_t, Car*> CC_last_cars_on_lanes;
+
+	// Pedestrian control
+	bool is_pedestrian_list[4] = {};				// Whether there is a pedestrian request
+	double pedestrian_time_mark_list[4] = { 0 };	// Planned pedestrian time(In case some cars instertedand interrupt the pedestiran time)
+
+	// Spillback info
+	Road_Info my_road_info[4 * LANE_NUM_PER_DIRECTION];
+	Road_Info* others_road_info[4 * LANE_NUM_PER_DIRECTION];
+	double spillback_delay_record[4 * LANE_NUM_PER_DIRECTION] = {0};
+	
+
+	IntersectionManager();
+	IntersectionManager(My_Coord id);
+
+	void connect(const uint8_t& my_direction, IntersectionManager& target_intersection, const uint8_t& its_direction);
+	Car_Info_In_Intersection get_car_info_for_route(const string& car_id);
+	string check_in_my_region(string lane_id);
+	void update_car(string car_id, string lane_id, double simu_step, char current_turn, char next_turn);
+	void update_path(string car_id, char current_turn, char next_turn, uint8_t intersection_dir);
+	void delete_car(string car_id);
+	void run(double simu_step);
+private:
+	void set_round_lane();
+	void scheduling(map<string, Car*>& sched_car, map<string, Car*>& n_sched_car, map<string, Car*>& advised_n_sched_car);
+	void Roadrunner_P(map<string, Car*>& sched_car, map<string, Car*>& n_sched_car, map<string, Car*>& advised_n_sched_car);
+};

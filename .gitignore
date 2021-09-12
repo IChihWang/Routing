@@ -23,3 +23,5 @@ SUMO_env_cpp/Debug/
 SUMO_env_cpp/.vs/
 *.user
 SUMO_env_cpp/x64/
+SUMO_env_cpp_dist_route/x64/Release
+SUMO_env_cpp_dist_route/.vs
