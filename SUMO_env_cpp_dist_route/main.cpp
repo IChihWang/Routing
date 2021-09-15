@@ -4,6 +4,7 @@
 #include <fstream>
 #include <cmath>
 #include <algorithm>
+#include <queue>
 #include "LaneAdviser.h"
 #include "Intersection_manager.h"
 #include "server.h"
@@ -31,7 +32,7 @@ unordered_map<string, string> src_dst_dict;
 void initial_sumo();
 void read_src_dst_file(string src_dst_file_name);
 void run_sumo();
-void routing(unordered_map<string, Car_Info>& cars_info, string car_id);
+string routing(unordered_map<string, Car_Info>& cars_info, string car_id);
 void update_network_delay(unordered_map<string, Car_Info>& cars_info_dict); // Update network info at each time step
 
 int main(int argc, char* argv[])
@@ -270,7 +271,6 @@ void run_sumo() {
 
             // No record of the car
             if (car_info_dict.find(car_id) == car_info_dict.end()) {
-                car_info_dict[car_id].route = "SSSSSSSS";        // Default, add "next turn" at the end
                 car_info_dict[car_id].route_state = "NEW";
                 string dst_node_str = src_dst_dict[car_id];
                 car_info_dict[car_id].intersection_manager_ptr = nullptr;
@@ -282,8 +282,9 @@ void run_sumo() {
                 car_info_dict[car_id].compute_shortest_time(lane_id, dst_node_str);
                 arrival_car_num++;
 
-                routing(car_info_dict, car_id);
-                
+                string new_route = routing(car_info_dict, car_id);
+                car_info_dict[car_id].route = new_route;
+
                 if (first_1000_car_id.size() <= 1000) {
                     first_1000_car_id.push_back(car_id);
                 }
@@ -429,11 +430,14 @@ void run_sumo() {
     }
 }
 
-unordered_map<string, double> lane_delay_record;    // A global record is needed to prevent all-stop spillback blockage
+
+typedef std::tuple<int, int> Coord; // (x, y)
+typedef std::tuple<int, int, int> Node_ID; // (x, y, direction)
+map<Node_ID, double> lane_delay_record;    // A global record is needed to prevent all-stop spillback blockage
 void update_network_delay(unordered_map<string, Car_Info>& cars_info_dict) {
     // Delay on lanes
-    unordered_map<string, double> lane_delay;
-    unordered_map<string, double> lane_count_car;
+    map<Node_ID, double> lane_delay;
+    map<Node_ID, double> lane_count_car;
 
     // Collect information from the map
     for (auto& [car_id, car_info] : cars_info_dict) {
@@ -457,28 +461,233 @@ void update_network_delay(unordered_map<string, Car_Info>& cars_info_dict) {
                     continue;
                 }
                 lane_id = lane_id.substr(0,9);
-                if (lane_delay.find(lane_id) != lane_delay.end()) {
+                Node_ID node_id(stoi(lane_id.substr(0, 3)), stoi(lane_id.substr(4, 3)), (int)(lane_id[8]-'0'));
+                if (lane_delay.find(node_id) != lane_delay.end()) {
                     // Found the lane in the record
-                    lane_delay[lane_id] += car_ptr->D;
-                    lane_count_car[lane_id] += 1;
+                    lane_delay[node_id] += car_ptr->D;
+                    lane_count_car[node_id] += 1;
                 }
                 else {
                     // Not found the lane in the record
-                    lane_delay[lane_id] = car_ptr->D;
-                    lane_count_car[lane_id] = 1;
+                    lane_delay[node_id] = car_ptr->D;
+                    lane_count_car[node_id] = 1;
                 }
             }
         }
     }
 
     // Calculate the average delay
-    for (auto& [lane_id, added_delay] : lane_delay) {
-        lane_delay_record[lane_id] = added_delay / lane_count_car[lane_id];
-        cout << lane_id << "  " << lane_delay_record[lane_id] << endl;
+    for (auto& [node_id, added_delay] : lane_delay) {
+        lane_delay_record[node_id] = added_delay / lane_count_car[node_id];
+        //cout << get<0>(node_id) << '_' << get<1>(node_id) << '_' << get<2>(node_id) << "  " << lane_delay_record[node_id] << endl;
     }
 }
-void routing(unordered_map<string, Car_Info>& cars_info_dict, string target_car_id) {
+
+class Node_in_Heap {
+public:
+    uint16_t current_arrival_time = 0;
+    Node_ID current_node;
+    Node_in_Heap() {}
+    Node_in_Heap(uint16_t arrival_time, Node_ID node) : current_arrival_time(arrival_time), current_node(node) {}
+};
+struct Compare_AT {
+    bool operator()(Node_in_Heap const& node1, Node_in_Heap const& node2) {
+        return node1.current_arrival_time > node2.current_arrival_time;
+    }
+};
+class Node_Record {
+public:
+    bool is_src = false;
+    double arrival_time = 0;		// Time that the car arrives
+    Node_ID last_intersection_id;
+    char turning = 'S';
+
+    Node_Record() {}
+    Node_Record(bool in_is_src, double arrival_time_stamp) : is_src(in_is_src), arrival_time(arrival_time_stamp) {}
+};
+map<char, Node_ID> decide_available_turnings(Coord src_coord, uint8_t src_intersection_direction, Coord dst_coord, uint16_t additional_search_range);
+string routing(unordered_map<string, Car_Info>& cars_info_dict, string target_car_id) {
+
     Car_Info& target_car_info = cars_info_dict[target_car_id];
 
+    // Get the coordination of the destination 
+    string& dst_node_str = target_car_info.dst_node_idx;
+    int dst_x = stoi(dst_node_str.substr(0, 3));
+    int dst_y = stoi(dst_node_str.substr(4, 3));
+    const Coord dst_coord(dst_x, dst_y);
 
+    // Get the coordination of source node 
+    string lane_id = traci.vehicle.getLaneID(target_car_id);
+    int src_x = stoi(lane_id.substr(0, 3));
+    int src_y = stoi(lane_id.substr(4, 3));
+    int src_dir = int(4 - (lane_id[8] - '0'));  // TODO: double check
+    const Node_ID src_node(src_x, src_y, src_dir);
+
+    // Initialization
+    map<Node_ID, Node_Record> nodes_arrival_time_data;
+    vector<Node_ID> visited_nodes;		// Record the visisted node
+    priority_queue<Node_in_Heap, vector<Node_in_Heap>, Compare_AT > unvisited_queue;
+    
+    nodes_arrival_time_data[src_node] = Node_Record(true, 500.0 / V_MAX);    // "True" for src_node. Free speed traveling to the first node
+    if (lane_delay_record.find(src_node) != lane_delay_record.end()) {
+        nodes_arrival_time_data[src_node].arrival_time += lane_delay_record[src_node];   // Add delay on the road
+    }
+
+    // Push the src node into the queue
+    Node_in_Heap src_node_in_heap(nodes_arrival_time_data[src_node].arrival_time, src_node);
+    unvisited_queue.push(src_node_in_heap);
+
+    Node_ID dst_node;   // Record the destination node
+
+    // Routing
+    while (unvisited_queue.size() > 0) {
+        Node_in_Heap node_in_heap = unvisited_queue.top();
+        unvisited_queue.pop();
+
+        uint16_t current_arrival_time = node_in_heap.current_arrival_time;
+        Node_ID current_node = node_in_heap.current_node;
+
+        // Skip if the node is visited, prevent multiple push into the heap
+        if (find(visited_nodes.begin(), visited_nodes.end(), current_node) != visited_nodes.end()) {
+            continue;
+        }
+
+        // Mark current node as "visisted"
+        visited_nodes.push_back(current_node);
+
+        int& intersection_x = get<0>(current_node);
+        int& intersection_y = get<1>(current_node);
+        int& intersection_dir = get<2>(current_node);
+        Coord intersection_id(intersection_x, intersection_y);
+
+        // Terminate when finding shortest path
+        if (dst_coord == intersection_id) {
+            dst_node = current_node;
+            break;
+        }
+
+        // Decide the available turnings
+        map<char, Node_ID> available_turnings_and_out_direction = decide_available_turnings(intersection_id, intersection_dir, dst_coord, 0);
+
+        for (pair<char, Node_ID> const& data_pair : available_turnings_and_out_direction) {
+            char turning = data_pair.first;
+            Node_ID node_id = data_pair.second;
+
+            int next_time_step = 0;
+            if (Coord(get<0>(node_id), get<1>(node_id)) == dst_coord) {
+                // Road to the destination
+                next_time_step = 500.0 / V_MAX;;    // Free speed traveling
+            }
+            else {
+                next_time_step = 200.0 / V_MAX;;    // Free speed traveling
+            }
+            // Add delay on the road
+            if (lane_delay_record.find(node_id) != lane_delay_record.end()) {
+                next_time_step += lane_delay_record[node_id];
+            }
+
+            if ((nodes_arrival_time_data.find(node_id) == nodes_arrival_time_data.end())
+                || (nodes_arrival_time_data[node_id].arrival_time > next_time_step)) {
+                // Update the record with the new candidate
+                Node_Record tmp_node_record(false, next_time_step);
+                tmp_node_record.turning = turning;
+                tmp_node_record.last_intersection_id = current_node;
+                nodes_arrival_time_data[node_id] = tmp_node_record;
+
+                // Push next node into the queue
+                Node_in_Heap node_in_heap(next_time_step, node_id);
+                unvisited_queue.push(node_in_heap);
+            }
+        }
+    }
+
+    // Retrieve the path
+    string path_list = "";
+    Node_Record node_data = nodes_arrival_time_data[dst_node];
+
+    while (node_data.is_src == false) {
+        path_list.insert(0, 1, node_data.turning);  // insert the turning into the path
+        node_data = nodes_arrival_time_data[node_data.last_intersection_id];
+    }
+
+    return path_list;
+}
+
+
+map<char, Node_ID> decide_available_turnings(Coord src_coord, uint8_t src_intersection_direction, Coord dst_coord, uint16_t additional_search_range) {
+    // additional_search_range : additional intersection number to be searched
+    // Value of the dict : id of next intersection, the direction of next intersection
+    map<char, Node_ID> available_turnings_and_out_direction;
+    if (src_intersection_direction == 0) {
+        if (get<0>(dst_coord) - get<0>(src_coord) > -additional_search_range) {
+            if (get<0>(src_coord) < _grid_size || get<1>(src_coord) == get<1>(dst_coord)) {
+                available_turnings_and_out_direction['R'] = Node_ID(get<0>(src_coord) + 1, get<1>(src_coord), 3);
+            }
+        }
+
+        if (get<0>(src_coord) - get<0>(dst_coord) > -additional_search_range) {
+            if (get<0>(src_coord) > 1 || get<1>(src_coord) == get<1>(dst_coord)) {
+                available_turnings_and_out_direction['L'] = Node_ID(get<0>(src_coord) - 1, get<1>(src_coord), 1);
+            }
+        }
+
+        if (get<1>(dst_coord) - get<1>(src_coord) > -additional_search_range) {
+            if (get<1>(src_coord) < _grid_size || get<0>(src_coord) == get<0>(dst_coord)) {
+                available_turnings_and_out_direction['S'] = Node_ID(get<0>(src_coord), get<1>(src_coord) + 1, 0);
+            }
+        }
+    }
+    else if (src_intersection_direction == 1) {
+        if (get<1>(dst_coord) - get<1>(src_coord) > -additional_search_range) {
+            if (get<1>(src_coord) < _grid_size || get<0>(src_coord) == get<0>(dst_coord)) {
+                available_turnings_and_out_direction['R'] = Node_ID(get<0>(src_coord), get<1>(src_coord) + 1, 0);
+            }
+        }
+        if (get<1>(src_coord) - get<1>(dst_coord) > -additional_search_range) {
+            if (get<1>(src_coord) > 1 || get<0>(src_coord) == get<0>(dst_coord)) {
+                available_turnings_and_out_direction['L'] = Node_ID(get<0>(src_coord), get<1>(src_coord) - 1, 2);
+            }
+        }
+        if (get<0>(src_coord) - get<0>(dst_coord) > -additional_search_range) {
+            if (get<0>(src_coord) > 1 || get<1>(src_coord) == get<1>(dst_coord)) {
+                available_turnings_and_out_direction['S'] = Node_ID(get<0>(src_coord) - 1, get<1>(src_coord), 1);
+            }
+        }
+    }
+    else if (src_intersection_direction == 2) {
+        if (get<0>(src_coord) - get<0>(dst_coord) > -additional_search_range) {
+            if (get<0>(src_coord) > 1 || get<1>(src_coord) == get<1>(dst_coord)) {
+                available_turnings_and_out_direction['R'] = Node_ID(get<0>(src_coord) - 1, get<1>(src_coord), 1);
+            }
+        }
+        if (get<0>(dst_coord) - get<0>(src_coord) > -additional_search_range) {
+            if (get<0>(src_coord) < _grid_size || get<1>(src_coord) == get<1>(dst_coord)) {
+                available_turnings_and_out_direction['L'] = Node_ID(get<0>(src_coord) + 1, get<1>(src_coord), 3);
+            }
+        }
+        if (get<1>(src_coord) - get<1>(dst_coord) > -additional_search_range) {
+            if (get<1>(src_coord) > 1 || get<0>(src_coord) == get<0>(dst_coord)) {
+                available_turnings_and_out_direction['S'] = Node_ID(get<0>(src_coord), get<1>(src_coord) - 1, 2);
+            }
+        }
+    }
+    else if (src_intersection_direction == 3) {
+        if (get<1>(src_coord) - get<1>(dst_coord) > -additional_search_range) {
+            if (get<1>(src_coord) > 1 || get<0>(src_coord) == get<0>(dst_coord)) {
+                available_turnings_and_out_direction['R'] = Node_ID(get<0>(src_coord), get<1>(src_coord) - 1, 2);
+            }
+        }
+        if (get<1>(dst_coord) - get<1>(src_coord) > -additional_search_range) {
+            if (get<1>(src_coord) < _grid_size || get<0>(src_coord) == get<0>(dst_coord)) {
+                available_turnings_and_out_direction['L'] = Node_ID(get<0>(src_coord), get<1>(src_coord) + 1, 0);
+            }
+        }
+        if (get<0>(dst_coord) - get<0>(src_coord) > -additional_search_range) {
+            if (get<0>(src_coord) < _grid_size || get<1>(src_coord) == get<1>(dst_coord)) {
+                available_turnings_and_out_direction['S'] = Node_ID(get<0>(src_coord) + 1, get<1>(src_coord), 3);
+            }
+        }
+    }
+
+    return available_turnings_and_out_direction; // Key : turnings, Values : out_direction
 }

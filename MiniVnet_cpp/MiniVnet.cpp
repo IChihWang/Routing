@@ -477,7 +477,7 @@ map<string, vector<Node_in_Path>> routing(const vector<reference_wrapper<Car>>& 
 		// Variables
 		map<Node_ID, Node_Record> nodes_arrival_time_data;
 		const Coord& dst_coord = car.dst_coord;
-		// Initualization
+		// Initialization
 		Node_ID src_node(car.src_coord, car.direction_of_src_intersection);
 		Node_Record src_record(true, (0 + car.time_offset_step));
 		nodes_arrival_time_data[src_node] = src_record;  // Starting with an offset, last_node, recordings
