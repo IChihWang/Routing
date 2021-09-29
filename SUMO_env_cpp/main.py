@@ -83,6 +83,7 @@ if __name__ == "__main__":
         cpp_cmd += str(seed) + " "
         #cpp_cmd += " &"
         os.system(cpp_cmd)
+        print(cpp_cmd)
         #'''
 
     except Exception as e:

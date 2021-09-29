@@ -2,24 +2,23 @@ rm MiniVnet_cpp/result/*
 rm SUMO_env_cpp/result/*
 rm -rf result
 
-export LD_LIBRARY_PATH=/local/mwang/ortools/lib
+export LD_LIBRARY_PATH=/localhome/michael_jr/ortools/lib
 
-for rSeed in $(seq 0 1 9)
+for rSeed in $(seq 0 1 4)
 do
-for aRate in $(seq 0.1 0.1 0.8)
+for aRate in $(seq 0.1 0.025 0.7)
 do
 for gridSize in 7
 do
 
-for iter in 1 2 3 4
+for iter in 1
 do
-for var in 6 8
+for var in 10
 do
 echo ....
-echo "thread" $var "| Iteration" $iter $aRate $rSeed $gridSize
+echo "Time ERR" $var "| Iteration" $iter $aRate $rSeed $gridSize
 echo ....
-( cd MiniVnet_cpp ; ./x64/Release/main) &
-( cd SUMO_env_cpp ; python3 main.py $aRate $rSeed $gridSize 10 1 $var $iter 10)
+( cd SUMO_env_cpp ; python3 main.py $aRate $rSeed $gridSize 10 1 6 $iter $var)
 sleep 5
 pkill main
 pkill python3
