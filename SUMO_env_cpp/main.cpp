@@ -292,7 +292,8 @@ void run_sumo() {
                 if (inter_region == "On my lane") {
                     // Check if the car enter the intersection (by changing state from "In intersection" to "on my lane")
                     if (car_info_dict[car_id].inter_status == "In my intersection") {
-                        car_info_dict[car_id].route = car_info_dict[car_id].route.erase(0, 1);
+                          string new_route = routing(car_info_dict, car_id);
+                          car_info_dict[car_id].route = new_route;
                     }
 
                     char current_turn = car_info_dict[car_id].route[0];
@@ -306,10 +307,9 @@ void run_sumo() {
                 }
                 else if (inter_region == "In my intersection") {
                     // Check if the car enter the intersection (by changing state from "On my lane" to "in intersection")
-                    if (car_info_dict[car_id].inter_status == "On my lane") {
-                        string new_route = routing(car_info_dict, car_id);
-                        car_info_dict[car_id].route = new_route;
-                    }
+                    //if (car_info_dict[car_id].inter_status == "On my lane") {
+                    //    car_info_dict[car_id].route = car_info_dict[car_id].route.erase(0, 1);
+                    //}
 
                     char current_turn = car_info_dict[car_id].route[0];
                     char next_turn = car_info_dict[car_id].route[1];
