@@ -108,7 +108,7 @@ void read_src_dst_file(string src_dst_file_name) {
 
 void run_sumo() {
     double simu_step = 0;
-    
+
 
     // Create a list with intersection managers
     map<My_Coord, IntersectionManager*> intersection_map;
@@ -213,8 +213,8 @@ void run_sumo() {
                 router_thread.request_worker_condition_variable.notify_all();
             }
             //cout << server_send_str << endl;
-            // 
-            // 
+            //
+            //
             // Wait for results
             {
                 unique_lock<mutex> main_thread_lock(router_thread.routing_done_mutex);
@@ -299,16 +299,17 @@ void run_sumo() {
                     char next_turn = car_info_dict[car_id].route[1];
 
                     intersection_ptr->update_car(car_id, lane_id, simu_step, current_turn, next_turn);
-                    
+
                     is_handled = true;
                     car_info_dict[car_id].inter_status = "On my lane";
                     car_info_dict[car_id].intersection_manager_ptr = intersection_ptr;
                 }
                 else if (inter_region == "In my intersection") {
                     // Check if the car enter the intersection (by changing state from "On my lane" to "in intersection")
-                    //if (car_info_dict[car_id].inter_status == "On my lane") {
-                    //    car_info_dict[car_id].route = car_info_dict[car_id].route.erase(0, 1);
-                    //}
+                    if (car_info_dict[car_id].inter_status == "On my lane") {
+                        string new_route = routing(car_info_dict, car_id);
+                        car_info_dict[car_id].route = new_route;
+                    }
 
                     char current_turn = car_info_dict[car_id].route[0];
                     char next_turn = car_info_dict[car_id].route[1];
@@ -347,7 +348,7 @@ void run_sumo() {
             all_delay_time[car_id] = car_travel_time - car_info_dict[car_id].shortest_travel_time;
             all_shortest_time[car_id] = car_info_dict[car_id].shortest_travel_time;
             all_diff_exit_time[car_id] = simu_step - (car_info_dict[car_id].estimated_exit_time);
-                        
+
             car_info_dict.erase(car_id);
             to_delete_car_in_database.push_back(car_id);    // This is for telling the router to delete the car
         }
@@ -369,8 +370,8 @@ void run_sumo() {
     }
 
     // Statistics
-    string file_name_prefix = string("result/") + to_string(_grid_size) + "_" + 
-        to_string(_TOP_N_CONGESTED) + "_" + to_string(_CHOOSE_CAR_OPTION) + "_" + 
+    string file_name_prefix = string("result/") + to_string(_grid_size) + "_" +
+        to_string(_TOP_N_CONGESTED) + "_" + to_string(_CHOOSE_CAR_OPTION) + "_" +
         to_string(_THREAD_NUM) + "_" + to_string(_ITERATION_NUM) + "_" + _CAR_TIME_ERROR + "_" + _ARRIVAL_RATE + "_" + _RANDOM_SEED + "_";
     ofstream all_car_file(file_name_prefix + "allCars.csv");
     ofstream statistic_file("result/statistic.csv", ofstream::app);
@@ -414,7 +415,7 @@ void run_sumo() {
     statistic_file << (int)_grid_size << ',' << (int)_TOP_N_CONGESTED << ',' << (int)_CHOOSE_CAR_OPTION << ',' << (int)_THREAD_NUM << ',' << (int)_ITERATION_NUM << ',' << _CAR_TIME_ERROR << ',';
     statistic_file << _ARRIVAL_RATE << ',' << _RANDOM_SEED << ',' << avg_shortest_travel_time << ',' << avg_travel_time << ',' << avg_delay_time << ',' << arrival_car_num << ',' << all_travel_time.size() << ',' << avg_diff_exit_time << ',';
     statistic_file << avg_first_1000_travel_time << ',' << avg_first_1000_delay_time << ',' << avg_first_1000_shortest_travel_time << ',' << first_1000_car_id.size() << endl;
-    
+
     all_car_file.close();
     statistic_file.close();
 
@@ -505,13 +506,13 @@ string routing(unordered_map<string, Car_Info>& cars_info_dict, string target_ca
 
     Car_Info& target_car_info = cars_info_dict[target_car_id];
 
-    // Get the coordination of the destination 
+    // Get the coordination of the destination
     string& dst_node_str = target_car_info.dst_node_idx;
     int dst_x = stoi(dst_node_str.substr(0, 3));
     int dst_y = stoi(dst_node_str.substr(4, 3));
     const Coord dst_coord(dst_x, dst_y);
 
-    // Get the coordination of source node 
+    // Get the coordination of source node
     string lane_id = traci.vehicle.getLaneID(target_car_id);
     int src_x = stoi(lane_id.substr(0, 3));
     int src_y = stoi(lane_id.substr(4, 3));
@@ -522,7 +523,7 @@ string routing(unordered_map<string, Car_Info>& cars_info_dict, string target_ca
     map<Node_ID, Node_Record> nodes_arrival_time_data;
     vector<Node_ID> visited_nodes;		// Record the visisted node
     priority_queue<Node_in_Heap, vector<Node_in_Heap>, Compare_AT > unvisited_queue;
-    
+
     nodes_arrival_time_data[src_node] = Node_Record(true, 500.0 / V_MAX);    // "True" for src_node. Free speed traveling to the first node
     if (lane_delay_record.find(src_node) != lane_delay_record.end()) {
         nodes_arrival_time_data[src_node].arrival_time += lane_delay_record[src_node];   // Add delay on the road
