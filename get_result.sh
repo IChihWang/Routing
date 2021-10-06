@@ -2,9 +2,12 @@ rm MiniVnet_cpp/result/*
 rm SUMO_env_cpp/result/*
 rm -rf result
 
-export LD_LIBRARY_PATH=/localhome/michael_jr/ortools/lib
+mkdir MiniVnet_cpp/result
+mkdir SUMO_env_cpp/result
 
-for rSeed in $(seq 0 1 4)
+export LD_LIBRARY_PATH=/local/mwang/ortools/lib
+
+for rSeed in 2
 do
 for aRate in $(seq 0.1 0.025 0.7)
 do

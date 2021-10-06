@@ -91,7 +91,7 @@ def generate_routefile_with_src_dst(inter_size, arrival_rate, rand_seed, time_st
     print(route_str, file=routes)
 
 
-    dir_prob = numpy.random.uniform(0, arrival_rate*1.5, len(route_list)).tolist()
+    #dir_prob = numpy.random.uniform(0, arrival_rate*1.5, len(route_list)).tolist()
     #print(dir_prob)
     #dir_prob = [arrival_rate]*len(route_list)
 
@@ -99,7 +99,8 @@ def generate_routefile_with_src_dst(inter_size, arrival_rate, rand_seed, time_st
     for i in range(time_steps):
         for idx_route in range(len(route_list)):
             route = route_list[idx_route]
-            if random.uniform(0, 1) < dir_prob[idx_route]:
+            #if random.uniform(0, 1) < dir_prob[idx_route]:
+            if random.uniform(0, 1) < random.uniform(0, arrival_rate):
                 car_length = random.randrange(5,10)
                 veh_str = "\t<vehicle id=\"car"
                 lane_r = random.randrange(cfg.LANE_NUM_PER_DIRECTION)
