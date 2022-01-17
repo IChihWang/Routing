@@ -172,6 +172,20 @@ string handle_request(string &in_str) {
 	map<string, double> traveling_time_dict;
 	vector<double> computation_time_list;
 
+	// TODO
+	// Load balancing
+		// Measure the computation loads (Measurement or estimate mathmatically)
+		// Load balancing algorithm
+		// Move the intersections between districts
+	// Cars route
+		// Abstract the district info (Average on each road)
+		// Route for every car
+
+	// TODO: cut the city into districts
+
+
+
+
 	auto begin = high_resolution_clock::now();
 	for (int iter_i = 0; iter_i < _ITERATION_NUM; iter_i++) {
 		vector<vector<reference_wrapper<Car>>> route_groups;
