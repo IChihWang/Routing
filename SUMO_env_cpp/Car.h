@@ -76,7 +76,7 @@ public:
 	double shortest_travel_time = 0;
 	double estimated_exit_time = 0;
 
-	double compute_shortest_time(string in_lane_str, string dst_node_str) {
+	void compute_shortest_time(string in_lane_str, string dst_node_str) {
 		int link_num = 1;
 		link_num += abs(stoi(in_lane_str.substr(0, 3)) - stoi(dst_node_str.substr(0, 3)));
 		link_num += abs(stoi(in_lane_str.substr(4, 3)) - stoi(dst_node_str.substr(4, 3)));

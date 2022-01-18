@@ -1,0 +1,11 @@
+{
+  "Version": 1,
+  "ProjectMap": {
+    "e331b35a-3702-4fe6-9a9c-07280caf9440": {
+      "ProjectGuid": "e331b35a-3702-4fe6-9a9c-07280caf9440",
+      "DisplayName": "SUMO_env_cpp",
+      "ColorIndex": 0
+    }
+  },
+  "NextColorIndex": 1
+}

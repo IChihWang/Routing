@@ -136,6 +136,7 @@ public:
 
 	double traveling_time = 0;
 
+	vector<Coord> brief_path_data;
 	vector<Node_in_Path> path_data;
 
 	Car() {};

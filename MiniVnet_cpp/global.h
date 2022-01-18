@@ -35,6 +35,13 @@ void read_load_adv_data();
 void read_inter_info_data();
 void read_inter_length_data();
 
+// Defined in CarRoute.cpp
+extern map< Node_ID, double> _avg_map_delay;
+void initial_avg_map();
+void compute_avg_map();
+void brief_route();
+
+
 
 // Defined in MiniVnet.cpp
 extern vector< map< Coord, Intersection* >* > _database;

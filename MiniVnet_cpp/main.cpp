@@ -41,6 +41,7 @@ int main(int argc, char const* argv[]) {
 
 	// Initializations done after getting infos from SUMO
 	create_grid_network();
+	initial_avg_map();		// For car routing by themselves
 	init_thread_pool();
 
 	// Create files for writing the results
@@ -172,16 +173,18 @@ string handle_request(string &in_str) {
 	map<string, double> traveling_time_dict;
 	vector<double> computation_time_list;
 
-	// TODO
-	// Load balancing
-		// Measure the computation loads (Measurement or estimate mathmatically)
-		// Load balancing algorithm
-		// Move the intersections between districts
-	// Cars route
-		// Abstract the district info (Average on each road)
-		// Route for every car
+// TODO
+// Load balancing
+	// Measure the computation loads (Measurement or estimate mathmatically)
+	// Load balancing algorithm
+	// Move the intersections between districts
+// Cars route
+	// Abstract the district info (Average on each road)
+	compute_avg_map();
+	// Route for every car
+	brief_route();
 
-	// TODO: cut the city into districts
+// TODO: cut the city into districts
 
 
 
