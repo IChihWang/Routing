@@ -43,8 +43,11 @@ void brief_route();
 
 // Defined in LoadBalancing.cpp
 extern map< Coord, Coord> _intersection_MEC;	// Record the MEC ID for each intersection
+extern map< string, Coord>	_car_id_MEC_map;	// Record the MEC ID for each car
+extern vector<Coord> _MEC_id_list;	// The list of ID of MECs
 int _MEC_num_per_edge = 3;		// Set 3 just for now for debugging
 void initial_district_allocation();
+void put_cars_into_districts();
 
 
 // Defined in MiniVnet.cpp
@@ -63,7 +66,7 @@ void update_car(const string& car_id, const uint8_t& car_length, const string& s
 	const uint8_t& direction_of_src_intersection, const uint16_t& time_offset_step,
 	const double& position_at_offset, const string& dst_node_id);
 Intersection& get_intersection(const uint16_t current_arrival_time, const Coord& intersection_id);
-vector<vector<reference_wrapper<Car>>> choose_car_to_thread_group(vector<string> &new_car_ids, vector<string> &old_car_ids);
+vector<vector<reference_wrapper<Car>>> choose_car_to_thread_group(Coord& MEC_id, vector<string> &new_car_ids, vector<string> &old_car_ids);
 void delete_car_from_database(Car& car);
 void delete_car_from_database_id(string car_id);
 

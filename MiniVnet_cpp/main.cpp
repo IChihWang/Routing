@@ -127,15 +127,15 @@ string handle_request(string &in_str) {
 		string car_state;
 		getline(ss_car_data, car_state, ',');
 
-		if (car_state.compare("EXIT") == 0) {
+		if (car_state == "EXIT") {
 			delete_car_from_database_id(car_id);
 		}
-		else if (car_state.compare("PAUSE") == 0) {
+		else if (car_state == "PAUSE") {
 			// Cannot reroute the car due to the lower lever control
 			if (_car_dict.find(car_id) != _car_dict.end())
 				_car_dict[car_id].state = car_state;
 		}
-		else if (car_state.compare("NEW") == 0 || car_state.compare("OLD") == 0) {
+		else if (car_state == "NEW" || car_state == "OLD") {
 			
 			string car_data;
 			getline(ss_car_data, car_data, ',');
@@ -156,10 +156,10 @@ string handle_request(string &in_str) {
 				position_at_offset, dst_node_str);
 			_car_dict[car_id].state = car_state;
 
-			if (car_state.compare("NEW") == 0) {
+			if (car_state == "NEW") {
 				new_car_ids.push_back(car_id);
 			}
-			else if (car_state.compare("OLD") == 0) {
+			else if (car_state == "OLD") {
 				old_car_ids.push_back(car_id);
 			}
 		}
@@ -179,6 +179,14 @@ string handle_request(string &in_str) {
 	// Measure the computation loads (Measurement or estimate mathmatically)
 	// Load balancing algorithm
 	// Move the intersections between districts
+	
+	// Classify groups for each MEC
+	put_cars_into_districts();
+
+
+	// Rewrite "_top_congested_intersections"
+	// Rewrite choose_car_to_thread_group
+
 // Cars route
 	// Abstract the district info (Average on each road)
 	compute_avg_map();
@@ -189,45 +197,53 @@ string handle_request(string &in_str) {
 
 
 
+	// Run routing in each district
+	for (Coord& MEC_id: _MEC_id_list){
+		// TODO: handle the time measurement
+		// TODO: double check the internal functions that use global variables
+		// TODO: routing choose_car_to_thread_group
 
-	auto begin = high_resolution_clock::now();
-	for (int iter_i = 0; iter_i < _ITERATION_NUM; iter_i++) {
-		vector<vector<reference_wrapper<Car>>> route_groups;
-		route_groups = choose_car_to_thread_group(new_car_ids, old_car_ids);
 
-		new_car_ids.clear();	//Remove the new cars after first routing
+		auto begin = high_resolution_clock::now();
+		for (int iter_i = 0; iter_i < _ITERATION_NUM; iter_i++) {
+			vector<vector<reference_wrapper<Car>>> route_groups;
+			route_groups = choose_car_to_thread_group(MEC_id, new_car_ids, old_car_ids);
 
-		// Clear affected_intersection_list before routing starts 
-		affected_intersections.clear();
+			new_car_ids.clear();	//Remove the new cars after first routing
 
-		// routing_with_groups(route_groups, routes_dict);
-		bool is_no_routing = true;
-		for (auto route_group : route_groups) {
-			if (route_group.size() > 0)
-				is_no_routing = false;
-		}
-		if (!is_no_routing)
-			routing_with_groups_thread(route_groups, routes_dict);
+			// Clear affected_intersection_list before routing starts 
+			affected_intersections.clear();
+
+			// routing_with_groups(route_groups, routes_dict);
+			bool is_no_routing = true;
+			for (auto route_group : route_groups) {
+				if (route_group.size() > 0)
+					is_no_routing = false;
+			}
+			if (!is_no_routing)
+				routing_with_groups_thread(route_groups, routes_dict);
 		
-		// Find the next top N congested list
-		add_intersection_to_reschedule_list();
+			// Find the next top N congested list
+			add_intersection_to_reschedule_list();
 
-		// Updated during routing, so no need to update database here
-		// router.update_database_after_routing(route_groups)
+			// Updated during routing, so no need to update database here
+			// router.update_database_after_routing(route_groups)
 
-		// Get the traveling time of cars
-		for (uint8_t i = 0; i < _thread_num; i++) {
-			for (Car& car : route_groups[i]) {
-				traveling_time_dict[car.id] = car.traveling_time;
-				count_scheduling_car_num++;
+			// Get the traveling time of cars
+			for (uint8_t i = 0; i < _thread_num; i++) {
+				for (Car& car : route_groups[i]) {
+					traveling_time_dict[car.id] = car.traveling_time;
+					count_scheduling_car_num++;
+				}
 			}
 		}
-	}
-	auto end = high_resolution_clock::now();
+		auto end = high_resolution_clock::now();
 
-	auto route_time = duration<double>(end - begin);
-	cout << "Route_time: " << route_time.count() << " seconds" << endl;
-	computation_time_list.push_back(route_time.count());
+		auto route_time = duration<double>(end - begin);
+		cout << "Route_time: " << route_time.count() << " seconds" << endl;
+		computation_time_list.push_back(route_time.count());
+
+	}
 
 
 	// Finalize the results

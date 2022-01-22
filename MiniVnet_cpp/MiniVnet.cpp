@@ -166,7 +166,7 @@ void update_car(const string& car_id, const uint8_t& car_length, const string& s
 }
 
 // Choose car for reroute (Called only by main thread)
-vector<vector<reference_wrapper<Car>>> choose_car_to_thread_group(vector<string>& new_car_ids, vector<string>& old_car_ids) {
+vector<vector<reference_wrapper<Car>>> choose_car_to_thread_group(Coord& MEC_id, vector<string>& new_car_ids, vector<string>& old_car_ids) {
 	vector<vector<reference_wrapper<Car>>> results;
 	// Important: a car shouldn't appear in two different groups at the same time!!!!!!!!!!!!
 
@@ -238,19 +238,76 @@ vector<vector<reference_wrapper<Car>>> choose_car_to_thread_group(vector<string>
 				// Record the car results
 				for (auto item : *(visiting_intersection_ptr->scheduling_cars)) {
 					string car_id = item.first;
-					if (_car_dict[car_id].state == "OLD" || _car_dict[car_id].state == "NEW") {
-						if (find(car_added_list.begin(), car_added_list.end(), car_id) == car_added_list.end()) {
-							target_result.push_back(_car_dict[car_id]);
-							car_added_list.push_back(car_id);
+					if (_car_id_MEC_map[car_id] == MEC_id) {	// If the car belongs to this district
+						if (_car_dict[car_id].state == "OLD" || _car_dict[car_id].state == "NEW") {
+							if (find(car_added_list.begin(), car_added_list.end(), car_id) == car_added_list.end()) {
+								target_result.push_back(_car_dict[car_id]);
+								car_added_list.push_back(car_id);
+							}
 						}
 					}
 				}
 			}
 		}
 
+		// Check if the car is un-sync
 		set<string> cars_to_add;
 		for (const auto& [car_id, car] : _car_dict) {
-			if (find(car_added_list.begin(), car_added_list.end(), car_id) == car_added_list.end()) {
+			if (_car_id_MEC_map[car_id] == MEC_id) {	// If the car belongs to this district
+				if (find(car_added_list.begin(), car_added_list.end(), car_id) == car_added_list.end()) {
+					if (find(new_car_ids.begin(), new_car_ids.end(), car_id) != new_car_ids.end()) {
+						// New car, skip
+						continue;
+					}
+					if (_car_dict[car_id].state == "OLD" || _car_dict[car_id].state == "NEW") {
+						int expected_arrive_timestamp = -1;
+						for (const Node_in_Path& node_in_path_record : _car_dict[car_id].path_data) {
+							if (_car_dict[car_id].src_coord == node_in_path_record.recordings[0].last_intersection_id) {
+								expected_arrive_timestamp = node_in_path_record.recordings[0].time_stamp;
+								expected_arrive_timestamp -= _routing_period_num;
+								break;
+							}
+						}
+
+						if (abs(expected_arrive_timestamp - _car_dict[car_id].time_offset_step) > int((double)_CAR_TIME_ERROR / _schedule_period)) {
+							cars_to_add.insert(car_id);
+							cout << car_id << " " << abs(expected_arrive_timestamp - _car_dict[car_id].time_offset_step) << " " << int((double)_CAR_TIME_ERROR / _schedule_period) << endl;
+						}
+					}
+				}
+			}
+		}
+
+		for (const string& car_id : cars_to_add) {
+			// Find the thread with minimum size to store the current tree
+			vector<reference_wrapper<Car>>& target_result = *min_element(results.begin(), results.end(),
+				[](const vector<reference_wrapper<Car>>& a, const vector<reference_wrapper<Car>>& b) -> bool
+				{
+					return a.size() < b.size();
+				});
+			// If the car belongs to this district (has been checked in creating cars_to_add)
+			target_result.push_back(_car_dict[car_id]);
+			
+		}
+
+	}
+	else if (_CHOOSE_CAR_OPTION == 1) {
+		set<string> cars_to_add;
+		for (const pair<uint32_t, Intersection*> item : _top_congested_intersections) {
+			Intersection* intersection_ptr = item.second;
+			for (auto car_item : *(intersection_ptr->scheduling_cars)) {
+				const string& car_id = car_item.first;
+				if (_car_dict[car_id].state == "OLD" || _car_dict[car_id].state == "NEW") {
+					if (_car_id_MEC_map[car_id] == MEC_id) {	// If the car belongs to this district
+						cars_to_add.insert(car_id);
+					}
+				}
+			}
+		}
+
+		// Check if the Car is un-sync
+		for (const auto& [car_id, car] : _car_dict) {
+			if (_car_id_MEC_map[car_id] == MEC_id) {	// If the car belongs to this district
 				if (find(new_car_ids.begin(), new_car_ids.end(), car_id) != new_car_ids.end()) {
 					// New car, skip
 					continue;
@@ -267,7 +324,7 @@ vector<vector<reference_wrapper<Car>>> choose_car_to_thread_group(vector<string>
 
 					if (abs(expected_arrive_timestamp - _car_dict[car_id].time_offset_step) > int((double)_CAR_TIME_ERROR / _schedule_period)) {
 						cars_to_add.insert(car_id);
-						cout << car_id << " " << abs(expected_arrive_timestamp - _car_dict[car_id].time_offset_step) << " " << int((double)_CAR_TIME_ERROR / _schedule_period) << endl;
+						//cout << car_id << " " << abs(expected_arrive_timestamp - _car_dict[car_id].time_offset_step) << " " << int(_CAR_TIME_ERROR / _schedule_period) << endl;
 					}
 				}
 			}
@@ -281,65 +338,21 @@ vector<vector<reference_wrapper<Car>>> choose_car_to_thread_group(vector<string>
 					return a.size() < b.size();
 				});
 
-			target_result.push_back(_car_dict[car_id]);
-		}
-
-	}
-	else if (_CHOOSE_CAR_OPTION == 1) {
-		set<string> cars_to_add;
-		for (const pair<uint32_t, Intersection*> item : _top_congested_intersections) {
-			Intersection* intersection_ptr = item.second;
-			for (auto car_item : *(intersection_ptr->scheduling_cars)) {
-				const string& car_id = car_item.first;
-				if (_car_dict[car_id].state == "OLD" || _car_dict[car_id].state == "NEW") {
-					cars_to_add.insert(car_id);
-				}
-
-			}
-		}
-
-		for (const auto& [car_id, car] : _car_dict) {
-			if (find(new_car_ids.begin(), new_car_ids.end(), car_id) != new_car_ids.end()) {
-				// New car, skip
-				continue;
-			}
-			if (_car_dict[car_id].state == "OLD" || _car_dict[car_id].state == "NEW") {
-				int expected_arrive_timestamp = -1;
-				for (const Node_in_Path& node_in_path_record : _car_dict[car_id].path_data) {
-					if (_car_dict[car_id].src_coord == node_in_path_record.recordings[0].last_intersection_id) {
-						expected_arrive_timestamp = node_in_path_record.recordings[0].time_stamp;
-						expected_arrive_timestamp -= _routing_period_num;
-						break;
-					}
-				}
-
-				if (abs(expected_arrive_timestamp - _car_dict[car_id].time_offset_step) > int((double)_CAR_TIME_ERROR / _schedule_period)) {
-					cars_to_add.insert(car_id);
-					//cout << car_id << " " << abs(expected_arrive_timestamp - _car_dict[car_id].time_offset_step) << " " << int(_CAR_TIME_ERROR / _schedule_period) << endl;
-				}
-			}
-		}
-
-		for (const string& car_id : cars_to_add) {
-			// Find the thread with minimum size to store the current tree
-			vector<reference_wrapper<Car>>& target_result = *min_element(results.begin(), results.end(),
-				[](const vector<reference_wrapper<Car>>& a, const vector<reference_wrapper<Car>>& b) -> bool
-				{
-					return a.size() < b.size();
-				});
-
+			// If the car belongs to this district (has been checked in creating cars_to_add)
 			target_result.push_back(_car_dict[car_id]);
 		}
 	}
 	else if (_CHOOSE_CAR_OPTION == 2) {
 		set<string> cars_to_add;
 		for (const auto& [car_id, car] : _car_dict) {
-			if (find(new_car_ids.begin(), new_car_ids.end(), car_id) != new_car_ids.end()) {
-				// New car, skip
-				continue;
-			}
-			if (_car_dict[car_id].state== "OLD" || _car_dict[car_id].state == "NEW") {
-				cars_to_add.insert(car_id);
+			if (_car_id_MEC_map[car_id] == MEC_id) {	// If the car belongs to this district
+				if (find(new_car_ids.begin(), new_car_ids.end(), car_id) != new_car_ids.end()) {
+					// New car, skip
+					continue;
+				}
+				if (_car_dict[car_id].state == "OLD" || _car_dict[car_id].state == "NEW") {
+					cars_to_add.insert(car_id);
+				}
 			}
 		}
 
@@ -351,6 +364,7 @@ vector<vector<reference_wrapper<Car>>> choose_car_to_thread_group(vector<string>
 					return a.size() < b.size();
 				});
 
+			// If the car belongs to this district (has been checked in creating cars_to_add)
 			target_result.push_back(_car_dict[car_id]);
 		}
 	}
@@ -367,17 +381,19 @@ vector<vector<reference_wrapper<Car>>> choose_car_to_thread_group(vector<string>
 	vector<reference_wrapper<Car>>* min_group = &(*min_max_result.first);
 	vector<reference_wrapper<Car>>* max_group = &(*min_max_result.second);
 	for (string car_id : new_car_ids) {
-		min_group->push_back(_car_dict[car_id]);
-		if ((int)min_group->size() > (int)max_group->size() - 3) {	// 3 is a temporary number to control the load balance
-			// Re-sort the group
+		if (_car_id_MEC_map[car_id] == MEC_id) {	// If the car belongs to this district
+			min_group->push_back(_car_dict[car_id]);
+			if ((int)min_group->size() > (int)max_group->size() - 3) {	// 3 is a temporary number to control the load balance
+				// Re-sort the group
 
-			auto min_max_result = minmax_element(results.begin(), results.end(),
-				[](const vector<reference_wrapper<Car>>& a, const vector<reference_wrapper<Car>>& b) -> bool
-				{
-					return a.size() < b.size();
-				});
-			min_group = &(*min_max_result.first);
-			max_group = &(*min_max_result.second);
+				auto min_max_result = minmax_element(results.begin(), results.end(),
+					[](const vector<reference_wrapper<Car>>& a, const vector<reference_wrapper<Car>>& b) -> bool
+					{
+						return a.size() < b.size();
+					});
+				min_group = &(*min_max_result.first);
+				max_group = &(*min_max_result.second);
+			}
 		}
 	}
 
