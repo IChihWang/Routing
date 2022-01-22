@@ -42,6 +42,7 @@ int main(int argc, char const* argv[]) {
 	// Initializations done after getting infos from SUMO
 	create_grid_network();
 	initial_avg_map();		// For car routing by themselves
+	initial_district_allocation();
 	init_thread_pool();
 
 	// Create files for writing the results

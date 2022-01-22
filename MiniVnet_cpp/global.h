@@ -41,6 +41,10 @@ void initial_avg_map();
 void compute_avg_map();
 void brief_route();
 
+// Defined in LoadBalancing.cpp
+extern map< Coord, Coord> _intersection_MEC;	// Record the MEC ID for each intersection
+int _MEC_num_per_edge = 3;		// Set 3 just for now for debugging
+void initial_district_allocation();
 
 
 // Defined in MiniVnet.cpp
