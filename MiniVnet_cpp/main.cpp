@@ -89,11 +89,13 @@ int main(int argc, char const* argv[]) {
 		}
 	}
 
+	/*
 	statistic_file << "Grid size, top N, choose_car, thread_num, iteration_num, _CAR_TIME_ERROR, arrival_rate, rand_seed, avg_compuation_time, avg_route_num, avg_new_car_num, total_new_car_num, compuation_time_per_car, compuation_time_per_new_car, routing_count" << endl;
 	statistic_file << (int)_grid_size << ',' << (int)_TOP_N_CONGESTED << ',' << (int)_CHOOSE_CAR_OPTION << ',' << (int)_thread_num << ',' << (int)_ITERATION_NUM << ',' << _CAR_TIME_ERROR << ',';
 	statistic_file << _ARRIVAL_RATE << ',' << _RANDOM_SEED << ',' << total_compuation_time / routing_count << ','; 
 	statistic_file << total_routing_car_num / routing_count << ',' << total_new_car_num / routing_count << ',';
 	statistic_file << total_new_car_num << ',' << total_compuation_time/ total_routing_car_num << ',' << total_compuation_time / total_new_car_num << ',' << routing_count << endl;
+	*/
 	statistic_file.close();
 
 	route_result_file.close();
@@ -170,49 +172,48 @@ string handle_request(string &in_str) {
 	total_new_car_num += new_car_ids.size();
 	int count_scheduling_car_num = 0;
 
+	// Record the result to tell SUMO
 	map<string, string> routes_dict;
+
 	map<string, double> traveling_time_dict;
-	vector<double> computation_time_list;
+	map<Coord, double> computation_time_list;
+	for (Coord& MEC_id : _MEC_id_list) {
+		computation_time_list[MEC_id] = 0;
+	}
 
 // TODO
 // Load balancing
 	// Measure the computation loads (Measurement or estimate mathmatically)
 	// Load balancing algorithm
-	// Move the intersections between districts
-	
+	// Move the intersections between districts (By modifying _intersection_MEC)
 	// Classify groups for each MEC
 	put_cars_into_districts();
-
-
-	// Rewrite "_top_congested_intersections"
-	// Rewrite choose_car_to_thread_group
 
 // Cars route
 	// Abstract the district info (Average on each road)
 	compute_avg_map();
 	// Route for every car
 	brief_route();
+	// Acclocate temporary destination for cars within a district
+	decide_tmp_destination();
 
-// TODO: cut the city into districts
-
-
+	// Global varibale for next round, local for each district
+	vector<pair<int32_t, Intersection*>> top_congested_intersections = _top_congested_intersections;
+	_top_congested_intersections.clear();
 
 	// Run routing in each district
 	for (Coord& MEC_id: _MEC_id_list){
-		// TODO: handle the time measurement
-		// TODO: double check the internal functions that use global variables
-		// TODO: routing choose_car_to_thread_group
-
+		// TODO: handle the time measurement for each MEC
+		
+		// Record top N congested list for a district 
+		vector< pair<int32_t, Intersection*> > district_top_congested_intersections = top_congested_intersections;
 
 		auto begin = high_resolution_clock::now();
 		for (int iter_i = 0; iter_i < _ITERATION_NUM; iter_i++) {
 			vector<vector<reference_wrapper<Car>>> route_groups;
-			route_groups = choose_car_to_thread_group(MEC_id, new_car_ids, old_car_ids);
+			route_groups = choose_car_to_thread_group(MEC_id, new_car_ids, district_top_congested_intersections);
 
 			new_car_ids.clear();	//Remove the new cars after first routing
-
-			// Clear affected_intersection_list before routing starts 
-			affected_intersections.clear();
 
 			// routing_with_groups(route_groups, routes_dict);
 			bool is_no_routing = true;
@@ -221,15 +222,15 @@ string handle_request(string &in_str) {
 					is_no_routing = false;
 			}
 			if (!is_no_routing)
-				routing_with_groups_thread(route_groups, routes_dict);
+				routing_with_groups_thread(MEC_id, route_groups, routes_dict);
 		
 			// Find the next top N congested list
-			add_intersection_to_reschedule_list();
+			add_intersection_to_reschedule_list(district_top_congested_intersections);
 
 			// Updated during routing, so no need to update database here
 			// router.update_database_after_routing(route_groups)
 
-			// Get the traveling time of cars
+			// Get the traveling time of cars (for statistic)
 			for (uint8_t i = 0; i < _thread_num; i++) {
 				for (Car& car : route_groups[i]) {
 					traveling_time_dict[car.id] = car.traveling_time;
@@ -237,12 +238,14 @@ string handle_request(string &in_str) {
 				}
 			}
 		}
+
+		// Record the top N intersection globally
+		_top_congested_intersections.insert(_top_congested_intersections.end(), district_top_congested_intersections.begin(), district_top_congested_intersections.end());
+
 		auto end = high_resolution_clock::now();
-
 		auto route_time = duration<double>(end - begin);
-		cout << "Route_time: " << route_time.count() << " seconds" << endl;
-		computation_time_list.push_back(route_time.count());
-
+		cout << "District " << get<0>(MEC_id) << "," << get<1>(MEC_id) << " : Route_time: " << route_time.count() << " seconds" << endl;
+		computation_time_list[MEC_id] = route_time.count();
 	}
 
 
@@ -260,10 +263,15 @@ string handle_request(string &in_str) {
 		route_result_file << car_id << ',' << path << endl;
 	}
 
-	all_computation_time_file << count_scheduling_car_num << ',' << route_time.count() << endl;
+	all_computation_time_file << count_scheduling_car_num;
+	for (Coord& MEC_id : _MEC_id_list) {
+		all_computation_time_file << ',' << computation_time_list[MEC_id];
+	}
+	all_computation_time_file << endl;
+
 	routing_count++;
-	total_compuation_time += route_time.count();
-	total_routing_car_num += count_scheduling_car_num;
+	//total_compuation_time += route_time.count();
+	//total_routing_car_num += count_scheduling_car_num;
 
 	move_a_time_step();
 

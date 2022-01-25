@@ -133,3 +133,25 @@ void brief_route() {
 		car.brief_path_data = path_list;
 	}
 }
+
+void decide_tmp_destination() {
+	for (auto& [car_id, car] : _car_dict) {
+		// Get the current MEC ID
+		Coord& current_intersection_id = car.brief_path_data[0];
+		Coord& current_MEC_id = _intersection_MEC[current_intersection_id];
+
+		// Scan the path list to decide the current district range
+		for (Coord& intersection_id : car.brief_path_data) {
+			if (intersection_id == car.dst_coord) {
+				// Include the intersection if the intersection is the destination
+				car.tmp_dst_coord = car.dst_coord;
+				break;
+			}
+			else if (_intersection_MEC[intersection_id] == current_MEC_id) {
+				// Include the intersection if the intersection is in the MEC where the car is currently at
+				car.tmp_dst_coord = intersection_id;
+				break;
+			}
+		}
+	}
+}

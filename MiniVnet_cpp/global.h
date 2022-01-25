@@ -36,10 +36,12 @@ void read_inter_info_data();
 void read_inter_length_data();
 
 // Defined in CarRoute.cpp
+#define OUTSIDE_MEC_MAP Coord(-1, -1)
 extern map< Node_ID, double> _avg_map_delay;
 void initial_avg_map();
-void compute_avg_map();
-void brief_route();
+void compute_avg_map();					// Abstract the district info (Average on each road)
+void brief_route();						// Route for every car
+void decide_tmp_destination();			// Acclocate temporary destination for cars within a district
 
 // Defined in LoadBalancing.cpp
 extern map< Coord, Coord> _intersection_MEC;	// Record the MEC ID for each intersection
@@ -55,8 +57,7 @@ extern vector< map< Coord, Intersection* >* > _database;
 extern map<string, Car> _car_dict;
 extern vector< pair<int32_t, Intersection*> > _top_congested_intersections;
 
-extern set< pair<uint16_t, Intersection*> > affected_intersections;
-void add_intersection_to_reschedule_list();
+void add_intersection_to_reschedule_list(vector< pair<int32_t, Intersection*> >& district_top_congested_intersections);
 
 void create_grid_network();
 void add_time_step(double time_stamp);
@@ -66,16 +67,16 @@ void update_car(const string& car_id, const uint8_t& car_length, const string& s
 	const uint8_t& direction_of_src_intersection, const uint16_t& time_offset_step,
 	const double& position_at_offset, const string& dst_node_id);
 Intersection& get_intersection(const uint16_t current_arrival_time, const Coord& intersection_id);
-vector<vector<reference_wrapper<Car>>> choose_car_to_thread_group(Coord& MEC_id, vector<string> &new_car_ids, vector<string> &old_car_ids);
+vector<vector<reference_wrapper<Car>>> choose_car_to_thread_group(const Coord& MEC_id, vector<string> &new_car_ids, vector< pair<int32_t, Intersection*> >& district_top_congested_intersections);
 void delete_car_from_database(Car& car);
 void delete_car_from_database_id(string car_id);
 
 // Single thread
 map<string, string>& routing_with_groups(const vector<vector<reference_wrapper<Car>>>& route_groups, map<string, string>& routes_dict);
 // Multi threads (in thread_worker.cpp)
-map<string, string>& routing_with_groups_thread(const vector<vector<reference_wrapper<Car>>>& route_groups, map<string, string>& routes_dict);
+map<string, string>& routing_with_groups_thread(const Coord& MEC_id, const vector<vector<reference_wrapper<Car>>>& route_groups, map<string, string>& routes_dict);
 
-map<string, vector<Node_in_Path>> routing(const vector<reference_wrapper<Car>>& route_group, set< pair<uint16_t, Intersection*> >& thread_affected_intersections);
+map<string, vector<Node_in_Path>> routing(const Coord& MEC_id, const vector<reference_wrapper<Car>>& route_group, set< pair<uint16_t, Intersection*> >& thread_affected_intersections);
 map<char, Node_ID> decide_available_turnings(Coord src_coord, uint8_t src_intersection_direction, Coord dst_coord, uint16_t additional_search_range);
 void add_car_to_database(Car& target_car, const vector<Node_in_Path>& path_list, set< pair<uint16_t, Intersection*> >& thread_affected_intersections);
 void testQ();

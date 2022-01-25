@@ -35,7 +35,7 @@ void routing_in_thread(Thread_Worker* thread_worker) {
 		// Start the routing
 		(thread_worker->thread_affected_intersections).clear();
 
-		map<string, vector<Node_in_Path>> result = routing(*(thread_worker->route_group_ptr), thread_worker->thread_affected_intersections);
+		map<string, vector<Node_in_Path>> result = routing(thread_worker->MEC_id, *(thread_worker->route_group_ptr), thread_worker->thread_affected_intersections);
 		
 		// Get the result
 		for (const auto& [car_id, path_data] : result) {
@@ -62,12 +62,13 @@ bool check_all_thread_done() {
 	return is_all_thread_done;
 }
 
-map<string, string>& routing_with_groups_thread(const vector<vector<reference_wrapper<Car>>>& route_groups, map<string, string>& routes_dict) {
+map<string, string>& routing_with_groups_thread(const Coord& MEC_id, const vector<vector<reference_wrapper<Car>>>& route_groups, map<string, string>& routes_dict) {
 	// Dispatch workload
 	for (uint8_t thread_i = 0; thread_i < _thread_num; thread_i++) {
 		const vector<reference_wrapper<Car>>& route_group = route_groups[thread_i];
 		(*(_thread_pool[thread_i])).route_group_ptr = &route_group;
 		(*(_thread_pool[thread_i])).request_worker_ready = true;
+		(*(_thread_pool[thread_i])).MEC_id = MEC_id;
 	}
 
 	// Start workers
@@ -93,6 +94,7 @@ map<string, string>& routing_with_groups_thread(const vector<vector<reference_wr
 	for (uint8_t thread_i = 0; thread_i < _thread_num; thread_i++) {
 		(*(_thread_pool[thread_i])).route_group_ptr = nullptr;
 		(*(_thread_pool[thread_i])).allow_main_continue = false;
+		(*(_thread_pool[thread_i])).MEC_id = OUTSIDE_MEC_MAP;
 		(*(_thread_pool[thread_i])).routes_dict.clear();
 	}
 

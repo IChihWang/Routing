@@ -125,6 +125,7 @@ class Node_in_Car;
 class Car : public Car_in_database {
 public:
 	Coord dst_coord;
+	Coord tmp_dst_coord;		// The destination node within a district
 	string state = "";
 	unordered_map<Intersection*, string> records_intersection_in_database;	// intersection_ptr, car_state, absolute_time_stamp
 	

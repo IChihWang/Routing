@@ -17,7 +17,6 @@ map<string, Car> _car_dict;
 vector<pair<int32_t, Intersection*>> _top_congested_intersections;
 
 shared_mutex wlock_mutex_affected_intersections;
-set<pair<uint16_t, Intersection*>> affected_intersections;
 
 
 /* Handling database */
@@ -84,31 +83,7 @@ void move_a_time_step() {
 		),
 		_top_congested_intersections.end()
 	);
-	/*
-	for (uint16_t i = 0; i < _routing_period_num; i++) {
-		map< Coord, Intersection* >* intersection_map = _database[0];
-		for (auto& [intersection_id, intersection_ptr] : (*intersection_map)) {
-			intersection_ptr->my_own_destructure();
-			delete intersection_ptr;
-		}
-		delete intersection_map;
-		_database.erase(_database.begin());
-	}
 
-	for (pair<int32_t, Intersection*>& item : _top_congested_intersections) {
-		item.first -= _routing_period_num;
-	}
-
-	_top_congested_intersections.erase(
-		std::remove_if(
-			_top_congested_intersections.begin(),
-			_top_congested_intersections.end(),
-			[](pair<int32_t, Intersection*> const& p) { return p.first <= 0; }
-		),
-		_top_congested_intersections.end()
-	);
-
-	*/
 }
 
 shared_mutex database_mutex;
@@ -166,7 +141,7 @@ void update_car(const string& car_id, const uint8_t& car_length, const string& s
 }
 
 // Choose car for reroute (Called only by main thread)
-vector<vector<reference_wrapper<Car>>> choose_car_to_thread_group(Coord& MEC_id, vector<string>& new_car_ids, vector<string>& old_car_ids) {
+vector<vector<reference_wrapper<Car>>> choose_car_to_thread_group(const Coord& MEC_id, vector<string>& new_car_ids, vector< pair<int32_t, Intersection*> >& district_top_congested_intersections) {
 	vector<vector<reference_wrapper<Car>>> results;
 	// Important: a car shouldn't appear in two different groups at the same time!!!!!!!!!!!!
 
@@ -185,7 +160,7 @@ vector<vector<reference_wrapper<Car>>> choose_car_to_thread_group(Coord& MEC_id,
 
 	if (_CHOOSE_CAR_OPTION == 0) {
 		// Find the correlatioin between affected intersections (Whether they share same CAV)
-		vector<pair<uint32_t, Intersection*>> not_yet_searched_list(_top_congested_intersections.begin(), _top_congested_intersections.end());
+		vector<pair<uint32_t, Intersection*>> not_yet_searched_list(district_top_congested_intersections.begin(), district_top_congested_intersections.end());
 		vector<pair<uint32_t, Intersection*>> searched_list;
 		vector<pair<uint32_t, Intersection*>> searching_list;
 		vector<string> car_added_list;
@@ -293,7 +268,7 @@ vector<vector<reference_wrapper<Car>>> choose_car_to_thread_group(Coord& MEC_id,
 	}
 	else if (_CHOOSE_CAR_OPTION == 1) {
 		set<string> cars_to_add;
-		for (const pair<uint32_t, Intersection*> item : _top_congested_intersections) {
+		for (const pair<uint32_t, Intersection*> item : district_top_congested_intersections) {
 			Intersection* intersection_ptr = item.second;
 			for (auto car_item : *(intersection_ptr->scheduling_cars)) {
 				const string& car_id = car_item.first;
@@ -483,7 +458,7 @@ map<string, string>& routing_with_groups(const vector<vector<reference_wrapper<C
 }
 */
 
-map<string, vector<Node_in_Path>> routing(const vector<reference_wrapper<Car>>& route_group, set< pair<uint16_t, Intersection*> >& thread_affected_intersections) {
+map<string, vector<Node_in_Path>> routing(const Coord& MEC_id, const vector<reference_wrapper<Car>>& route_group, set< pair<uint16_t, Intersection*> >& thread_affected_intersections) {
 	thread_affected_intersections.clear();
 	map<string, vector<Node_in_Path>> route_record;
 
@@ -492,7 +467,7 @@ map<string, vector<Node_in_Path>> routing(const vector<reference_wrapper<Car>>& 
 
 		// Variables
 		map<Node_ID, Node_Record> nodes_arrival_time_data;
-		const Coord& dst_coord = car.dst_coord;
+		const Coord& dst_coord = car.tmp_dst_coord;
 		// Initualization
 		Node_ID src_node(car.src_coord, car.direction_of_src_intersection);
 		Node_Record src_record(true, (0 + car.time_offset_step));
@@ -535,7 +510,7 @@ map<string, vector<Node_in_Path>> routing(const vector<reference_wrapper<Car>>& 
 
 			
 			// Terminate when finding shortest path
-			if (intersection_id == car.dst_coord) {
+			if (intersection_id == dst_coord) {
 				car.traveling_time = _NOW_SIMU_TIME + double(current_arrival_time) * _schedule_period + (500 - (_TOTAL_LEN - node_position_at_offset)) / _V_MAX; // additional time for car to leave sumo
 				dst_node = current_node;
 				break;
@@ -547,10 +522,15 @@ map<string, vector<Node_in_Path>> routing(const vector<reference_wrapper<Car>>& 
 			// Decide the turnings
 			map<char, Node_ID> available_turnings_and_out_direction = decide_available_turnings(intersection_id, intersection_dir, dst_coord, 0);
 
-			for (pair<char, Node_ID> const& data_pair : available_turnings_and_out_direction) {
-				char turning = data_pair.first;
-				Node_ID node_id = data_pair.second;
+			for (const auto & [turning, node_id] : available_turnings_and_out_direction) {
 				double position_at_offset = node_position_at_offset;
+
+				// Skip that intersection if the intersection is not in the same district
+				Coord next_intersection_id = get<0>(node_id);
+				Coord next_MEC_id = _intersection_MEC[next_intersection_id];
+				if (next_MEC_id != MEC_id && next_MEC_id != OUTSIDE_MEC_MAP) {
+					continue;
+				}
 
 				// Recording the states for final path
 				vector<Car_in_Node_Record> recordings;
@@ -769,9 +749,8 @@ map<char, Node_ID> decide_available_turnings(Coord src_coord, uint8_t src_inters
 	return available_turnings_and_out_direction; // Key : turnings, Values : out_direction
 }
 
-void add_intersection_to_reschedule_list() {
-	
-	affected_intersections.clear();
+void add_intersection_to_reschedule_list(vector< pair<int32_t, Intersection*> > &district_top_congested_intersections) {
+	set<pair<uint16_t, Intersection*>> affected_intersections;
 
 	for (uint8_t thread_i = 0; thread_i < _thread_num; thread_i++) {
 		set< pair<uint16_t, Intersection*> >& thread_affected_intersections = _thread_pool[thread_i]->thread_affected_intersections;
@@ -780,15 +759,15 @@ void add_intersection_to_reschedule_list() {
 
 	// /*
 	vector<pair<uint16_t, Intersection*>> sorted_affected_intersections(affected_intersections.begin(), affected_intersections.end());
-	sorted_affected_intersections.insert(sorted_affected_intersections.end(), _top_congested_intersections.begin(), _top_congested_intersections.end());
+	sorted_affected_intersections.insert(sorted_affected_intersections.end(), district_top_congested_intersections.begin(), district_top_congested_intersections.end());
 	sort(sorted_affected_intersections.begin(), sorted_affected_intersections.end(), [](pair<uint16_t, Intersection*> a, pair<uint16_t, Intersection*> b) -> bool {return (a.second)->get_car_num() > (b.second)->get_car_num(); });
 
-	//_top_congested_intersections = vector<pair<int32_t, Intersection*>>(sorted_affected_intersections.begin(), sorted_affected_intersections.begin()+ _TOP_N_CONGESTED);
-	_top_congested_intersections.clear();
+	
+	district_top_congested_intersections.clear();
 	uint8_t count = 0;
 	for (auto sorted_item : sorted_affected_intersections) {
 		bool is_skip = false;
-		for (auto item : _top_congested_intersections) {
+		for (auto item : district_top_congested_intersections) {
 			if (sorted_item.second->id_str == item.second->id_str && abs(sorted_item.first - item.first) < 2*double(_TOTAL_LEN)/_V_MAX){
 				is_skip = true;
 				break;
@@ -796,12 +775,13 @@ void add_intersection_to_reschedule_list() {
 		}
 		
 		if (!is_skip) {
-			_top_congested_intersections.push_back(sorted_item);
+			district_top_congested_intersections.push_back(sorted_item);
 
 			if (++count >= _TOP_N_CONGESTED)
 				break;
 		}
 	}
+	// */
 }
 
 void add_car_to_database(Car& target_car, const vector<Node_in_Path>& path_list, set< pair<uint16_t, Intersection*> >& thread_affected_intersections) {

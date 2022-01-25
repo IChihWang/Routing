@@ -21,6 +21,7 @@ public:
 	static condition_variable request_worker_condition_variable;
 	bool request_worker_ready = false;
 	set< pair<uint16_t, Intersection*> > thread_affected_intersections;
+	Coord MEC_id = OUTSIDE_MEC_MAP;	// Current running MEC
 
 	thread* worker_ptr;
 

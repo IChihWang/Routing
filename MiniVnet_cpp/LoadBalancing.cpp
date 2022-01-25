@@ -15,6 +15,16 @@ void initial_district_allocation() {
 			_intersection_MEC[Coord(i, j)] = MEC_id;
 		}
 	}
+
+	// Index the edge intersection of the whole city map  (OUTSIDE_MEC_MAP)
+	for (int i = 0; i <= _grid_size+1; i++) {
+		_intersection_MEC[Coord(i, 0)] = OUTSIDE_MEC_MAP;
+		_intersection_MEC[Coord(i, _grid_size + 1)] = OUTSIDE_MEC_MAP;
+	}
+	for (int j = 0; j <= _grid_size+1; j++) {
+		_intersection_MEC[Coord(0, j)] = OUTSIDE_MEC_MAP;
+		_intersection_MEC[Coord(_grid_size + 1, j)] = OUTSIDE_MEC_MAP;
+	}
 }
 
 void put_cars_into_districts(){
