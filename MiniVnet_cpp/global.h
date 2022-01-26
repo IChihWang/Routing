@@ -45,11 +45,16 @@ void decide_tmp_destination();			// Acclocate temporary destination for cars wit
 
 // Defined in LoadBalancing.cpp
 extern map< Coord, Coord> _intersection_MEC;	// Record the MEC ID for each intersection
+extern map< Edge_ID, Coord> _roadseg_MEC;	// Record the MEC ID for each road segment
 extern map< string, Coord>	_car_id_MEC_map;	// Record the MEC ID for each car
 extern vector<Coord> _MEC_id_list;	// The list of ID of MECs
 int _MEC_num_per_edge = 3;		// Set 3 just for now for debugging
 void initial_district_allocation();
 void put_cars_into_districts();
+void load_balancing();
+void update_intersection_info_in_MEC();
+void estimate_new_car_load(vector<string> new_car_ids);
+pair<int, int> calculate_MEC_cost_info(Coord& MEC_id);	// return <V, E>
 
 
 // Defined in MiniVnet.cpp

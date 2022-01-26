@@ -525,10 +525,10 @@ map<string, vector<Node_in_Path>> routing(const Coord& MEC_id, const vector<refe
 			for (const auto & [turning, node_id] : available_turnings_and_out_direction) {
 				double position_at_offset = node_position_at_offset;
 
-				// Skip that intersection if the intersection is not in the same district
+				// Skip that intersection if the intersection is not in the same district or not the destination intersection
 				Coord next_intersection_id = get<0>(node_id);
 				Coord next_MEC_id = _intersection_MEC[next_intersection_id];
-				if (next_MEC_id != MEC_id && next_MEC_id != OUTSIDE_MEC_MAP) {
+				if (next_MEC_id != MEC_id && next_MEC_id != OUTSIDE_MEC_MAP && next_intersection_id != dst_coord) {
 					continue;
 				}
 

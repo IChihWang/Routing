@@ -183,9 +183,12 @@ string handle_request(string &in_str) {
 
 // TODO
 // Load balancing
+	// "Estimate" new car load (idea: pick the car num in last time window)
+	estimate_new_car_load(new_car_ids);
 	// Measure the computation loads (Measurement or estimate mathmatically)
-	// Load balancing algorithm
-	// Move the intersections between districts (By modifying _intersection_MEC)
+	// & Load balancing algorithm
+	// & Move the intersections between districts (By modifying _intersection_MEC)
+	load_balancing();
 	// Classify groups for each MEC
 	put_cars_into_districts();
 
@@ -203,7 +206,6 @@ string handle_request(string &in_str) {
 
 	// Run routing in each district
 	for (Coord& MEC_id: _MEC_id_list){
-		// TODO: handle the time measurement for each MEC
 		
 		// Record top N congested list for a district 
 		vector< pair<int32_t, Intersection*> > district_top_congested_intersections = top_congested_intersections;

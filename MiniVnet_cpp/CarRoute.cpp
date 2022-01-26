@@ -140,6 +140,7 @@ void decide_tmp_destination() {
 		Coord& current_intersection_id = car.brief_path_data[0];
 		Coord& current_MEC_id = _intersection_MEC[current_intersection_id];
 
+		car.tmp_dst_coord = OUTSIDE_MEC_MAP;
 		// Scan the path list to decide the current district range
 		for (Coord& intersection_id : car.brief_path_data) {
 			if (intersection_id == car.dst_coord) {
@@ -147,11 +148,16 @@ void decide_tmp_destination() {
 				car.tmp_dst_coord = car.dst_coord;
 				break;
 			}
-			else if (_intersection_MEC[intersection_id] == current_MEC_id) {
-				// Include the intersection if the intersection is in the MEC where the car is currently at
+			else if (_intersection_MEC[intersection_id] != current_MEC_id) {
+				// Assign the tmp destination, where the car is about to leave the MEC
 				car.tmp_dst_coord = intersection_id;
 				break;
 			}
+		}
+
+		// DEBUG: Check if it fail to decide temporary destination
+		if (car.tmp_dst_coord == OUTSIDE_MEC_MAP) {
+			cout << "Error when deciding tmp destination" << endl;
 		}
 	}
 }

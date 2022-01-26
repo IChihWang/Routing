@@ -23,6 +23,7 @@ public:
 };
 // Record info of each node during routing
 typedef tuple<Coord, uint8_t> Node_ID;
+typedef Node_ID Edge_ID;
 class Node_Record {
 public:
 	bool is_src = false;
