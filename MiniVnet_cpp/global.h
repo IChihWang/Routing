@@ -48,7 +48,7 @@ extern map< Coord, Coord> _intersection_MEC;	// Record the MEC ID for each inter
 extern map< Edge_ID, Coord> _roadseg_MEC;	// Record the MEC ID for each road segment
 extern map< string, Coord>	_car_id_MEC_map;	// Record the MEC ID for each car
 extern vector<Coord> _MEC_id_list;	// The list of ID of MECs
-int _MEC_num_per_edge = 3;		// Set 3 just for now for debugging
+extern int _MEC_num_per_edge;		// Set 3 just for now for debugging
 void initial_district_allocation();
 void put_cars_into_districts();
 void load_balancing();
