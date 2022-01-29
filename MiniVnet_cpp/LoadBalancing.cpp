@@ -7,12 +7,14 @@ map< Edge_ID, Coord> _roadseg_MEC;
 map< string, Coord>	_car_id_MEC_map;
 vector<Coord> _MEC_id_list;
 map< Coord, vector<Coord>> _MEC_intersection;	// Record the intersections that each MEC has
-map<Coord, int> intersection_new_car_in;		// Record the number of new cars (new to the map) in each intersection
+map< Coord, int> intersection_new_car_in;		// Record the number of new cars (new to the map) in each intersection
 int _MEC_num_per_edge = 3;
+map< Coord, Coord> MEC_center_coord;			// Record the center of the MEC to prevent overly migration
 
 void initial_district_allocation() {
 	int _num_intersection_per_edge = ceil(1.0 * _grid_size / _MEC_num_per_edge);
 
+	// Initial and allocate intersections to MECs
 	for (int i = 1; i <= _grid_size; i++) {
 		for (int j = 1; j <= _grid_size; j++) {
 			Coord MEC_id = Coord((i - 1) / _num_intersection_per_edge, (j - 1) / _num_intersection_per_edge);
@@ -30,6 +32,16 @@ void initial_district_allocation() {
 		_intersection_MEC[Coord(0, j)] = OUTSIDE_MEC_MAP;
 		_intersection_MEC[Coord(_grid_size + 1, j)] = OUTSIDE_MEC_MAP;
 	}
+
+	// Decide the center intersection of each MEC (MEC_center_coord)
+	for (const Coord& MEC_id : _MEC_id_list) {
+		const int &MEC_i = get<0>(MEC_id);
+		const int &MEC_j = get<1>(MEC_id);
+		int center_i = MEC_i * _num_intersection_per_edge + _num_intersection_per_edge / 2;
+		int center_j = MEC_j * _num_intersection_per_edge + _num_intersection_per_edge / 2;
+		MEC_center_coord[MEC_id] = Coord(MEC_i, MEC_j);
+	}
+
 }
 
 void put_cars_into_districts(){
@@ -82,6 +94,7 @@ void load_balancing() {	// update _MEC_id_computation_load
 		int V = get<0>(MEC_parameters[MEC_id]);
 		int E = get<1>(MEC_parameters[MEC_id]);
 		double computation_load = V + E * log2(V);	// Dijkstra's algorithm with min-priority queue
+		computation_load *= MEC_car_num[MEC_id];
 		MEC_computation_load[MEC_id] = computation_load;
 	}
 
@@ -118,6 +131,7 @@ void load_balancing() {	// update _MEC_id_computation_load
 		// Start negociate with the neighbers in the order of intersections with the most external link
 		vector<Coord> searched_intersection;
 		while (true) {
+			// Choose the intersection and record it
 			map<Coord, int>::iterator chosen_intersection = max_element(intersection_external_link_num.begin(), intersection_external_link_num.end(),
 				[](const pair<Coord, int> & a, const pair<Coord, int>& b) -> bool {
 					return a.second < b.second;
@@ -133,11 +147,35 @@ void load_balancing() {	// update _MEC_id_computation_load
 					potential_reduced_E++;
 			}
 
+			// Calculate the potential moved car number on current MEC
+			int car_number_change = 0;
+			if (intersection_car_num.find(intersection_id) != intersection_car_num.end())
+				car_number_change = intersection_car_num[intersection_id];
+
 			// Ask the neighbors
 			for (int dir_i = 0; dir_i < 4; dir_i++) {
+				// Check whether the intersection is allowed to migrate in this direction (beyond the center; if so, skip)
+				if (dir_i == 0) {
+					if (get<1>(intersection_id) >= get<1>(MEC_center_coord[highest_load_MEC_id]))
+						continue;
+				}
+				else if (dir_i == 1) {
+					if (get<0>(intersection_id) <= get<0>(MEC_center_coord[highest_load_MEC_id]))
+						continue;
+				}
+				else if (dir_i == 2) {
+					if (get<1>(intersection_id) <= get<1>(MEC_center_coord[highest_load_MEC_id]))
+						continue;
+				}
+				else if (dir_i == 3) {
+					if (get<0>(intersection_id) >= get<0>(MEC_center_coord[highest_load_MEC_id]))
+						continue;
+				}
+
+
 				Coord& neighbor_MEC = _roadseg_MEC[Edge_ID(intersection_id, dir_i)];
-				// Well, the "neighbor_MEC" is itself in this case
-				if (neighbor_MEC == highest_load_MEC_id)
+				// Well, the "neighbor_MEC" is itself in this case or outside city range
+				if (neighbor_MEC == highest_load_MEC_id || neighbor_MEC == OUTSIDE_MEC_MAP)
 					continue;
 				// neighbor_MEC has higher or equal load than itself
 				else if (MEC_computation_load[neighbor_MEC] >= MEC_computation_load[highest_load_MEC_id])
@@ -145,8 +183,66 @@ void load_balancing() {	// update _MEC_id_computation_load
 				// Otherwise, found a potential neighbor to take over the load
 				else {
 					// Calculate the potential load reduction after moving the intersection
+					int new_V = get<0>(MEC_parameters[highest_load_MEC_id]) -1;
+					int new_E = get<1>(MEC_parameters[highest_load_MEC_id]) - potential_reduced_E;
+					int new_car_num = MEC_car_num[highest_load_MEC_id] - car_number_change;
+
+					double new_computation_load = new_V + new_E * log2(new_V);	// Dijkstra's algorithm with min-priority queue
+					new_computation_load *= new_car_num;
+
+					// Calculate the potential load gain of the neighbor
+					int new_neighbor_V = get<0>(MEC_parameters[neighbor_MEC]) + 1;
+					int neighbor_potential_gained_E = 0;
+					for (int dir_i = 0; dir_i < 4; dir_i++) {
+						Coord& connected_MEC = _roadseg_MEC[Edge_ID(intersection_id, dir_i)];
+						if (connected_MEC == neighbor_MEC)
+							neighbor_potential_gained_E++;
+					}
+					int new_neighbor_E = get<1>(MEC_parameters[neighbor_MEC]) + neighbor_potential_gained_E;
+					int new_neighbor_car_num = MEC_car_num[neighbor_MEC] + car_number_change;
+					double new_neighbor_computation_load = new_neighbor_V + new_neighbor_E * log2(new_neighbor_V);	// Dijkstra's algorithm with min-priority queue
+					new_neighbor_computation_load *= new_neighbor_car_num;
+
+					// Offload to the neighbor if the migration doesn't cost overload to the neighbor
+					if (new_neighbor_computation_load < new_computation_load) {
+						// Move the intersection
+						_intersection_MEC[intersection_id] = neighbor_MEC;
+
+						// Update the road segment info
+						const int& intersection_id_i = get<0>(intersection_id);
+						const int& intersection_id_j = get<1>(intersection_id);
+						if (_intersection_MEC[Coord(intersection_id_i, intersection_id_j - 1)] != OUTSIDE_MEC_MAP)
+							_roadseg_MEC[Edge_ID(Coord(intersection_id_i, intersection_id_j - 1), 2)] = neighbor_MEC;
+						if (_intersection_MEC[Coord(intersection_id_i + 1, intersection_id_j)] != OUTSIDE_MEC_MAP)
+							_roadseg_MEC[Edge_ID(Coord(intersection_id_i + 1, intersection_id_j), 3)] = neighbor_MEC;
+						if (_intersection_MEC[Coord(intersection_id_i, intersection_id_j +1 )] != OUTSIDE_MEC_MAP)
+							_roadseg_MEC[Edge_ID(Coord(intersection_id_i, intersection_id_j + 1), 0)] = neighbor_MEC;
+						if (_intersection_MEC[Coord(intersection_id_i - 1, intersection_id_j)] != OUTSIDE_MEC_MAP)
+							_roadseg_MEC[Edge_ID(Coord(intersection_id_i - 1, intersection_id_j), 1)] = neighbor_MEC;
+
+						// Update the MEC intersection
+						_MEC_intersection[highest_load_MEC_id].erase(
+							remove(_MEC_intersection[highest_load_MEC_id].begin(), _MEC_intersection[highest_load_MEC_id].end(), intersection_id)
+							, _MEC_intersection[highest_load_MEC_id].end());
+						_MEC_intersection[neighbor_MEC].push_back(intersection_id);
+						
+						// Update MEC parameters
+						MEC_parameters[highest_load_MEC_id] = make_pair(new_V, new_E);
+						MEC_parameters[neighbor_MEC] = make_pair(new_neighbor_V, new_neighbor_E);
+
+						MEC_car_num[highest_load_MEC_id] = new_car_num;
+						MEC_car_num[neighbor_MEC] = new_neighbor_car_num;
+
+						// Update the load of the MEC
+						MEC_computation_load[highest_load_MEC_id] = new_computation_load;
+						MEC_computation_load[neighbor_MEC] = new_neighbor_computation_load;
+					}
+
+					// TODO: Move the intersection to the neighbor and update the costs/parameters (including all the MECs)
 				}
 			}
+
+			// TODO: break the while loop
 
 		}
 
