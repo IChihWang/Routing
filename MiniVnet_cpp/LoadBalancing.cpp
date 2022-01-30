@@ -18,7 +18,9 @@ void initial_district_allocation() {
 	for (int i = 1; i <= _grid_size; i++) {
 		for (int j = 1; j <= _grid_size; j++) {
 			Coord MEC_id = Coord((i - 1) / _num_intersection_per_edge, (j - 1) / _num_intersection_per_edge);
-			_MEC_id_list.push_back(MEC_id);
+			if (find(_MEC_id_list.begin(), _MEC_id_list.end(), MEC_id) == _MEC_id_list.end()) {
+				_MEC_id_list.push_back(MEC_id);
+			}
 			_intersection_MEC[Coord(i, j)] = MEC_id;
 		}
 	}
@@ -98,23 +100,20 @@ void load_balancing() {	// update _MEC_id_computation_load
 		MEC_computation_load[MEC_id] = computation_load;
 	}
 
-	// TODO: Starting from the highest load, try to offload to the neighbors
-	// Sort the MEC by the load
-	vector<Coord> sorted_MEC_id_list = _MEC_id_list;
-	sort(sorted_MEC_id_list.begin(), sorted_MEC_id_list.end(),
-		[&MEC_computation_load](const Coord& a, const Coord& b) -> bool
-		{
-			return MEC_computation_load[a] > MEC_computation_load[b];
-		});
-
+	
 	// Repeat MEC_num time to propergate from high to low load
+	vector<Coord> candidate_MEC_id_list = _MEC_id_list;
 	for (int repeat_i = 0; repeat_i < _MEC_id_list.size(); repeat_i++) {
 		// Get the one with the highest load
-		Coord& highest_load_MEC_id = sorted_MEC_id_list[0];
+		vector<Coord>::iterator chosen_MEC = max_element(candidate_MEC_id_list.begin(), candidate_MEC_id_list.end(),
+			[&MEC_computation_load](const Coord& a, const Coord& b) -> bool {
+				return MEC_computation_load[a] > MEC_computation_load[b];
+			});
+		Coord& highest_load_MEC_id = *(chosen_MEC);
 
 		// Find the intersection with the most external to move
-		vector<Coord> intersection_list = _MEC_intersection[highest_load_MEC_id];
-		map<Coord, int> intersection_external_link_num;
+		vector<Coord>& intersection_list = _MEC_intersection[highest_load_MEC_id];
+		map<Coord, int> candidate_intersection_external_link_num;
 
 		//	Calculate the external link number of each intersection
 		for (const Coord& intersection_id : intersection_list) {
@@ -124,20 +123,22 @@ void load_balancing() {	// update _MEC_id_computation_load
 				if (external_MEC != highest_load_MEC_id && external_MEC != OUTSIDE_MEC_MAP)
 					external_link_num++;
 			}
-			if (external_link_num > 0)
-				intersection_external_link_num[intersection_id] = external_link_num;
+			candidate_intersection_external_link_num[intersection_id] = external_link_num;
 		}
 
 		// Start negociate with the neighbers in the order of intersections with the most external link
-		vector<Coord> searched_intersection;
-		while (true) {
+		int candidate_intersection_num = candidate_intersection_external_link_num.size();	// Specify this because the size of the candidate_intersection changes within the loop
+		for(int search_count = 0; search_count < candidate_intersection_num; search_count++){
 			// Choose the intersection and record it
-			map<Coord, int>::iterator chosen_intersection = max_element(intersection_external_link_num.begin(), intersection_external_link_num.end(),
+			map<Coord, int>::iterator chosen_intersection = max_element(candidate_intersection_external_link_num.begin(), candidate_intersection_external_link_num.end(),
 				[](const pair<Coord, int> & a, const pair<Coord, int>& b) -> bool {
 					return a.second < b.second;
 				});
 			const Coord& intersection_id = chosen_intersection->first;
-			searched_intersection.push_back(intersection_id);
+
+			// Early terminate when there is no intersection to be searched (searched ones are removed)
+			if (candidate_intersection_external_link_num[intersection_id] == 0)
+				break;
 
 			// Calculate the potential E reduction on current MEC
 			int potential_reduced_E = 0;
@@ -211,14 +212,38 @@ void load_balancing() {	// update _MEC_id_computation_load
 						// Update the road segment info
 						const int& intersection_id_i = get<0>(intersection_id);
 						const int& intersection_id_j = get<1>(intersection_id);
-						if (_intersection_MEC[Coord(intersection_id_i, intersection_id_j - 1)] != OUTSIDE_MEC_MAP)
-							_roadseg_MEC[Edge_ID(Coord(intersection_id_i, intersection_id_j - 1), 2)] = neighbor_MEC;
-						if (_intersection_MEC[Coord(intersection_id_i + 1, intersection_id_j)] != OUTSIDE_MEC_MAP)
-							_roadseg_MEC[Edge_ID(Coord(intersection_id_i + 1, intersection_id_j), 3)] = neighbor_MEC;
-						if (_intersection_MEC[Coord(intersection_id_i, intersection_id_j +1 )] != OUTSIDE_MEC_MAP)
-							_roadseg_MEC[Edge_ID(Coord(intersection_id_i, intersection_id_j + 1), 0)] = neighbor_MEC;
-						if (_intersection_MEC[Coord(intersection_id_i - 1, intersection_id_j)] != OUTSIDE_MEC_MAP)
-							_roadseg_MEC[Edge_ID(Coord(intersection_id_i - 1, intersection_id_j), 1)] = neighbor_MEC;
+						Coord neighbor_intersection_id(intersection_id_i, intersection_id_j - 1);
+						if (_intersection_MEC[neighbor_intersection_id] != OUTSIDE_MEC_MAP) {
+							_roadseg_MEC[Edge_ID(neighbor_intersection_id, 2)] = neighbor_MEC;
+							// Update the neighbor in list candidate_intersection_external_link_num if the neighbor is a candidate (because the internal link changes to external)
+							if (candidate_intersection_external_link_num.find(neighbor_intersection_id) != candidate_intersection_external_link_num.end()) {
+								candidate_intersection_external_link_num[neighbor_intersection_id]++;
+							}
+						}
+						neighbor_intersection_id = Coord(intersection_id_i + 1, intersection_id_j);
+						if (_intersection_MEC[neighbor_intersection_id] != OUTSIDE_MEC_MAP) {
+							_roadseg_MEC[Edge_ID(neighbor_intersection_id, 3)] = neighbor_MEC;
+							// Update the neighbor in list candidate_intersection_external_link_num if the neighbor is a candidate (because the internal link changes to external)
+							if (candidate_intersection_external_link_num.find(neighbor_intersection_id) != candidate_intersection_external_link_num.end()) {
+								candidate_intersection_external_link_num[neighbor_intersection_id]++;
+							}
+						}
+						neighbor_intersection_id = Coord(intersection_id_i, intersection_id_j + 1);
+						if (_intersection_MEC[neighbor_intersection_id] != OUTSIDE_MEC_MAP) {
+							_roadseg_MEC[Edge_ID(neighbor_intersection_id, 0)] = neighbor_MEC;
+							// Update the neighbor in list candidate_intersection_external_link_num if the neighbor is a candidate (because the internal link changes to external)
+							if (candidate_intersection_external_link_num.find(neighbor_intersection_id) != candidate_intersection_external_link_num.end()) {
+								candidate_intersection_external_link_num[neighbor_intersection_id]++;
+							}
+						}
+						neighbor_intersection_id = Coord(intersection_id_i - 1, intersection_id_j);
+						if (_intersection_MEC[neighbor_intersection_id] != OUTSIDE_MEC_MAP) {
+							_roadseg_MEC[Edge_ID(neighbor_intersection_id, 1)] = neighbor_MEC;
+							// Update the neighbor in list candidate_intersection_external_link_num if the neighbor is a candidate (because the internal link changes to external)
+							if (candidate_intersection_external_link_num.find(neighbor_intersection_id) != candidate_intersection_external_link_num.end()) {
+								candidate_intersection_external_link_num[neighbor_intersection_id]++;
+							}
+						}
 
 						// Update the MEC intersection
 						_MEC_intersection[highest_load_MEC_id].erase(
@@ -236,46 +261,25 @@ void load_balancing() {	// update _MEC_id_computation_load
 						// Update the load of the MEC
 						MEC_computation_load[highest_load_MEC_id] = new_computation_load;
 						MEC_computation_load[neighbor_MEC] = new_neighbor_computation_load;
-					}
 
-					// TODO: Move the intersection to the neighbor and update the costs/parameters (including all the MECs)
+						break;
+					}
 				}
 			}
 
-			// TODO: break the while loop
+			// After asking the neighbors, remove the intersection out of the list to search
+			candidate_intersection_external_link_num.erase(intersection_id);
 
 		}
 
-		/*
-		// Negociate with the neighbor and then update the MEC_computation_load
-		// Also, update _intersection_MEC at the mean time
-		// Find the neighbors
-		int MEC_i = get<0>(highest_load_MEC_id);
-		int MEC_j = get<1>(highest_load_MEC_id);
-		vector<Coord> MEC_neighbors;
-		if (MEC_i - 1 >= 0)
-			MEC_neighbors.push_back(Coord(MEC_i - 1, MEC_j));
-		if (MEC_j - 1 >= 0)
-			MEC_neighbors.push_back(Coord(MEC_i, MEC_j - 1));
-		if (MEC_i + 1 < _MEC_num_per_edge)
-			MEC_neighbors.push_back(Coord(MEC_i + 1, MEC_j));
-		if (MEC_j + 1 < _MEC_num_per_edge)
-			MEC_neighbors.push_back(Coord(MEC_i, MEC_j + 1));
-		*/
-
-
-
-		// Remove the MEC with highest load, then re-sort the list
-		sorted_MEC_id_list.erase(sorted_MEC_id_list.begin());
-		sort(sorted_MEC_id_list.begin(), sorted_MEC_id_list.end(),
-			[&MEC_computation_load](const Coord& a, const Coord& b) -> bool
-			{
-				return MEC_computation_load[a] > MEC_computation_load[b];
-			});
+		// Remove the MEC with highest load
+		candidate_MEC_id_list.erase(
+			remove(candidate_MEC_id_list.begin(), candidate_MEC_id_list.end(), highest_load_MEC_id)
+			, candidate_MEC_id_list.end());
 	}
 
 
-	// TODO: Finally update _intersection_MEC
+	// _intersection_MEC is updated in the code
 }
 
 pair<int, int> calculate_MEC_cost_info(Coord& MEC_id) {

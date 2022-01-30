@@ -373,7 +373,7 @@ vector<vector<reference_wrapper<Car>>> choose_car_to_thread_group(const Coord& M
 	}
 
 	for (auto car_vec : results) {
-		cout << " " << car_vec.size() << " ";
+		cout << " >> " << car_vec.size() << " ";
 	}
 	cout << endl;
 
