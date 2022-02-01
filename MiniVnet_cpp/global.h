@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <iostream>
 #include <set>
+#include <fstream>
 #include "globalConst.h"
 #include "element.h"
 #include "LaneAdviser.h"
@@ -34,6 +35,9 @@ string handle_request(string &in_str);
 void read_load_adv_data();
 void read_inter_info_data();
 void read_inter_length_data();
+ostream& operator<<(ostream& os, const Coord& coord_id);
+
+extern ofstream _debug_file;
 
 // Defined in CarRoute.cpp
 #define OUTSIDE_MEC_MAP Coord(-1, -1)
@@ -49,6 +53,7 @@ extern map< Edge_ID, Coord> _roadseg_MEC;	// Record the MEC ID for each road seg
 extern map< string, Coord>	_car_id_MEC_map;	// Record the MEC ID for each car
 extern vector<Coord> _MEC_id_list;	// The list of ID of MECs
 extern int _MEC_num_per_edge;		// Set 3 just for now for debugging
+extern map< Coord, vector<Coord>> _MEC_intersection;	// Record the intersections that each MEC has
 void initial_district_allocation();
 void put_cars_into_districts();
 void load_balancing();
@@ -77,7 +82,7 @@ void delete_car_from_database(Car& car);
 void delete_car_from_database_id(string car_id);
 
 // Single thread
-map<string, string>& routing_with_groups(const vector<vector<reference_wrapper<Car>>>& route_groups, map<string, string>& routes_dict);
+map<string, string>& routing_with_groups(const Coord& MEC_id, const vector<vector<reference_wrapper<Car>>>& route_groups, map<string, string>& routes_dict);
 // Multi threads (in thread_worker.cpp)
 map<string, string>& routing_with_groups_thread(const Coord& MEC_id, const vector<vector<reference_wrapper<Car>>>& route_groups, map<string, string>& routes_dict);
 

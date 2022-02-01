@@ -4,7 +4,6 @@
 
 #include <chrono>	// Measure runtime
 
-#include <fstream>
 using namespace std;
 using namespace std::chrono;
 
@@ -23,6 +22,8 @@ int _CAR_TIME_ERROR = 0;
 ofstream route_result_file;
 ofstream all_computation_time_file;
 ofstream statistic_file;
+ofstream load_balancing_file;
+ofstream _debug_file;
 
 int routing_count = 0;
 double total_compuation_time = 0;
@@ -52,9 +53,21 @@ int main(int argc, char const* argv[]) {
 	route_result_file.open(file_name_prefix + "routes.csv");
 	all_computation_time_file.open(file_name_prefix + "computation_time.csv");
 	statistic_file.open("result/statistic.csv", ofstream::app);
+	load_balancing_file.open(file_name_prefix+"load_balancing.csv");
+	_debug_file.open(file_name_prefix + "debug.csv");
+
 
 	route_result_file << "car_id, path, estimated_travel_timie" << endl;
 	all_computation_time_file << "new_car_num, all_car_num, compuation_time" << endl;
+	for (const Coord& MEC_id : _MEC_id_list) {
+		load_balancing_file << get<0>(MEC_id) << "_" << get<1>(MEC_id) << "_computation,";
+		_debug_file << get<0>(MEC_id) << "_" << get<1>(MEC_id);
+	}
+	for (const Coord& MEC_id : _MEC_id_list) {
+		load_balancing_file << get<0>(MEC_id) << "_" << get<1>(MEC_id) << "_MEC_range,";
+	}
+	load_balancing_file << endl;
+	_debug_file << endl;
 
 	// Receiving requests/sending replies
 	while (true) {
@@ -223,11 +236,15 @@ string handle_request(string &in_str) {
 				if (route_group.size() > 0)
 					is_no_routing = false;
 			}
-			if (!is_no_routing)
+			if (!is_no_routing) {
 				routing_with_groups_thread(MEC_id, route_groups, routes_dict);
-		
-			// Find the next top N congested list
-			add_intersection_to_reschedule_list(district_top_congested_intersections);
+
+				// Find the next top N congested list
+				add_intersection_to_reschedule_list(district_top_congested_intersections);
+			}
+			else {
+				district_top_congested_intersections.clear();
+			}
 
 			// Updated during routing, so no need to update database here
 			// router.update_database_after_routing(route_groups)
@@ -271,6 +288,18 @@ string handle_request(string &in_str) {
 	}
 	all_computation_time_file << endl;
 
+	// Write the load balancing result file
+	for (Coord& MEC_id : _MEC_id_list) {
+		load_balancing_file << computation_time_list[MEC_id] << ",";
+	}
+	for (Coord& MEC_id : _MEC_id_list) {
+		for (Coord& intersection_id : _MEC_intersection[MEC_id]) {
+			load_balancing_file << get<0>(intersection_id) << "_" << get<1>(intersection_id) << "|";
+		}
+		load_balancing_file << ",";
+	}
+	load_balancing_file << endl;
+
 	routing_count++;
 	//total_compuation_time += route_time.count();
 	//total_routing_car_num += count_scheduling_car_num;
@@ -280,3 +309,8 @@ string handle_request(string &in_str) {
 	return out_str;
 }
 
+ostream& operator<<(ostream& os, const Coord& coord_id)
+{
+	os << "(" << get<0>(coord_id) << '.' << get<1>(coord_id) << ')';
+	return os;
+}

@@ -39,9 +39,9 @@ void initial_district_allocation() {
 	for (const Coord& MEC_id : _MEC_id_list) {
 		const int &MEC_i = get<0>(MEC_id);
 		const int &MEC_j = get<1>(MEC_id);
-		int center_i = MEC_i * _num_intersection_per_edge + _num_intersection_per_edge / 2;
-		int center_j = MEC_j * _num_intersection_per_edge + _num_intersection_per_edge / 2;
-		MEC_center_coord[MEC_id] = Coord(MEC_i, MEC_j);
+		int center_i = MEC_i * _num_intersection_per_edge + _num_intersection_per_edge / 2 + 1;
+		int center_j = MEC_j * _num_intersection_per_edge + _num_intersection_per_edge / 2 + 1;
+		MEC_center_coord[MEC_id] = Coord(center_i, center_j);
 	}
 
 }
@@ -175,6 +175,10 @@ void load_balancing() {	// update _MEC_id_computation_load
 
 
 				Coord& neighbor_MEC = _roadseg_MEC[Edge_ID(intersection_id, dir_i)];
+
+				if (highest_load_MEC_id == Coord(0, 0))
+					cout << "The (0,0) has " << intersection_id << " , " << dir_i << " neighbor " << neighbor_MEC << " center " << MEC_center_coord[highest_load_MEC_id] << endl;
+
 				// Well, the "neighbor_MEC" is itself in this case or outside city range
 				if (neighbor_MEC == highest_load_MEC_id || neighbor_MEC == OUTSIDE_MEC_MAP)
 					continue;
@@ -278,6 +282,10 @@ void load_balancing() {	// update _MEC_id_computation_load
 			, candidate_MEC_id_list.end());
 	}
 
+	for (Coord& MEC_id : _MEC_id_list) {
+		_debug_file << MEC_car_num[MEC_id] << ",";
+	}
+	_debug_file << endl;
 
 	// _intersection_MEC is updated in the code
 }

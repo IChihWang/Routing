@@ -1,2 +1,6 @@
 Grid size, top N, choose_car, thread_num, iteration_num,         _CAR_TIME_ERROR, arrival_rate, rand_seed, avg_shortest_travel_time, avg_travel,         avg_delay, arrival_car_num, departured_car_num, diff_exit_time, 1000_travel_time,         1000_delay_time, 1000_shortest_travel_time, 1000_car_num
 4,10,1,6,1,10,0.8,1,143.969,169.748,25.7788,11465,10318,2.85731,162.055,17.8344,144.221,1001
+Grid size, top N, choose_car, thread_num, iteration_num,         _CAR_TIME_ERROR, arrival_rate, rand_seed, avg_shortest_travel_time, avg_travel,         avg_delay, arrival_car_num, departured_car_num, diff_exit_time, 1000_travel_time,         1000_delay_time, 1000_shortest_travel_time, 1000_car_num
+9,10,1,2,3,10,0.4,0,209.862,230.123,20.2611,4265,2460,-1.13629,251.219,22.1098,229.109,1001
+Grid size, top N, choose_car, thread_num, iteration_num,         _CAR_TIME_ERROR, arrival_rate, rand_seed, avg_shortest_travel_time, avg_travel,         avg_delay, arrival_car_num, departured_car_num, diff_exit_time, 1000_travel_time,         1000_delay_time, 1000_shortest_travel_time, 1000_car_num
+9,10,1,2,3,10,0.4,0,209.698,230.037,20.3392,4265,2458,-1.17902,251.361,22.252,229.109,1001

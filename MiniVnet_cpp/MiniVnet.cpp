@@ -75,6 +75,7 @@ void move_a_time_step() {
 		}
 	}
 
+	/*
 	_top_congested_intersections.erase(
 		std::remove_if(
 			_top_congested_intersections.begin(),
@@ -83,6 +84,7 @@ void move_a_time_step() {
 		),
 		_top_congested_intersections.end()
 	);
+	*/
 
 }
 
@@ -435,10 +437,13 @@ void delete_car_from_database_id(string car_id) {
 	_car_dict.erase(car_id);
 }
 
-/*
-map<string, string>& routing_with_groups(const vector<vector<reference_wrapper<Car>>>& route_groups, map<string, string>& routes_dict) {
-	for (const vector<reference_wrapper<Car>> &route_group : route_groups) {
-		map<string, vector<Node_in_Path>> result = routing(route_group);
+// /*
+map<string, string>& routing_with_groups(const Coord& MEC_id, const vector<vector<reference_wrapper<Car>>>& route_groups, map<string, string>& routes_dict) {
+	for (uint8_t thread_i = 0; thread_i < _thread_num; thread_i++) {
+
+		const vector<reference_wrapper<Car>>& route_group = route_groups[thread_i];
+		(_thread_pool[thread_i]->thread_affected_intersections).clear();
+		map<string, vector<Node_in_Path>> result = routing(MEC_id, route_group, _thread_pool[thread_i]->thread_affected_intersections);
 
 		for (const pair < string, vector<Node_in_Path>>& result_data : result) {
 			const string& car_id = result_data.first;
@@ -456,7 +461,7 @@ map<string, string>& routing_with_groups(const vector<vector<reference_wrapper<C
 
 	return routes_dict;
 }
-*/
+//*/
 
 map<string, vector<Node_in_Path>> routing(const Coord& MEC_id, const vector<reference_wrapper<Car>>& route_group, set< pair<uint16_t, Intersection*> >& thread_affected_intersections) {
 	thread_affected_intersections.clear();
@@ -767,6 +772,13 @@ void add_intersection_to_reschedule_list(vector< pair<int32_t, Intersection*> > 
 	uint8_t count = 0;
 	for (auto sorted_item : sorted_affected_intersections) {
 		bool is_skip = false;
+
+		// Skip if chosen intersection is outdated
+		if (sorted_item.second->time_stamp < _NOW_SIMU_TIME + _routing_period) {
+			continue;
+		}
+
+		// Skip if two intersection timesteps are too close
 		for (auto item : district_top_congested_intersections) {
 			if (sorted_item.second->id_str == item.second->id_str && abs(sorted_item.first - item.first) < 2*double(_TOTAL_LEN)/_V_MAX){
 				is_skip = true;
