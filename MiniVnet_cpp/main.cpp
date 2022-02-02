@@ -61,7 +61,7 @@ int main(int argc, char const* argv[]) {
 	all_computation_time_file << "new_car_num, all_car_num, compuation_time" << endl;
 	for (const Coord& MEC_id : _MEC_id_list) {
 		load_balancing_file << get<0>(MEC_id) << "_" << get<1>(MEC_id) << "_computation,";
-		_debug_file << get<0>(MEC_id) << "_" << get<1>(MEC_id);
+		_debug_file << get<0>(MEC_id) << "_" << get<1>(MEC_id) << ",";
 	}
 	for (const Coord& MEC_id : _MEC_id_list) {
 		load_balancing_file << get<0>(MEC_id) << "_" << get<1>(MEC_id) << "_MEC_range,";
@@ -217,16 +217,23 @@ string handle_request(string &in_str) {
 	vector<pair<int32_t, Intersection*>> top_congested_intersections = _top_congested_intersections;
 	_top_congested_intersections.clear();
 
+	_debug_file << endl;
 	// Run routing in each district
 	for (Coord& MEC_id: _MEC_id_list){
 		
 		// Record top N congested list for a district 
 		vector< pair<int32_t, Intersection*> > district_top_congested_intersections = top_congested_intersections;
 
+		int debug_total_car_num = 0;
+
 		auto begin = high_resolution_clock::now();
 		for (int iter_i = 0; iter_i < _ITERATION_NUM; iter_i++) {
 			vector<vector<reference_wrapper<Car>>> route_groups;
 			route_groups = choose_car_to_thread_group(MEC_id, new_car_ids, district_top_congested_intersections);
+
+			for (int debug_i = 0; debug_i < route_groups.size(); debug_i++) {
+				debug_total_car_num += route_groups[debug_i].size();
+			}
 
 			new_car_ids.clear();	//Remove the new cars after first routing
 
@@ -265,8 +272,11 @@ string handle_request(string &in_str) {
 		auto route_time = duration<double>(end - begin);
 		cout << "District " << get<0>(MEC_id) << "," << get<1>(MEC_id) << " : Route_time: " << route_time.count() << " seconds" << endl;
 		computation_time_list[MEC_id] = route_time.count();
-	}
 
+
+		_debug_file << debug_total_car_num << ",";
+	}
+	_debug_file << endl;
 
 	// Finalize the results
 	string out_str = "";
