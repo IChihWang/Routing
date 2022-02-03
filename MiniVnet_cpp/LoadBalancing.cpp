@@ -81,13 +81,25 @@ void load_balancing() {	// update _MEC_id_computation_load
 		MEC_car_num[MEC_id] += new_car_num;
 		intersection_car_num[intersection_id] += new_car_num;
 	}
+
 	//	Update with the _top_congested_intersections car number
+	set<string> top_intersection_car_list;		// Record this in case an intersection is chosen twice or more with two different timestamp
+	//		Gather all the car_to_be_updated
 	for (auto& [timestamp, intersection_ptr] : _top_congested_intersections) {
 		Coord& intersection_id = intersection_ptr->id;
+		for (auto car_item : *(intersection_ptr->scheduling_cars)) {
+			const string& car_id = car_item.first;
+			if (_car_dict[car_id].state == "OLD" || _car_dict[car_id].state == "NEW") {
+				top_intersection_car_list.insert(car_id);
+			}
+		}
+	}
+	//		Update the car number
+	for (auto& car_id : top_intersection_car_list) {
+		const Coord& intersection_id = _car_dict[car_id].src_coord;
 		Coord& MEC_id = _intersection_MEC[intersection_id];
-		int car_num = intersection_ptr->get_car_num();
-		MEC_car_num[MEC_id] += car_num;
-		intersection_car_num[intersection_id] += car_num;
+		MEC_car_num[MEC_id] += 1* _ITERATION_NUM;
+		intersection_car_num[intersection_id] += 1* _ITERATION_NUM;
 	}
 
 	// Compute the load for each MEC
