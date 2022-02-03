@@ -217,7 +217,6 @@ string handle_request(string &in_str) {
 	vector<pair<int32_t, Intersection*>> top_congested_intersections = _top_congested_intersections;
 	_top_congested_intersections.clear();
 
-	_debug_file << endl;
 	// Run routing in each district
 	for (Coord& MEC_id: _MEC_id_list){
 		
@@ -233,6 +232,7 @@ string handle_request(string &in_str) {
 
 			for (int debug_i = 0; debug_i < route_groups.size(); debug_i++) {
 				debug_total_car_num += route_groups[debug_i].size();
+				_debug_file << route_groups[debug_i].size() << ",";
 			}
 
 			new_car_ids.clear();	//Remove the new cars after first routing
@@ -321,6 +321,6 @@ string handle_request(string &in_str) {
 
 ostream& operator<<(ostream& os, const Coord& coord_id)
 {
-	os << "(" << get<0>(coord_id) << '.' << get<1>(coord_id) << ')';
+	os << "(" << get<0>(coord_id) << '_' << get<1>(coord_id) << ')';
 	return os;
 }

@@ -82,6 +82,12 @@ void load_balancing() {	// update _MEC_id_computation_load
 		intersection_car_num[intersection_id] += new_car_num;
 	}
 
+	map<Coord, int> debug_MEC_car_num;
+	for (Coord& MEC_id : _MEC_id_list) {
+		debug_MEC_car_num[MEC_id] = MEC_car_num[MEC_id];
+	}
+	
+
 	//	Update with the _top_congested_intersections car number
 	set<string> top_intersection_car_list;		// Record this in case an intersection is chosen twice or more with two different timestamp
 	//		Gather all the car_to_be_updated
@@ -100,7 +106,10 @@ void load_balancing() {	// update _MEC_id_computation_load
 		Coord& MEC_id = _intersection_MEC[intersection_id];
 		MEC_car_num[MEC_id] += 1* _ITERATION_NUM;
 		intersection_car_num[intersection_id] += 1* _ITERATION_NUM;
+		debug_MEC_car_num[MEC_id]++;
 	}
+
+	
 
 	// Compute the load for each MEC
 	map<Coord, double>	MEC_computation_load;	// Record the load in each MEC
@@ -274,6 +283,12 @@ void load_balancing() {	// update _MEC_id_computation_load
 						MEC_car_num[highest_load_MEC_id] = new_car_num;
 						MEC_car_num[neighbor_MEC] = new_neighbor_car_num;
 
+						int car_number_change2 = 0;
+						if (intersection_car_num.find(intersection_id) != intersection_car_num.end())
+							car_number_change2 = intersection_car_num[intersection_id];
+						debug_MEC_car_num[highest_load_MEC_id] -= car_number_change2;
+						debug_MEC_car_num[neighbor_MEC] += car_number_change2;
+
 						// Update the load of the MEC
 						MEC_computation_load[highest_load_MEC_id] = new_computation_load;
 						MEC_computation_load[neighbor_MEC] = new_neighbor_computation_load;
@@ -294,6 +309,9 @@ void load_balancing() {	// update _MEC_id_computation_load
 			, candidate_MEC_id_list.end());
 	}
 
+	for (Coord& MEC_id : _MEC_id_list) {
+		_debug_file << debug_MEC_car_num[MEC_id] << ",";
+	}
 	for (Coord& MEC_id : _MEC_id_list) {
 		_debug_file << MEC_car_num[MEC_id] << ",";
 	}
@@ -351,18 +369,15 @@ void update_intersection_info_in_MEC() {
 
 void estimate_new_car_load(vector<string> new_car_ids) {
 	// Clear the load info
-	for (int i = 0; i <= _grid_size + 1; i++) {
-		intersection_new_car_in[Coord(i, 0)] = 0;
-		intersection_new_car_in[Coord(i, _grid_size + 1)] = 0;
-	}
-	for (int j = 0; j <= _grid_size + 1; j++) {
-		intersection_new_car_in[Coord(0, j)] = 0;
-		intersection_new_car_in[Coord(_grid_size + 1, j)] = 0;
-	}
+	intersection_new_car_in.clear();
 
 	// Update the load info
 	for (string& car_id : new_car_ids) {
 		Coord& intersection_id = _car_dict[car_id].src_coord;
+		if (intersection_new_car_in.find(intersection_id) == intersection_new_car_in.end())
+			intersection_new_car_in[intersection_id] == 0;
+
 		intersection_new_car_in[intersection_id]++;
 	}
+
 }
