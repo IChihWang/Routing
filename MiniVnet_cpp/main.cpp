@@ -232,10 +232,19 @@ string handle_request(string &in_str) {
 
 			for (int debug_i = 0; debug_i < route_groups.size(); debug_i++) {
 				debug_total_car_num += route_groups[debug_i].size();
-				_debug_file << route_groups[debug_i].size() << ",";
+				//_debug_file << route_groups[debug_i].size() << ",";
 			}
 
-			new_car_ids.clear();	//Remove the new cars after first routing
+			//Remove the new cars after first routing
+			new_car_ids.erase(
+				std::remove_if(
+					new_car_ids.begin(),
+					new_car_ids.end(),
+					[&](string const& p) { return _car_id_MEC_map[p] == MEC_id; }
+				),
+				new_car_ids.end()
+			);
+
 
 			// routing_with_groups(route_groups, routes_dict);
 			bool is_no_routing = true;
@@ -274,9 +283,9 @@ string handle_request(string &in_str) {
 		computation_time_list[MEC_id] = route_time.count();
 
 
-		_debug_file << debug_total_car_num << ",";
+		//_debug_file << debug_total_car_num << ",";
 	}
-	_debug_file << endl;
+	_debug_file << endl << endl;
 
 	// Finalize the results
 	string out_str = "";

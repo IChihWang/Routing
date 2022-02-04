@@ -46,11 +46,54 @@ void initial_district_allocation() {
 
 }
 
+
+vector<string> debug_new_car_ids;
+
 void put_cars_into_districts(){
+	_car_id_MEC_map.clear();
+
 	for (auto& [car_id, car] : _car_dict) {
-		Coord& MEC_id = _intersection_MEC[car.src_coord];
-		_car_id_MEC_map[car_id] = MEC_id;
+		if (_car_dict[car_id].state == "OLD" || _car_dict[car_id].state == "NEW") {
+			Coord& MEC_id = _intersection_MEC[car.src_coord];
+			_car_id_MEC_map[car_id] = MEC_id;
+		}
 	}
+
+
+
+	set<string> top_intersection_car_list;		// Record this in case an intersection is chosen twice or more with two different timestamp
+	//		Gather all the car_to_be_updated
+	for (auto& [timestamp, intersection_ptr] : _top_congested_intersections) {
+		Coord& intersection_id = intersection_ptr->id;
+		for (auto car_item : *(intersection_ptr->scheduling_cars)) {
+			const string& car_id = car_item.first;
+			if (_car_dict[car_id].state == "OLD" || _car_dict[car_id].state == "NEW") {
+				top_intersection_car_list.insert(car_id);
+			}
+		}
+	}
+	map<Coord, int> debug_MEC_car_num;
+	for (Coord& MEC_id : _MEC_id_list) {
+		debug_MEC_car_num[MEC_id] = 0;
+	}
+	for (auto& car_id : top_intersection_car_list) {
+		if (_car_dict[car_id].state == "OLD" || _car_dict[car_id].state == "NEW") {
+			Coord& MEC_id = _intersection_MEC[_car_dict[car_id].src_coord];
+			debug_MEC_car_num[MEC_id]++;
+		}
+	}
+	/*
+	for (auto& car_id : debug_new_car_ids) {
+		if (_car_dict[car_id].state == "OLD" || _car_dict[car_id].state == "NEW") {
+			Coord& MEC_id = _intersection_MEC[_car_dict[car_id].src_coord];
+			debug_MEC_car_num[MEC_id]++;
+		}
+	}
+	*/
+	for (Coord& MEC_id : _MEC_id_list) {
+		_debug_file << debug_MEC_car_num[MEC_id] << ",";
+	}
+	_debug_file << endl;
 }
 
 void load_balancing() {	// update _MEC_id_computation_load
@@ -86,7 +129,6 @@ void load_balancing() {	// update _MEC_id_computation_load
 	for (Coord& MEC_id : _MEC_id_list) {
 		debug_MEC_car_num[MEC_id] = MEC_car_num[MEC_id];
 	}
-	
 
 	//	Update with the _top_congested_intersections car number
 	set<string> top_intersection_car_list;		// Record this in case an intersection is chosen twice or more with two different timestamp
@@ -309,12 +351,16 @@ void load_balancing() {	// update _MEC_id_computation_load
 			, candidate_MEC_id_list.end());
 	}
 
+	// /*
 	for (Coord& MEC_id : _MEC_id_list) {
 		_debug_file << debug_MEC_car_num[MEC_id] << ",";
 	}
+	// */
+	/*
 	for (Coord& MEC_id : _MEC_id_list) {
 		_debug_file << MEC_car_num[MEC_id] << ",";
 	}
+	*/
 	_debug_file << endl;
 
 	// _intersection_MEC is updated in the code
@@ -375,9 +421,11 @@ void estimate_new_car_load(vector<string> new_car_ids) {
 	for (string& car_id : new_car_ids) {
 		Coord& intersection_id = _car_dict[car_id].src_coord;
 		if (intersection_new_car_in.find(intersection_id) == intersection_new_car_in.end())
-			intersection_new_car_in[intersection_id] == 0;
+			intersection_new_car_in[intersection_id] = 0;
 
 		intersection_new_car_in[intersection_id]++;
 	}
 
+
+	debug_new_car_ids = new_car_ids;
 }

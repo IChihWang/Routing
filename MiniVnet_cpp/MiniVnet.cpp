@@ -159,7 +159,7 @@ vector<vector<reference_wrapper<Car>>> choose_car_to_thread_group(const Coord& M
 		results.push_back(vector<reference_wrapper<Car>>());
 	}
 
-
+	int debug_old_car_num = 0;
 	if (_CHOOSE_CAR_OPTION == 0) {
 		// Find the correlatioin between affected intersections (Whether they share same CAV)
 		vector<pair<uint32_t, Intersection*>> not_yet_searched_list(district_top_congested_intersections.begin(), district_top_congested_intersections.end());
@@ -281,6 +281,7 @@ vector<vector<reference_wrapper<Car>>> choose_car_to_thread_group(const Coord& M
 				}
 			}
 		}
+		debug_old_car_num = cars_to_add.size();
 
 		// Check if the Car is un-sync
 		for (const auto& [car_id, car] : _car_dict) {
@@ -355,6 +356,9 @@ vector<vector<reference_wrapper<Car>>> choose_car_to_thread_group(const Coord& M
 		{
 			return a.size() < b.size();
 		});
+
+	int debug_new_car_num = 0;
+
 	vector<reference_wrapper<Car>>* min_group = &(*min_max_result.first);
 	vector<reference_wrapper<Car>>* max_group = &(*min_max_result.second);
 	for (string car_id : new_car_ids) {
@@ -362,7 +366,6 @@ vector<vector<reference_wrapper<Car>>> choose_car_to_thread_group(const Coord& M
 			min_group->push_back(_car_dict[car_id]);
 			if ((int)min_group->size() > (int)max_group->size() - 3) {	// 3 is a temporary number to control the load balance
 				// Re-sort the group
-
 				auto min_max_result = minmax_element(results.begin(), results.end(),
 					[](const vector<reference_wrapper<Car>>& a, const vector<reference_wrapper<Car>>& b) -> bool
 					{
@@ -371,6 +374,8 @@ vector<vector<reference_wrapper<Car>>> choose_car_to_thread_group(const Coord& M
 				min_group = &(*min_max_result.first);
 				max_group = &(*min_max_result.second);
 			}
+
+			debug_new_car_num++;
 		}
 	}
 
@@ -379,6 +384,8 @@ vector<vector<reference_wrapper<Car>>> choose_car_to_thread_group(const Coord& M
 	}
 	cout << endl;
 
+
+	_debug_file << debug_old_car_num << ",";
 	/*
 	* Looping through each bucket
 	int process_idx = 0;
