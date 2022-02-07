@@ -197,13 +197,82 @@ string handle_request(string &in_str) {
 // TODO
 // Load balancing
 	// "Estimate" new car load (idea: pick the car num in last time window)
-	estimate_new_car_load(new_car_ids);
-	// Measure the computation loads (Measurement or estimate mathmatically)
+	// $ Measure the computation loads (Measurement or estimate mathmatically)
 	// & Load balancing algorithm
 	// & Move the intersections between districts (By modifying _intersection_MEC)
-	load_balancing();
+	//load_balancing(new_car_ids);
 	// Classify groups for each MEC
 	put_cars_into_districts();
+
+
+	//		Update the un-sync car number
+	map<Coord, int> debug_MEC_car_num;
+	for (Coord& MEC_id : _MEC_id_list) {
+		debug_MEC_car_num[MEC_id] = 0;
+	}
+	for (const auto& [car_id, car] : _car_dict) {
+		if (find(new_car_ids.begin(), new_car_ids.end(), car_id) != new_car_ids.end()) {
+			// New car, skip
+			continue;
+		}
+		if (_car_dict[car_id].state == "OLD" || _car_dict[car_id].state == "NEW") {
+			int expected_arrive_timestamp = -1;
+			for (const Node_in_Path& node_in_path_record : _car_dict[car_id].path_data) {
+				if (_car_dict[car_id].src_coord == node_in_path_record.recordings[0].last_intersection_id) {
+					expected_arrive_timestamp = node_in_path_record.recordings[0].time_stamp;
+					expected_arrive_timestamp -= _routing_period_num;
+					break;
+				}
+			}
+			if (abs(expected_arrive_timestamp - _car_dict[car_id].time_offset_step) > int((double)_CAR_TIME_ERROR / _schedule_period)) {
+				const Coord& intersection_id = _car_dict[car_id].src_coord;
+				Coord& MEC_id = _intersection_MEC[intersection_id];
+				//debug_MEC_car_num[MEC_id]++;
+
+				MEC_id = _car_id_MEC_map[car_id];
+				debug_MEC_car_num[MEC_id]++;
+			}
+		}
+	}
+	for (Coord& MEC_id : _MEC_id_list) {
+		_debug_file << debug_MEC_car_num[MEC_id] << ",";
+	}
+	_debug_file << endl;
+
+
+	//		Update the un-sync car number
+	for (Coord& MEC_id : _MEC_id_list) {
+		int debug_unsync_car_num = 0;
+		for (const auto& [car_id, car] : _car_dict) {
+			if (find(new_car_ids.begin(), new_car_ids.end(), car_id) != new_car_ids.end()) {
+				// New car, skip
+				continue;
+			}
+			if (_car_dict[car_id].state == "OLD" || _car_dict[car_id].state == "NEW") {
+				int expected_arrive_timestamp = -1;
+				for (const Node_in_Path& node_in_path_record : _car_dict[car_id].path_data) {
+					if (_car_dict[car_id].src_coord == node_in_path_record.recordings[0].last_intersection_id) {
+						expected_arrive_timestamp = node_in_path_record.recordings[0].time_stamp;
+						expected_arrive_timestamp -= _routing_period_num;
+						break;
+					}
+				}
+				if (abs(expected_arrive_timestamp - _car_dict[car_id].time_offset_step) > int((double)_CAR_TIME_ERROR / _schedule_period)) {
+					const Coord& intersection_id = _car_dict[car_id].src_coord;
+					Coord& in_MEC_id = _intersection_MEC[intersection_id];
+					//debug_MEC_car_num[MEC_id]++;
+
+					in_MEC_id = _car_id_MEC_map[car_id];
+					if (in_MEC_id == MEC_id)
+						debug_unsync_car_num++;
+				}
+			}
+		}
+		_debug_file << debug_unsync_car_num << ",";
+	}
+
+
+
 
 // Cars route
 	// Abstract the district info (Average on each road)
@@ -212,6 +281,16 @@ string handle_request(string &in_str) {
 	brief_route();
 	// Acclocate temporary destination for cars within a district
 	decide_tmp_destination();
+
+
+
+
+
+
+
+
+
+
 
 	// Global varibale for next round, local for each district
 	vector<pair<int32_t, Intersection*>> top_congested_intersections = _top_congested_intersections;

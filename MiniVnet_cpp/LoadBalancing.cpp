@@ -76,12 +76,15 @@ void put_cars_into_districts(){
 	for (Coord& MEC_id : _MEC_id_list) {
 		debug_MEC_car_num[MEC_id] = 0;
 	}
+	/*
 	for (auto& car_id : top_intersection_car_list) {
 		if (_car_dict[car_id].state == "OLD" || _car_dict[car_id].state == "NEW") {
 			Coord& MEC_id = _intersection_MEC[_car_dict[car_id].src_coord];
 			debug_MEC_car_num[MEC_id]++;
 		}
 	}
+
+	*/
 	/*
 	for (auto& car_id : debug_new_car_ids) {
 		if (_car_dict[car_id].state == "OLD" || _car_dict[car_id].state == "NEW") {
@@ -90,13 +93,21 @@ void put_cars_into_districts(){
 		}
 	}
 	*/
+
+
+
+	/*
 	for (Coord& MEC_id : _MEC_id_list) {
 		_debug_file << debug_MEC_car_num[MEC_id] << ",";
 	}
 	_debug_file << endl;
+	//*/
 }
 
-void load_balancing() {	// update _MEC_id_computation_load
+void load_balancing(const vector<string>& new_car_ids) {	// update _MEC_id_computation_load
+	// "Estimate" new car load (idea: pick the car num in last time window)
+	estimate_new_car_load(new_car_ids);
+
 	// Properly allocate the MEC_id for each intersection and road segment
 	update_intersection_info_in_MEC();
 
@@ -127,7 +138,8 @@ void load_balancing() {	// update _MEC_id_computation_load
 
 	map<Coord, int> debug_MEC_car_num;
 	for (Coord& MEC_id : _MEC_id_list) {
-		debug_MEC_car_num[MEC_id] = MEC_car_num[MEC_id];
+		//debug_MEC_car_num[MEC_id] = MEC_car_num[MEC_id];
+		debug_MEC_car_num[MEC_id] = 0;
 	}
 
 	//	Update with the _top_congested_intersections car number
@@ -148,10 +160,33 @@ void load_balancing() {	// update _MEC_id_computation_load
 		Coord& MEC_id = _intersection_MEC[intersection_id];
 		MEC_car_num[MEC_id] += 1* _ITERATION_NUM;
 		intersection_car_num[intersection_id] += 1* _ITERATION_NUM;
-		debug_MEC_car_num[MEC_id]++;
+		//debug_MEC_car_num[MEC_id]++;
 	}
 
-	
+	//		Update the un-sync car number
+	for (const auto& [car_id, car] : _car_dict) {
+		if (find(new_car_ids.begin(), new_car_ids.end(), car_id) != new_car_ids.end()) {
+			// New car, skip
+			continue;
+		}
+		if (_car_dict[car_id].state == "OLD" || _car_dict[car_id].state == "NEW") {
+			int expected_arrive_timestamp = -1;
+			for (const Node_in_Path& node_in_path_record : _car_dict[car_id].path_data) {
+				if (_car_dict[car_id].src_coord == node_in_path_record.recordings[0].last_intersection_id) {
+					expected_arrive_timestamp = node_in_path_record.recordings[0].time_stamp;
+					expected_arrive_timestamp -= _routing_period_num;
+					break;
+				}
+			}
+			if (abs(expected_arrive_timestamp - _car_dict[car_id].time_offset_step) > int((double)_CAR_TIME_ERROR / _schedule_period)) {
+				const Coord& intersection_id = _car_dict[car_id].src_coord;
+				Coord& MEC_id = _intersection_MEC[intersection_id];
+				MEC_car_num[MEC_id]++;
+				intersection_car_num[intersection_id]++;
+				debug_MEC_car_num[MEC_id]++;
+			}
+		}
+	}
 
 	// Compute the load for each MEC
 	map<Coord, double>	MEC_computation_load;	// Record the load in each MEC
@@ -413,19 +448,16 @@ void update_intersection_info_in_MEC() {
 	}
 }
 
-void estimate_new_car_load(vector<string> new_car_ids) {
+void estimate_new_car_load(const vector<string>& new_car_ids) {
 	// Clear the load info
 	intersection_new_car_in.clear();
 
 	// Update the load info
-	for (string& car_id : new_car_ids) {
+	for (const string& car_id : new_car_ids) {
 		Coord& intersection_id = _car_dict[car_id].src_coord;
 		if (intersection_new_car_in.find(intersection_id) == intersection_new_car_in.end())
 			intersection_new_car_in[intersection_id] = 0;
 
 		intersection_new_car_in[intersection_id]++;
 	}
-
-
-	debug_new_car_ids = new_car_ids;
 }

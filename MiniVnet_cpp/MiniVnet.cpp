@@ -281,7 +281,8 @@ vector<vector<reference_wrapper<Car>>> choose_car_to_thread_group(const Coord& M
 				}
 			}
 		}
-		debug_old_car_num = cars_to_add.size();
+		//debug_old_car_num = cars_to_add.size();
+		debug_old_car_num = 0;
 
 		// Check if the Car is un-sync
 		for (const auto& [car_id, car] : _car_dict) {
@@ -302,11 +303,14 @@ vector<vector<reference_wrapper<Car>>> choose_car_to_thread_group(const Coord& M
 
 					if (abs(expected_arrive_timestamp - _car_dict[car_id].time_offset_step) > int((double)_CAR_TIME_ERROR / _schedule_period)) {
 						cars_to_add.insert(car_id);
+						debug_old_car_num++;
 						//cout << car_id << " " << abs(expected_arrive_timestamp - _car_dict[car_id].time_offset_step) << " " << int(_CAR_TIME_ERROR / _schedule_period) << endl;
 					}
 				}
 			}
 		}
+
+		//debug_old_car_num = cars_to_add.size()- debug_old_car_num;
 
 		for (const string& car_id : cars_to_add) {
 			// Find the thread with minimum size to store the current tree
@@ -385,7 +389,7 @@ vector<vector<reference_wrapper<Car>>> choose_car_to_thread_group(const Coord& M
 	cout << endl;
 
 
-	_debug_file << debug_old_car_num << ",";
+	//_debug_file << debug_old_car_num << ",";
 	/*
 	* Looping through each bucket
 	int process_idx = 0;

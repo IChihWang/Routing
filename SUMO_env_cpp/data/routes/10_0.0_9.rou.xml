@@ -1,0 +1,50 @@
+<routes>
+
+	<vType id="car5" accel="200.0" decel="200.0" speedFactor="2" sigma="0.0" length="5" minGap="3.000000" maxSpeed="11.180000" tau="0.400000" carFollowModel="CACC" color="255,255,255"/>
+	<vType id="car6" accel="200.0" decel="200.0" speedFactor="2" sigma="0.0" length="6" minGap="3.000000" maxSpeed="11.180000" tau="0.400000" carFollowModel="CACC" color="255,255,255"/>
+	<vType id="car7" accel="200.0" decel="200.0" speedFactor="2" sigma="0.0" length="7" minGap="3.000000" maxSpeed="11.180000" tau="0.400000" carFollowModel="CACC" color="255,255,255"/>
+	<vType id="car8" accel="200.0" decel="200.0" speedFactor="2" sigma="0.0" length="8" minGap="3.000000" maxSpeed="11.180000" tau="0.400000" carFollowModel="CACC" color="255,255,255"/>
+	<vType id="car9" accel="200.0" decel="200.0" speedFactor="2" sigma="0.0" length="9" minGap="3.000000" maxSpeed="11.180000" tau="0.400000" carFollowModel="CACC" color="255,255,255"/>
+
+	<route id="39" edges=" 001_001_1"/>
+	<route id="29" edges=" 001_010_2"/>
+	<route id="10" edges=" 010_001_3"/>
+	<route id="0" edges=" 001_001_4"/>
+	<route id="38" edges=" 001_002_1"/>
+	<route id="28" edges=" 002_010_2"/>
+	<route id="11" edges=" 010_002_3"/>
+	<route id="1" edges=" 002_001_4"/>
+	<route id="37" edges=" 001_003_1"/>
+	<route id="27" edges=" 003_010_2"/>
+	<route id="12" edges=" 010_003_3"/>
+	<route id="2" edges=" 003_001_4"/>
+	<route id="36" edges=" 001_004_1"/>
+	<route id="26" edges=" 004_010_2"/>
+	<route id="13" edges=" 010_004_3"/>
+	<route id="3" edges=" 004_001_4"/>
+	<route id="35" edges=" 001_005_1"/>
+	<route id="25" edges=" 005_010_2"/>
+	<route id="14" edges=" 010_005_3"/>
+	<route id="4" edges=" 005_001_4"/>
+	<route id="34" edges=" 001_006_1"/>
+	<route id="24" edges=" 006_010_2"/>
+	<route id="15" edges=" 010_006_3"/>
+	<route id="5" edges=" 006_001_4"/>
+	<route id="33" edges=" 001_007_1"/>
+	<route id="23" edges=" 007_010_2"/>
+	<route id="16" edges=" 010_007_3"/>
+	<route id="6" edges=" 007_001_4"/>
+	<route id="32" edges=" 001_008_1"/>
+	<route id="22" edges=" 008_010_2"/>
+	<route id="17" edges=" 010_008_3"/>
+	<route id="7" edges=" 008_001_4"/>
+	<route id="31" edges=" 001_009_1"/>
+	<route id="21" edges=" 009_010_2"/>
+	<route id="18" edges=" 010_009_3"/>
+	<route id="8" edges=" 009_001_4"/>
+	<route id="30" edges=" 001_010_1"/>
+	<route id="20" edges=" 010_010_2"/>
+	<route id="19" edges=" 010_010_3"/>
+	<route id="9" edges=" 010_001_4"/>
+
+</routes>

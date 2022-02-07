@@ -56,9 +56,9 @@ extern int _MEC_num_per_edge;		// Set 3 just for now for debugging
 extern map< Coord, vector<Coord>> _MEC_intersection;	// Record the intersections that each MEC has
 void initial_district_allocation();
 void put_cars_into_districts();
-void load_balancing();
+void load_balancing(const vector<string>& new_car_ids);
 void update_intersection_info_in_MEC();
-void estimate_new_car_load(vector<string> new_car_ids);
+void estimate_new_car_load(const vector<string>& new_car_ids);
 pair<int, int> calculate_MEC_cost_info(Coord& MEC_id);	// return <V, E>
 
 
