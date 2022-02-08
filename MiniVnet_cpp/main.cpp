@@ -22,11 +22,13 @@ string _Enable_Load_Balance;
 
 
 ofstream route_result_file;
-ofstream all_computation_time_file;
-ofstream statistic_file;
-ofstream load_balancing_file;
+ofstream other_info_file;
+ofstream load_balance_range_file;
+ofstream all_MEC_computation_time_file;
+ofstream all_MEC_car_number_file;
+ofstream all_MEC_speed_file;
+ofstream overall_speed_file;
 
-int routing_count = 0;
 double total_compuation_time = 0;
 long total_routing_car_num = 0;
 long total_new_car_num = 0;
@@ -50,22 +52,31 @@ int main(int argc, char const* argv[]) {
 	// Create files for writing the results
 	string file_name_prefix = string("result/") + to_string(_grid_size) + "_" +
 		to_string(_TOP_N_CONGESTED) + "_" + to_string(_CHOOSE_CAR_OPTION) + "_" +
-		to_string(_thread_num) + "_" + to_string(_ITERATION_NUM) + "_" + to_string(_CAR_TIME_ERROR) + "_" + _ARRIVAL_RATE + "_" + _RANDOM_SEED + "_";
+		to_string(_thread_num) + "_" + to_string(_ITERATION_NUM) + "_" + 
+		to_string(_CAR_TIME_ERROR) + "_" + _ARRIVAL_RATE + "_" + _RANDOM_SEED + "_" +
+		to_string(_MEC_num_per_edge) + "_" + _Enable_Load_Balance + "_";
 	route_result_file.open(file_name_prefix + "routes.csv");
-	all_computation_time_file.open(file_name_prefix + "computation_time.csv");
-	statistic_file.open("result/statistic.csv", ofstream::app);
-	load_balancing_file.open(file_name_prefix+"load_balancing.csv");
+	other_info_file.open(file_name_prefix + "other_info.csv");
+	all_MEC_computation_time_file.open(file_name_prefix + "MEC_computation_time.csv");
+	load_balance_range_file.open(file_name_prefix+"load_balance_range.csv");
+	all_MEC_car_number_file.open(file_name_prefix + "MEC_car_num.csv");
+	all_MEC_speed_file.open(file_name_prefix + "MEC_speed.csv");
+	overall_speed_file.open(file_name_prefix + "overall_speed.csv");
 
 
 	route_result_file << "car_id, path, estimated_travel_timie" << endl;
-	all_computation_time_file << "new_car_num, all_car_num, compuation_time" << endl;
+	other_info_file << "new_car_num, scheduling_car_num" << endl;
+	overall_speed_file << "throughput (num/s)" << endl;
 	for (const Coord& MEC_id : _MEC_id_list) {
-		load_balancing_file << get<0>(MEC_id) << "_" << get<1>(MEC_id) << "_computation,";
+		all_MEC_computation_time_file << MEC_id << "_computation_time,";
+		load_balance_range_file << MEC_id << "_MEC_range,";
+		all_MEC_car_number_file << MEC_id << "_MEC_car_num,";
+		all_MEC_speed_file << MEC_id << "_MEC_speed,";
 	}
-	for (const Coord& MEC_id : _MEC_id_list) {
-		load_balancing_file << get<0>(MEC_id) << "_" << get<1>(MEC_id) << "_MEC_range,";
-	}
-	load_balancing_file << endl;
+	all_MEC_computation_time_file << endl;
+	load_balance_range_file << endl;
+	all_MEC_car_number_file << endl;
+	all_MEC_speed_file << endl;
 
 	// Receiving requests/sending replies
 	while (true) {
@@ -100,21 +111,13 @@ int main(int argc, char const* argv[]) {
 		}
 	}
 
-	/*
-	statistic_file << "Grid size, top N, choose_car, thread_num, iteration_num, _CAR_TIME_ERROR, arrival_rate, rand_seed, avg_compuation_time, avg_route_num, avg_new_car_num, total_new_car_num, compuation_time_per_car, compuation_time_per_new_car, routing_count" << endl;
-	statistic_file << (int)_grid_size << ',' << (int)_TOP_N_CONGESTED << ',' << (int)_CHOOSE_CAR_OPTION << ',' << (int)_thread_num << ',' << (int)_ITERATION_NUM << ',' << _CAR_TIME_ERROR << ',';
-	statistic_file << _ARRIVAL_RATE << ',' << _RANDOM_SEED << ',' << total_compuation_time / routing_count << ','; 
-	statistic_file << total_routing_car_num / routing_count << ',' << total_new_car_num / routing_count << ',';
-	statistic_file << total_new_car_num << ',' << total_compuation_time/ total_routing_car_num << ',' << total_compuation_time / total_new_car_num << ',' << routing_count << endl;
-	*/
-	statistic_file.close();
-
 	route_result_file.close();
-	all_computation_time_file.close();
-
-
-
-	//terminate_thread_pool();
+	other_info_file.close();
+	load_balance_range_file.close();
+	all_MEC_computation_time_file.close();
+	all_MEC_car_number_file.close();
+	all_MEC_speed_file.close();
+	overall_speed_file.close();
 
 	return 0;
 }
@@ -179,7 +182,7 @@ string handle_request(string &in_str) {
 	}
 
 	// Record the new car number
-	all_computation_time_file << new_car_ids.size() << ',';
+	other_info_file << new_car_ids.size() << ',';
 	total_new_car_num += new_car_ids.size();
 	int count_scheduling_car_num = 0;
 
@@ -286,30 +289,44 @@ string handle_request(string &in_str) {
 		out_str += ',';
 		out_str += to_string(traveling_time_dict[car_id]);
 		out_str += ';';
-		route_result_file << car_id << ',' << path << endl;
+		route_result_file << car_id << ',' << path << traveling_time_dict[car_id] << endl;
 	}
 
-	all_computation_time_file << count_scheduling_car_num;
-	for (Coord& MEC_id : _MEC_id_list) {
-		all_computation_time_file << ',' << computation_time_list[MEC_id];
-	}
-	all_computation_time_file << endl;
+	other_info_file << count_scheduling_car_num;
+	other_info_file << endl;
 
-	// Write the load balancing result file
+	// Write the result files
 	for (Coord& MEC_id : _MEC_id_list) {
-		load_balancing_file << computation_time_list[MEC_id] << ",";
+		all_MEC_computation_time_file << computation_time_list[MEC_id] << ",";
 	}
+	all_MEC_computation_time_file << endl;
+
 	for (Coord& MEC_id : _MEC_id_list) {
 		for (Coord& intersection_id : _MEC_intersection[MEC_id]) {
-			load_balancing_file << get<0>(intersection_id) << "_" << get<1>(intersection_id) << "|";
+			load_balance_range_file << intersection_id << "|";
 		}
-		load_balancing_file << ",";
+		load_balance_range_file << ",";
 	}
-	load_balancing_file << endl;
+	load_balance_range_file << endl;
 
-	routing_count++;
-	//total_compuation_time += route_time.count();
-	//total_routing_car_num += count_scheduling_car_num;
+	for (Coord& MEC_id : _MEC_id_list) {
+		all_MEC_car_number_file << _MEC_car_num[MEC_id] << ",";
+	}
+	all_MEC_car_number_file << endl;
+
+	for (Coord& MEC_id : _MEC_id_list) {
+		all_MEC_speed_file << _MEC_car_num[MEC_id]/computation_time_list[MEC_id] << ",";
+	}
+	all_MEC_speed_file << endl;
+
+	int total_car_num = 0;
+	double max_computation_time = 0;
+	for (Coord& MEC_id : _MEC_id_list) {
+		total_car_num += _MEC_car_num[MEC_id];
+		max_computation_time = max(max_computation_time, computation_time_list[MEC_id]);
+	}
+	overall_speed_file << total_car_num / max_computation_time << endl;
+
 
 	move_a_time_step();
 

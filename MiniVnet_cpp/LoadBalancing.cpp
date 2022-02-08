@@ -9,6 +9,7 @@ vector<Coord> _MEC_id_list;
 map< Coord, vector<Coord>> _MEC_intersection;	// Record the intersections that each MEC has
 map< Coord, int> intersection_new_car_in;		// Record the number of new cars (new to the map) in each intersection
 map< Coord, Coord> MEC_center_coord;			// Record the center of the MEC to prevent overly migration
+map< Coord, int> _MEC_car_num;
 
 void initial_district_allocation() {
 	int _num_intersection_per_edge = ceil(1.0 * _grid_size / _MEC_num_per_edge);
@@ -50,26 +51,19 @@ void initial_district_allocation() {
 void put_cars_into_districts(){
 	_car_id_MEC_map.clear();
 
+	for (const Coord& MEC_id : _MEC_id_list) {
+		_MEC_car_num[MEC_id] = 0;
+	}
+
 	for (auto& [car_id, car] : _car_dict) {
 		if (_car_dict[car_id].state == "OLD" || _car_dict[car_id].state == "NEW") {
 			Coord& MEC_id = _intersection_MEC[car.src_coord];
 			_car_id_MEC_map[car_id] = MEC_id;
+			if (MEC_id != OUTSIDE_MEC_MAP)
+				_MEC_car_num[MEC_id]++;		// Count the number
 		}
 	}
 
-
-
-	set<string> top_intersection_car_list;		// Record this in case an intersection is chosen twice or more with two different timestamp
-	//		Gather all the car_to_be_updated
-	for (auto& [timestamp, intersection_ptr] : _top_congested_intersections) {
-		Coord& intersection_id = intersection_ptr->id;
-		for (auto car_item : *(intersection_ptr->scheduling_cars)) {
-			const string& car_id = car_item.first;
-			if (_car_dict[car_id].state == "OLD" || _car_dict[car_id].state == "NEW") {
-				top_intersection_car_list.insert(car_id);
-			}
-		}
-	}
 }
 
 void load_balancing(const vector<string>& new_car_ids) {	// update _MEC_id_computation_load

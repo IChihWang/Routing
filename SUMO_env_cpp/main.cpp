@@ -374,7 +374,9 @@ void run_sumo(Thread_Worker& router_thread) {
     // Statistics
     string file_name_prefix = string("result/") + to_string(_grid_size) + "_" + 
         to_string(_TOP_N_CONGESTED) + "_" + to_string(_CHOOSE_CAR_OPTION) + "_" + 
-        to_string(_THREAD_NUM) + "_" + to_string(_ITERATION_NUM) + "_" + _CAR_TIME_ERROR + "_" + _ARRIVAL_RATE + "_" + _RANDOM_SEED + "_";
+        to_string(_THREAD_NUM) + "_" + to_string(_ITERATION_NUM) + "_" + 
+        _CAR_TIME_ERROR + "_" + _ARRIVAL_RATE + "_" + _RANDOM_SEED + "_" +
+        to_string(_MEC_num_per_edge) + "_" + _Enable_Load_Balance + "_";
     ofstream all_car_file(file_name_prefix + "allCars.csv");
     ofstream statistic_file("result/statistic.csv", ofstream::app);
 
