@@ -34,6 +34,8 @@ extern uint8_t _TOP_N_CONGESTED;
 extern uint8_t _ITERATION_NUM;
 extern double _NOW_SIMU_TIME;
 extern int _CAR_TIME_ERROR;	// Time error for triggering cars to reroute
+extern int _MEC_num_per_edge;
+extern std::string _Enable_Load_Balance;
 
 extern std::string _RANDOM_SEED;
 extern std::string _ARRIVAL_RATE;

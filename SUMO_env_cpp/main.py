@@ -37,7 +37,7 @@ HOST, PORT = "localhost", 9997
 # Main function
 if __name__ == "__main__":
 
-    print("python main.py <arrival_rate> <seed> <INTER_SIZE> <TOP_N> <CHOOSE_CAR_OPTION> <Thread_num> <Iteration_num> <_CAR_TIME_ERROR>")
+    print("python main.py <arrival_rate> <seed> <INTER_SIZE> <TOP_N> <CHOOSE_CAR_OPTION> <Thread_num> <Iteration_num> <_CAR_TIME_ERROR> <_MEC_num_per_edge> <_Load_Balance T/F>")
 
     # Initial variables
     seed = int(sys.argv[2])
@@ -79,6 +79,8 @@ if __name__ == "__main__":
         cpp_cmd += sys.argv[6] + " "    # Thread number
         cpp_cmd += sys.argv[7] + " "    # Iteration num
         cpp_cmd += sys.argv[8] + " "    # _CAR_TIME_ERROR
+        cpp_cmd += sys.argv[9] + " "    # _MEC_num_per_edge
+        cpp_cmd += sys.argv[10] + " "    # _Load_Balance
         cpp_cmd += str(arrival_rate) + " "
         cpp_cmd += str(seed) + " "
         cpp_cmd += " &"

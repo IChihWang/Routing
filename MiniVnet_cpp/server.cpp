@@ -79,7 +79,7 @@ SOCKET initial_server_handler() {
 
 	stringstream ss(buffer);
 	vector<float> results;
-	for (int i = 0; i < 13; i++) {
+	for (int i = 0; i < 15; i++) {
 		string substr;
 		getline(ss, substr, ':');
 		getline(ss, substr, ':');
@@ -102,6 +102,8 @@ SOCKET initial_server_handler() {
 	_thread_num = uint8_t(results[10]);
 	_ITERATION_NUM = uint8_t(results[11]);
 	_CAR_TIME_ERROR = uint8_t(results[12]);
+	_MEC_num_per_edge = uint8_t(results[13]);
+	_Enable_Load_Balance = results[14];
 
 	{
 		string substr;

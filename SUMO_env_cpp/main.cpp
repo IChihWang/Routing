@@ -25,6 +25,8 @@ string _ARRIVAL_RATE;
 string _RANDOM_SEED;
 uint8_t _ITERATION_NUM;
 string _CAR_TIME_ERROR;
+uint8_t _MEC_num_per_edge;
+string _Enable_Load_Balance;
 
 unordered_map<string, string> src_dst_dict;
 
@@ -48,8 +50,10 @@ int main(int argc, char* argv[])
         _THREAD_NUM = stoi(argv[7]);
         _ITERATION_NUM = stoi(argv[8]);
         _CAR_TIME_ERROR = argv[9];
-        _ARRIVAL_RATE = argv[10];
-        _RANDOM_SEED = argv[11];
+        _MEC_num_per_edge = stoi(argv[10]);
+        _Enable_Load_Balance = argv[11];
+        _ARRIVAL_RATE = argv[12];
+        _RANDOM_SEED = argv[13];
     }
     else {
         cout << "Wrong number of arguments" << endl;

@@ -67,6 +67,8 @@ extern uint8_t _ITERATION_NUM;
 extern string _RANDOM_SEED;
 extern string _ARRIVAL_RATE;
 extern string _CAR_TIME_ERROR;
+extern uint8_t _MEC_num_per_edge;
+extern string _Enable_Load_Balance;
 
 
 // Claim in main.cpp

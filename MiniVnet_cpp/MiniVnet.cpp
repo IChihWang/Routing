@@ -388,18 +388,6 @@ vector<vector<reference_wrapper<Car>>> choose_car_to_thread_group(const Coord& M
 	}
 	cout << endl;
 
-
-	//_debug_file << debug_old_car_num << ",";
-	/*
-	* Looping through each bucket
-	int process_idx = 0;
-	for (string car_id : new_car_ids) {
-		process_idx++;
-		process_idx %= _thread_num;
-		results[process_idx].push_back(_car_dict[car_id]);
-	}
-	*/
-
 	// Remove Cars from the database for new routes
 	for (vector<reference_wrapper<Car>> car_group : results) {
 		for (Car &car: car_group) {
