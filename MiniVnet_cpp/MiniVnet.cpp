@@ -652,8 +652,8 @@ map<string, vector<Node_in_Path>> routing(const Coord& MEC_id, const vector<refe
 
 		if (nodes_arrival_time_data.find(dst_node) == nodes_arrival_time_data.end()) {
 			cout << "No route is found for " << car.id << endl;
-			cout << get<0>(_car_dict[car.id].src_coord) << "," << get<1>(_car_dict[car.id].src_coord) << " ";
-			cout << get<0>(_car_dict[car.id].dst_coord) << "," << get<1>(_car_dict[car.id].dst_coord) << " ";
+			cout << _car_dict[car.id].src_coord << " ";
+			cout << _car_dict[car.id].dst_coord << " ";
 			cout << (int)_car_dict[car.id].direction_of_src_intersection << " ";
 			cout << (int)_car_dict[car.id].time_offset_step << " ";
 			cout << _car_dict[car.id].position_at_offset << endl;

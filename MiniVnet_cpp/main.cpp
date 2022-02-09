@@ -55,6 +55,7 @@ int main(int argc, char const* argv[]) {
 		to_string(_thread_num) + "_" + to_string(_ITERATION_NUM) + "_" + 
 		to_string(_CAR_TIME_ERROR) + "_" + _ARRIVAL_RATE + "_" + _RANDOM_SEED + "_" +
 		to_string(_MEC_num_per_edge) + "_" + _Enable_Load_Balance + "_";
+
 	route_result_file.open(file_name_prefix + "routes.csv");
 	other_info_file.open(file_name_prefix + "other_info.csv");
 	all_MEC_computation_time_file.open(file_name_prefix + "MEC_computation_time.csv");
@@ -202,9 +203,9 @@ string handle_request(string &in_str) {
 			// & Load balancing algorithm
 			// & Move the intersections between districts (By modifying _intersection_MEC)
 		load_balancing(new_car_ids);
+	}
 		// Classify groups for each MEC
 		put_cars_into_districts();
-	}
 
 // Cars route
 	// Abstract the district info (Average on each road)
