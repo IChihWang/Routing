@@ -48,9 +48,9 @@ void routing_in_thread(Thread_Worker* thread_worker) {
 			thread_worker->routes_dict[car_id] = turning_str;
 		}
 		// Done task, notify main thread
-		thread_worker->allow_main_continue = true;
 		{
 			unique_lock<mutex> main_thread_lock(Thread_Worker::routing_done_mutex);
+			thread_worker->allow_main_continue = true;
 			thread_worker->routing_done_condition_variable.notify_all();
 		}
 	}
