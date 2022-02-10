@@ -38,6 +38,7 @@ void IntersectionManager::Roadrunner_P(map<string, Car*>& old_cars, map<string, 
 
 	// part 1: build the solver
 	unique_ptr<MPSolver> solver(MPSolver::CreateSolver("SCIP"));
+	solver->set_time_limit(20);
 	const double infinity = solver->infinity();
 
 	// part 2: claim variables
