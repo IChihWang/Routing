@@ -417,7 +417,7 @@ void run_sumo(Thread_Worker& router_thread) {
         avg_delay, arrival_car_num, departured_car_num, diff_exit_time, 1000_travel_time, \
         1000_delay_time, 1000_shortest_travel_time, 1000_car_num" << endl;
     statistic_file << (int)_grid_size << ',' << (int)_TOP_N_CONGESTED << ',' << (int)_CHOOSE_CAR_OPTION << ',' << (int)_THREAD_NUM << ',' << (int)_ITERATION_NUM << ',' << _CAR_TIME_ERROR << ',';
-    statistic_file << _MEC_num_per_edge << ',' << _Enable_Load_Balance << ',';
+    statistic_file << (int)_MEC_num_per_edge << ',' << _Enable_Load_Balance << ',';
     statistic_file << _ARRIVAL_RATE << ',' << _RANDOM_SEED << ',' << avg_shortest_travel_time << ',' << avg_travel_time << ',' << avg_delay_time << ',' << arrival_car_num << ',' << all_travel_time.size() << ',' << avg_diff_exit_time << ',';
     statistic_file << avg_first_1000_travel_time << ',' << avg_first_1000_delay_time << ',' << avg_first_1000_shortest_travel_time << ',' << first_1000_car_id.size() << endl;
     

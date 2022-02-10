@@ -1,4 +1,8 @@
 Grid size, top N, choose_car, thread_num, iteration_num,         _CAR_TIME_ERROR, _MEC_num_per_edge, _Enable_Load_Balance, arrival_rate, rand_seed, avg_shortest_travel_time, avg_travel,         avg_delay, arrival_car_num, departured_car_num, diff_exit_time, 1000_travel_time,         1000_delay_time, 1000_shortest_travel_time, 1000_car_num
-12,10,1,4,2,10,,T,0.1,0,268.23,293.216,24.9854,4272,3541,-1.41881,300.012,25.6173,274.395,1001
+12,10,1,4,2,10,4,T,0.1,0,268.23,293.216,24.9854,4272,3541,-1.41881,300.012,25.6173,274.395,1001
 Grid size, top N, choose_car, thread_num, iteration_num,         _CAR_TIME_ERROR, _MEC_num_per_edge, _Enable_Load_Balance, arrival_rate, rand_seed, avg_shortest_travel_time, avg_travel,         avg_delay, arrival_car_num, departured_car_num, diff_exit_time, 1000_travel_time,         1000_delay_time, 1000_shortest_travel_time, 1000_car_num
-12,10,1,4,2,10,,T,0.1,0,268.417,291.332,22.9155,4272,3548,-1.38842,297.861,23.4659,274.395,1001
+12,10,1,4,2,10,1,T,0.1,0,268.417,291.332,22.9155,4272,3548,-1.38842,297.861,23.4659,274.395,1001
+Grid size, top N, choose_car, thread_num, iteration_num,         _CAR_TIME_ERROR, _MEC_num_per_edge, _Enable_Load_Balance, arrival_rate, rand_seed, avg_shortest_travel_time, avg_travel,         avg_delay, arrival_car_num, departured_car_num, diff_exit_time, 1000_travel_time,         1000_delay_time, 1000_shortest_travel_time, 1000_car_num
+12,10,1,4,2,10,12,T,0.1,0,268.185,293.998,25.8138,4272,3539,-1.35377,300.872,26.4773,274.395,1001
+Grid size, top N, choose_car, thread_num, iteration_num,         _CAR_TIME_ERROR, _MEC_num_per_edge, _Enable_Load_Balance, arrival_rate, rand_seed, avg_shortest_travel_time, avg_travel,         avg_delay, arrival_car_num, departured_car_num, diff_exit_time, 1000_travel_time,         1000_delay_time, 1000_shortest_travel_time, 1000_car_num
+12,10,1,4,2,10,4,F,0.1,0,268.261,292.853,24.5926,4272,3543,-1.43897,299.62,25.2249,274.395,1001
