@@ -49,7 +49,10 @@ void routing_in_thread(Thread_Worker* thread_worker) {
 		}
 		// Done task, notify main thread
 		thread_worker->allow_main_continue = true;
-		thread_worker->routing_done_condition_variable.notify_all();
+		{
+			unique_lock<mutex> main_thread_lock(Thread_Worker::routing_done_mutex);
+			thread_worker->routing_done_condition_variable.notify_all();
+		}
 	}
 }
 

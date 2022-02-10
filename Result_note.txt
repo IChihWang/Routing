@@ -1,0 +1,9 @@
+Measurement notes
+- Hierachy vs no Hierachy - arrival_rate v.s. serving throughput
+-       arrival_rate v.s., car delay (Plus fully car control)
+- Load balancing or not - arrival_rate v.s. serving throughput
+-       arrival_rate v.s., car delay
+- Parallelization or not - rate of parallization v.s. througput
+-       rate of parallization v.s., car delay
+- Density of MEC - density v.s. serving thoughput
+-       density v.s., car delay

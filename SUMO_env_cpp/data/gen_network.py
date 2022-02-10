@@ -110,7 +110,7 @@ def gen_net(i):
     gen_node(i, i)
     gen_edge(i, i)
     gen_connection(i, i)
-for i in range(2,11):
+for i in range(11,20):
     gen_net(i)
     node = './tmp/lane.nod.xml'
     edge = './tmp/lane.edg.xml'
