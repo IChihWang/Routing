@@ -2,7 +2,7 @@
 #include <algorithm>
 #include <iostream>
 #include "global.h"
-#include "intersection_manager.h"
+#include "Intersection_manager.h"
 #include "Car.h"
 
 using namespace std;

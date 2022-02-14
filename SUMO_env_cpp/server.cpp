@@ -41,7 +41,7 @@ SOCKET initial_client_handler() {
 	sockAddr.sin_port = htons(ROUTER_PORT);
 
 	// Connect socket to the port
-	while (connect(client_sock, (SOCKADDR*)&sockAddr, sizeof(sockAddr)) < 0) {
+	while (connect(client_sock, (struct sockaddr*)&sockAddr, sizeof(sockAddr)) < 0) {
 		cout << "trying to connect" << endl;
 		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 		// closesocket(client_sock);
@@ -62,9 +62,7 @@ SOCKET initial_client_handler() {
 	init_info += ":TOP_N_CONGESTED:" + to_string(_TOP_N_CONGESTED);
 	init_info += ":_THREAD_NUM:" + to_string(_THREAD_NUM);
 	init_info += ":_ITERATION_NUM:" + to_string(_ITERATION_NUM);
-	init_info += ":_CAR_TIME_ERROR:" + _CAR_TIME_ERROR;
-	init_info += ":_MEC_num_per_edge:" + to_string(_MEC_num_per_edge);
-	init_info += ":_Enable_Load_Balance:" + _Enable_Load_Balance;
+	init_info += ":_ITERATION_NUM:" + _CAR_TIME_ERROR;
 	init_info += ":_ARRIVAL_RATE:" + _ARRIVAL_RATE;
 	init_info += ":_RANDOM_SEED:" + _RANDOM_SEED;
 

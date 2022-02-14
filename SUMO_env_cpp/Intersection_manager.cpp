@@ -1,4 +1,4 @@
-#include "intersection_manager.h"
+#include "Intersection_manager.h"
 #include "Car.h"
 #include "global.h"
 #include <sstream>
@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <string>
 #include <sstream>
+#include <cmath>
 using namespace std;
 
 IntersectionManager::IntersectionManager() {
