@@ -68,7 +68,7 @@ if __name__ == "__main__":
                     + " -r data/routes/"+route_name + " --remote-port " + str(PORT)
                     + " --collision.action none &")
 
-        '''
+        #'''
         cpp_cmd = './x64/Release/main '
         cpp_cmd += str(cfg.INTER_SIZE) + " "
         cpp_cmd += "%i_%s_%i_src_dst.json " % (cfg.INTER_SIZE, arrival_rate, seed)
@@ -83,7 +83,7 @@ if __name__ == "__main__":
         cpp_cmd += sys.argv[10] + " "    # _Load_Balance
         cpp_cmd += str(arrival_rate) + " "
         cpp_cmd += str(seed) + " "
-        cpp_cmd += " &"
+        cpp_cmd += " "
         os.system(cpp_cmd)
         #'''
 
