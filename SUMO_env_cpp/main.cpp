@@ -36,7 +36,7 @@ void run_sumo(Thread_Worker& router_thread);
 
 int main(int argc, char* argv[])
 {
-    cout << "Usage: ./main <grid_size> <src_dst_file.json> <_N_TIME_STEP> <_TIME_STEP> <_TOP_N_CONGESTED> <_CHOOSE_CAR_OPTION> <_THREAD_NUM> <_ITERATION_NUM> <_CAR_TIME_ERROR> <_ARRIVAL_RATE> <_RANDOM_SEED>" << endl;
+    cout << "Usage: ./main <grid_size> <src_dst_file.json> <_N_TIME_STEP> <_TIME_STEP> <_TOP_N_CONGESTED> <_CHOOSE_CAR_OPTION> <_THREAD_NUM> <_ITERATION_NUM> <_CAR_TIME_ERROR> <MEC_num_per_edge> <isLoadBalancing> <_ARRIVAL_RATE> <_RANDOM_SEED>" << endl;
     string src_dst_file_name = "data/routes/";
     // Parse the input
     if (argc >= 5) {
