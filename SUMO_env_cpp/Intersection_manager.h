@@ -87,7 +87,7 @@ public:
 
 	// Spillback info
 	Road_Info my_road_info[4 * LANE_NUM_PER_DIRECTION];
-	Road_Info* others_road_info[4 * LANE_NUM_PER_DIRECTION];
+	Road_Info* others_road_info[4 * LANE_NUM_PER_DIRECTION] = {nullptr};
 	double spillback_delay_record[4 * LANE_NUM_PER_DIRECTION] = {0};
 	
 
