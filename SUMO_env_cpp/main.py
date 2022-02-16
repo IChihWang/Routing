@@ -66,9 +66,9 @@ if __name__ == "__main__":
         os.system(sumo + "-c data/UDTA.sumocfg --step-length " + str(cfg.TIME_STEP)
                     + " --collision.mingap-factor 0 -n data/net/"+net_name
                     + " -r data/routes/"+route_name + " --remote-port " + str(PORT)
-                    + " --collision.action none &")
+                    + " --collision.action none ")
 
-        #'''
+        '''
         cpp_cmd = './x64/Release/main '
         cpp_cmd += str(cfg.INTER_SIZE) + " "
         cpp_cmd += "%i_%s_%i_src_dst.json " % (cfg.INTER_SIZE, arrival_rate, seed)
