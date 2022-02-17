@@ -10,6 +10,7 @@ map< Coord, vector<Coord>> _MEC_intersection;	// Record the intersections that e
 map< Coord, int> intersection_new_car_in;		// Record the number of new cars (new to the map) in each intersection
 map< Coord, Coord> MEC_center_coord;			// Record the center of the MEC to prevent overly migration
 map< Coord, int> _MEC_car_num;
+//map< Coord, vector<Coord>> intersection_allow_MEC;	// Record available MEC for each intersection
 
 void initial_district_allocation() {
 	int _num_intersection_per_edge = ceil(1.0 * _grid_size / _MEC_num_per_edge);
@@ -43,6 +44,50 @@ void initial_district_allocation() {
 		int center_j = MEC_j * _num_intersection_per_edge + _num_intersection_per_edge / 2 + 1;
 		MEC_center_coord[MEC_id] = Coord(center_i, center_j);
 	}
+
+	/*	Temporary unused
+	// Construct available MEC list for all intersections
+	for (const auto& [intersection_id, MEC_id] : _intersection_MEC) {
+		const int& MEC_i = get<0>(MEC_id);
+		const int& MEC_j = get<1>(MEC_id);
+
+		const int& center_MEC_i = get<0>(MEC_center_coord[MEC_id]);
+		const int& center_MEC_j = get<1>(MEC_center_coord[MEC_id]);
+
+		const int& intersection_id_i = get<0>(intersection_id);
+		const int& intersection_id_j = get<1>(intersection_id);
+
+		// Add current MEC_id
+		intersection_allow_MEC[intersection_id].push_back(MEC_id);
+
+		// Add neighbor MEC_id
+		if (intersection_id_i > center_MEC_i) {
+			int new_MEC_i = MEC_i + 1;
+			if (new_MEC_i < _MEC_num_per_edge) {
+				intersection_allow_MEC[intersection_id].push_back(Coord(new_MEC_i, MEC_j));
+			}
+		}
+		else {	// intersection_id_i <= center_MEC_i
+			int new_MEC_i = MEC_i - 1;
+			if (new_MEC_i >= 0) {
+				intersection_allow_MEC[intersection_id].push_back(Coord(new_MEC_i, MEC_j));
+			}
+		}
+		if (intersection_id_j > center_MEC_j) {
+			int new_MEC_j = MEC_j + 1;
+			if (new_MEC_j < _MEC_num_per_edge) {
+				intersection_allow_MEC[intersection_id].push_back(Coord(MEC_i, new_MEC_j));
+			}
+		}
+		else {	// intersection_id_j <= center_MEC_j
+			int new_MEC_j = MEC_j - 1;
+			if (new_MEC_j >= 0) {
+				intersection_allow_MEC[intersection_id].push_back(Coord(MEC_i, new_MEC_j));
+			}
+		}
+
+	}
+	*/
 
 }
 
@@ -182,9 +227,25 @@ void load_balancing(const vector<string>& new_car_ids) {	// update _MEC_id_compu
 		int candidate_intersection_num = candidate_intersection_external_link_num.size();	// Specify this because the size of the candidate_intersection changes within the loop
 		for(int search_count = 0; search_count < candidate_intersection_num; search_count++){
 			// Choose the intersection and record it
+			Coord my_MEC_center_coord = MEC_center_coord[highest_load_MEC_id];
 			map<Coord, int>::iterator chosen_intersection = max_element(candidate_intersection_external_link_num.begin(), candidate_intersection_external_link_num.end(),
-				[](const pair<Coord, int> & a, const pair<Coord, int>& b) -> bool {
-					return a.second < b.second;
+				[&my_MEC_center_coord](const pair<Coord, int> & a, const pair<Coord, int>& b) -> bool {
+					// Most external link first, then farthest
+					if (a.second != b.second) {
+						return a.second < b.second;
+					}
+					else {
+						// Calculate the distance to the center
+						int dist_a_i = abs(get<0>(my_MEC_center_coord) - get<0>(a.first));
+						int dist_a_j = abs(get<1>(my_MEC_center_coord) - get<1>(a.first));
+						int dist_a = dist_a_i + dist_a_j;
+
+						int dist_b_i = abs(get<0>(my_MEC_center_coord) - get<0>(b.first));
+						int dist_b_j = abs(get<1>(my_MEC_center_coord) - get<1>(b.first));
+						int dist_b = dist_b_i + dist_b_j;
+
+						return dist_a < dist_b;
+					}
 				});
 			const Coord& intersection_id = chosen_intersection->first;
 
