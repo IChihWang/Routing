@@ -125,6 +125,14 @@ void brief_route() {
 		Node_ID current_node = dst_node;
 		path_list.push_back(get<0>(dst_node));
 		while (current_node != src_node) {
+			if (get<0>(current_node) == Coord(0, 0)) {
+				cout << car.id << " " << car.dst_coord << endl;
+				cout << get<0>(dst_node) << " , " << get<1>(dst_node) << " _ " << get<0>(src_node) << " , " << get<1>(src_node) << " = ";
+				for (auto& [current, last] : nodes_last_node) {
+					cout << get<0>(current) << " , " << get<1>(current) << " _ " << get<0>(last) << " , " << get<1>(last);
+				}
+				return; // Skip if the connection is weird
+			}
 			current_node = nodes_last_node[current_node];
 			path_list.insert(path_list.begin(), get<0>(current_node));
 		}

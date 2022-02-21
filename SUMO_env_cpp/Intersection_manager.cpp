@@ -110,7 +110,7 @@ Car_Info_In_Intersection IntersectionManager::get_car_info_for_route(const strin
 			}
 		}
 
-		// Get the origin intersection id
+		// Get the origin intersection iddirection_of_src_intersection
 		uint8_t lane = car_list[car_id]->lane;
 		uint8_t direction = lane / LANE_NUM_PER_DIRECTION;
 

@@ -29,7 +29,7 @@ import csv
 import json
 from gen_route import generate_routefile_with_src_dst
 
-HOST, PORT = "localhost", 9997
+HOST, PORT = "localhost", 29997
 
 #  Start SUMO and listen to the port for TraCi commands
 

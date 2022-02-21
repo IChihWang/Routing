@@ -156,6 +156,7 @@ void run_sumo(Thread_Worker& router_thread) {
             // Start workers
             {
                 unique_lock<mutex> worker_lock(router_thread.request_worker_mutex);
+                router_thread.request_worker_ready = true;
                 router_thread.request_worker_condition_variable.notify_all();
             }
             break;
@@ -163,13 +164,69 @@ void run_sumo(Thread_Worker& router_thread) {
 
         traci.simulationStep();
         vector<string> all_c = traci.vehicle.getIDList();
+
+        // Handle cars at the final intersections
+        for (auto& [car_id, car_info] : car_info_dict) {
+            IntersectionManager* intersection_manager_ptr = car_info.intersection_manager_ptr;
+            if (intersection_manager_ptr == nullptr) {
+                car_info.is_last_turn = true;
+            }
+            else {
+                string& intersection_id = intersection_manager_ptr->id_str;
+                string& dst_id = car_info.dst_node_idx;
+                int inter_x = stoi(intersection_id.substr(0, 3));
+                int inter_y = stoi(intersection_id.substr(4, 3));
+                int dst_id_x = stoi(dst_id.substr(0, 3));
+                int dst_id_y = stoi(dst_id.substr(4, 3));
+                int diff_x = abs(inter_x - dst_id_x);
+                int diff_y = abs(inter_y - dst_id_y);
+                int diff_dist = diff_x + diff_y;
+                if (diff_dist == 1) {
+                    car_info.is_last_turn = true;
+                    // Decide the final turn
+                    uint8_t lane = intersection_manager_ptr->car_list[car_id]->lane;
+                    uint8_t src_direction = lane / LANE_NUM_PER_DIRECTION;
+                    uint8_t dst_direction = -1;
+                    if (dst_id_y < inter_y)
+                        dst_direction = 0;
+                    else if (dst_id_x > inter_x)
+                        dst_direction = 1;
+                    else if (dst_id_y > inter_y)
+                        dst_direction = 2;
+                    else if (dst_id_x < inter_x)
+                        dst_direction = 3;
+                    else
+                        cout << "Error: dst direction error" << endl;
+
+                    char turning = 'S';
+                    int turning_i = (dst_direction - src_direction + 4) % 4;
+                    if (turning_i == 3)
+                        turning = 'L';
+                    else if (turning_i == 1)
+                        turning = 'R';
+
+                    car_info_dict[car_id].route = turning;
+                    car_info_dict[car_id].route += turning;
+                    car_info_dict[car_id].route += turning;
+                    car_info_dict[car_id].route += turning;
+                }
+            }
+        }
+
         // Send route requests
         if (fmod(simu_step, ROUTING_PERIOD) < _TIME_STEP) {
             string server_send_str = "";
             server_send_str += to_string(simu_step) + ";";
             for (auto& [car_id, car_info] : car_info_dict) {
+
                 IntersectionManager* intersection_manager_ptr = car_info.intersection_manager_ptr;
-                if (intersection_manager_ptr != nullptr) {
+
+                // Stop car routing for final turn
+                if (car_info.is_last_turn) {
+                    server_send_str += car_id + ",";
+                    server_send_str += string("PAUSE") + ";";
+                }
+                else if (intersection_manager_ptr != nullptr) {
                     IntersectionManager& intersection_manager = *intersection_manager_ptr;
 
                     Car_Info_In_Intersection car_data = intersection_manager.get_car_info_for_route(car_id);
@@ -181,7 +238,7 @@ void run_sumo(Thread_Worker& router_thread) {
                         uint8_t src_shift_num = car_data.src_shift_num;
                         car_info.src_shift_num = src_shift_num;
 
-                        if (src_intersection_id.compare(car_info.dst_node_idx) != 0) {
+                        if (src_intersection_id != car_info.dst_node_idx) {
                             server_send_str += car_id + ",";
                             server_send_str += car_info.route_state + ",";
                             server_send_str += to_string(car_info.car_length) + ",";
@@ -300,7 +357,7 @@ void run_sumo(Thread_Worker& router_thread) {
 
                     char current_turn = car_info_dict[car_id].route[0];
                     char next_turn = car_info_dict[car_id].route[1];
-
+                    //cout << car_id << " " << current_turn << " " << next_turn << endl;
                     intersection_ptr->update_car(car_id, lane_id, simu_step, current_turn, next_turn);
                     
                     is_handled = true;
@@ -315,7 +372,7 @@ void run_sumo(Thread_Worker& router_thread) {
 
                     char current_turn = car_info_dict[car_id].route[0];
                     char next_turn = car_info_dict[car_id].route[1];
-
+                    
                     intersection_ptr->update_car(car_id, lane_id, simu_step, current_turn, next_turn);
 
                     is_handled = true;

@@ -94,6 +94,7 @@ int main(int argc, char const* argv[]) {
 			}
 			in_str += buffer;
 		}
+		//cout << in_str << endl;
 		in_str.pop_back();
 		if (!is_connected)
 			break;

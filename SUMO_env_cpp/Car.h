@@ -71,6 +71,7 @@ public:
 	string inter_status = "";
 	uint8_t car_length = 0;
 	string route = "";
+	bool is_last_turn = false;	// At the last turn, force turn
 	
 	double enter_time = 0;
 	double shortest_travel_time = 0;
