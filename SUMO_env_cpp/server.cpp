@@ -41,39 +41,52 @@ SOCKET initial_client_handler() {
 	sockAddr.sin_port = htons(ROUTER_PORT);
 
 	// Connect socket to the port
-	while (connect(client_sock, (SOCKADDR*)&sockAddr, sizeof(sockAddr)) < 0) {
-		cout << "trying to connect" << endl;
-		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-		// closesocket(client_sock);
-		// ClearWinSock();
-		// exit(EXIT_FAILURE);
+	while (true) {
+		while (connect(client_sock, (SOCKADDR*)&sockAddr, sizeof(sockAddr)) < 0) {
+			cout << "trying to connect" << endl;
+			std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+			// closesocket(client_sock);
+			// ClearWinSock();
+			// exit(EXIT_FAILURE);
+		}
+
+		string init_info = "";
+		init_info += "My_grid_size:" + to_string(_grid_size);
+		init_info += ":My_schedule_period:" + get_string_from_double(SCHEDULING_PERIOD, 2);
+		init_info += ":My_routing_period_num:" + to_string(ROUTING_PERIOD_NUM);
+		init_info += ":GZ_BZ_CCZ_len:" + get_string_from_double(GZ_LEN + BZ_LEN + CCZ_LEN, 1);
+		init_info += ":HEADWAY:" + to_string(HEADWAY);
+		init_info += ":V_MAX:" + get_string_from_double(V_MAX, 2);
+		init_info += ":TURN_SPEED:" + get_string_from_double(TURN_SPEED, 2);
+		init_info += ":TOTAL_LEN:" + get_string_from_double(TOTAL_LEN, 1);
+		init_info += ":CHOOSE_CAR_OPTION:" + to_string(_CHOOSE_CAR_OPTION);
+		init_info += ":TOP_N_CONGESTED:" + to_string(_TOP_N_CONGESTED);
+		init_info += ":_THREAD_NUM:" + to_string(_THREAD_NUM);
+		init_info += ":_ITERATION_NUM:" + to_string(_ITERATION_NUM);
+		init_info += ":_CAR_TIME_ERROR:" + _CAR_TIME_ERROR;
+		init_info += ":_MEC_num_per_edge:" + to_string(_MEC_num_per_edge);
+		init_info += ":_Enable_Load_Balance:" + _Enable_Load_Balance;
+		init_info += ":_ARRIVAL_RATE:" + _ARRIVAL_RATE;
+		init_info += ":_RANDOM_SEED:" + _RANDOM_SEED;
+
+		send(client_sock, init_info.c_str(), int(init_info.length()), 0);
+
+		char buffer[1024] = { 0 };
+		recv(client_sock, buffer, 1024, 0);
+
+		cout << "Server replies: " << buffer << endl;
+
+		// Reconnect if the server is not connected properly
+		string server_reply_str = buffer;
+		if (server_reply_str.find('@') != string::npos) {
+			break;
+		}
+		else {
+			closesocket(client_sock);
+			client_sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
+			continue;
+		}
 	}
-
-	string init_info = "";
-	init_info += "My_grid_size:" + to_string(_grid_size);
-	init_info += ":My_schedule_period:" + get_string_from_double(SCHEDULING_PERIOD, 2);
-	init_info += ":My_routing_period_num:" + to_string(ROUTING_PERIOD_NUM);
-	init_info += ":GZ_BZ_CCZ_len:" + get_string_from_double(GZ_LEN + BZ_LEN + CCZ_LEN, 1);
-	init_info += ":HEADWAY:" + to_string(HEADWAY);
-	init_info += ":V_MAX:" + get_string_from_double(V_MAX, 2);
-	init_info += ":TURN_SPEED:" + get_string_from_double(TURN_SPEED, 2);
-	init_info += ":TOTAL_LEN:" + get_string_from_double(TOTAL_LEN, 1);
-	init_info += ":CHOOSE_CAR_OPTION:" + to_string(_CHOOSE_CAR_OPTION);
-	init_info += ":TOP_N_CONGESTED:" + to_string(_TOP_N_CONGESTED);
-	init_info += ":_THREAD_NUM:" + to_string(_THREAD_NUM);
-	init_info += ":_ITERATION_NUM:" + to_string(_ITERATION_NUM);
-	init_info += ":_CAR_TIME_ERROR:" + _CAR_TIME_ERROR;
-	init_info += ":_MEC_num_per_edge:" + to_string(_MEC_num_per_edge);
-	init_info += ":_Enable_Load_Balance:" + _Enable_Load_Balance;
-	init_info += ":_ARRIVAL_RATE:" + _ARRIVAL_RATE;
-	init_info += ":_RANDOM_SEED:" + _RANDOM_SEED;
-
-	send(client_sock, init_info.c_str(), int(init_info.length()), 0);
-
-	char buffer[1024] = { 0 };
-	recv(client_sock, buffer, 1024, 0);
-
-	cout << "Server replies: " << buffer << endl;
 
 	return client_sock;
 }
