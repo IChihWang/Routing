@@ -6,19 +6,21 @@ typedef int SOCKET;
 #include <vector>
 #include <thread>
 
-/*
+typedef int SOCKET;
+
+//#define WIN32
 #if defined WIN32
 #include <winsock.h>
 # pragma comment(lib,"ws2_32.lib") //Winsock Library
 typedef int socklen_t;
 #else
-*/
+
 #define closesocket close
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
-//#endif
+#endif
 
 #include "global.h"
 
@@ -31,5 +33,3 @@ extern SOCKET client_sock;
 // Functions in server.cpp
 void ClearWinSock();
 SOCKET initial_client_handler();
-
-

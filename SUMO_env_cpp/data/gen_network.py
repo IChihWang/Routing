@@ -110,6 +110,7 @@ def gen_net(i):
     gen_node(i, i)
     gen_edge(i, i)
     gen_connection(i, i)
+'''
 for i in range(11,20):
     gen_net(i)
     node = './tmp/lane.nod.xml'
@@ -118,3 +119,13 @@ for i in range(11,20):
     out = './tmp/lane{}by{}.net.xml'.format(i, i)
 
     os.system("netconvert --node-files={} --edge-files={} --connection-files={} --output-file={}".format(node,edge,con,out))
+'''
+
+i = sys.argv[1]
+gen_net(i)
+node = './tmp/lane.nod.xml'
+edge = './tmp/lane.edg.xml'
+con = './tmp/lane.con.xml'
+out = './net/lane{}by{}.net.xml'.format(i, i)
+
+os.system("netconvert --node-files={} --edge-files={} --connection-files={} --output-file={}".format(node,edge,con,out))

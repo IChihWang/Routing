@@ -12,6 +12,8 @@
 #include <iostream>
 #include <set>
 #include <fstream>
+#include <cmath>
+
 #include "globalConst.h"
 #include "element.h"
 #include "LaneAdviser.h"

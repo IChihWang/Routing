@@ -5,8 +5,11 @@
 #include <sstream>
 #include <vector>
 #include <thread>
+#include <cstring>
 
-#define WIN32
+typedef int SOCKET;
+
+//#define WIN32
 #if defined WIN32
 #include <winsock.h>
 # pragma comment(lib,"ws2_32.lib") //Winsock Library
@@ -27,5 +30,3 @@ typedef int socklen_t;
 // Functions in server.cpp
 void ClearWinSock();
 SOCKET initial_server_handler();
-
-
