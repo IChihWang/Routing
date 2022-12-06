@@ -121,7 +121,7 @@ for i in range(11,20):
     os.system("netconvert --node-files={} --edge-files={} --connection-files={} --output-file={}".format(node,edge,con,out))
 '''
 
-i = sys.argv[1]
+i = int(sys.argv[1])
 gen_net(i)
 node = './tmp/lane.nod.xml'
 edge = './tmp/lane.edg.xml'

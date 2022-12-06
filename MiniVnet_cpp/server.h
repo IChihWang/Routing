@@ -25,7 +25,7 @@ typedef int socklen_t;
 
 #include "global.h"
 
-#define PORT 9996
+#define PORT 29996
 
 // Functions in server.cpp
 void ClearWinSock();

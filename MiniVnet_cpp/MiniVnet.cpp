@@ -124,7 +124,7 @@ void update_car(const string& car_id, const uint8_t& car_length, const string& s
 		getline(ss, dst_id_substr, '_');
 		int dst_id_2 = stoi(dst_id_substr);
 		Coord dst_coord(dst_id_1, dst_id_2);
-		
+
 		_car_dict[car_id] = Car(car_id, car_length, dst_coord);
 	}
 
@@ -264,7 +264,7 @@ vector<vector<reference_wrapper<Car>>> choose_car_to_thread_group(const Coord& M
 				});
 			// If the car belongs to this district (has been checked in creating cars_to_add)
 			target_result.push_back(_car_dict[car_id]);
-			
+
 		}
 
 	}
@@ -353,9 +353,9 @@ vector<vector<reference_wrapper<Car>>> choose_car_to_thread_group(const Coord& M
 	else if (_CHOOSE_CAR_OPTION == 3) {
 		// Do nothing with the old cars
 	}
-	
+
 	// Handling the new cars
-	auto min_max_result = minmax_element(results.begin(), results.end(), 
+	auto min_max_result = minmax_element(results.begin(), results.end(),
 		[](const vector<reference_wrapper<Car>>& a, const vector<reference_wrapper<Car>>& b) -> bool
 		{
 			return a.size() < b.size();
@@ -383,10 +383,12 @@ vector<vector<reference_wrapper<Car>>> choose_car_to_thread_group(const Coord& M
 		}
 	}
 
+	/*
 	for (auto car_vec : results) {
 		cout << " >> " << car_vec.size() << " ";
 	}
 	cout << endl;
+	*/
 
 	// Remove Cars from the database for new routes
 	for (vector<reference_wrapper<Car>> car_group : results) {
@@ -512,7 +514,7 @@ map<string, vector<Node_in_Path>> routing(const Coord& MEC_id, const vector<refe
 			Coord intersection_id = get<0>(current_node);
 			uint8_t intersection_dir = get<1>(current_node);
 
-			
+
 			// Terminate when finding shortest path
 			if (intersection_id == dst_coord) {
 				car.traveling_time = _NOW_SIMU_TIME + double(current_arrival_time) * _schedule_period + (500 - (_TOTAL_LEN - node_position_at_offset)) / _V_MAX; // additional time for car to leave sumo
@@ -631,7 +633,7 @@ map<string, vector<Node_in_Path>> routing(const Coord& MEC_id, const vector<refe
 
 				Node_ID next_node = node_id;
 
-				if ( (nodes_arrival_time_data.find(next_node) == nodes_arrival_time_data.end()) 
+				if ( (nodes_arrival_time_data.find(next_node) == nodes_arrival_time_data.end())
 					|| (nodes_arrival_time_data[next_node].arrival_time_stamp > next_time_step)) {
 					Node_Record tmp_node_record(false, next_time_step);
 					tmp_node_record.turning = turning;
@@ -766,7 +768,7 @@ void add_intersection_to_reschedule_list(vector< pair<int32_t, Intersection*> > 
 	sorted_affected_intersections.insert(sorted_affected_intersections.end(), district_top_congested_intersections.begin(), district_top_congested_intersections.end());
 	sort(sorted_affected_intersections.begin(), sorted_affected_intersections.end(), [](pair<uint16_t, Intersection*> a, pair<uint16_t, Intersection*> b) -> bool {return (a.second)->get_car_num() > (b.second)->get_car_num(); });
 
-	
+
 	district_top_congested_intersections.clear();
 	uint8_t count = 0;
 	for (auto sorted_item : sorted_affected_intersections) {
@@ -784,7 +786,7 @@ void add_intersection_to_reschedule_list(vector< pair<int32_t, Intersection*> > 
 				break;
 			}
 		}
-		
+
 		if (!is_skip) {
 			district_top_congested_intersections.push_back(sorted_item);
 
@@ -797,7 +799,7 @@ void add_intersection_to_reschedule_list(vector< pair<int32_t, Intersection*> > 
 
 void add_car_to_database(Car& target_car, const vector<Node_in_Path>& path_list, set< pair<uint16_t, Intersection*> >& thread_affected_intersections) {
 	// TODO: write lock
-	
+
 	// Put all to-write records together
 	vector<reference_wrapper<const Car_in_Node_Record>> recordings;
 	for (const Node_in_Path& node_in_path_record : path_list) {
@@ -813,7 +815,7 @@ void add_car_to_database(Car& target_car, const vector<Node_in_Path>& path_list,
 		const Coord& intersection_id = record.last_intersection_id;
 		const string& state = record.car_state;
 		const Car_in_database& car = record.car_in_database;
-		
+
 		Intersection& intersection = get_intersection(time, intersection_id);
 
 		if (state.compare("lane_advising") == 0) {

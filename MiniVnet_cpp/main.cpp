@@ -52,7 +52,7 @@ int main(int argc, char const* argv[]) {
 	// Create files for writing the results
 	string file_name_prefix = string("result/") + to_string(_grid_size) + "_" +
 		to_string(_TOP_N_CONGESTED) + "_" + to_string(_CHOOSE_CAR_OPTION) + "_" +
-		to_string(_thread_num) + "_" + to_string(_ITERATION_NUM) + "_" + 
+		to_string(_thread_num) + "_" + to_string(_ITERATION_NUM) + "_" +
 		to_string(_CAR_TIME_ERROR) + "_" + _ARRIVAL_RATE + "_" + _RANDOM_SEED + "_" +
 		to_string(_MEC_num_per_edge) + "_" + _Enable_Load_Balance + "_";
 
@@ -124,6 +124,7 @@ int main(int argc, char const* argv[]) {
 }
 
 string handle_request(string &in_str) {
+	cout << "Get request" << endl;
 	in_str.pop_back();	// Remove the ";" at the end
 	stringstream ss_car(in_str);
 	vector<string> new_car_ids;
@@ -132,7 +133,7 @@ string handle_request(string &in_str) {
 	string simu_time_str;
 	getline(ss_car, simu_time_str, ';');
 	_NOW_SIMU_TIME = stod(simu_time_str);
-	
+
 	// Parse the data from SUMO
 	while (ss_car.good()) {
 		string car_str;
@@ -153,7 +154,7 @@ string handle_request(string &in_str) {
 				_car_dict[car_id].state = car_state;
 		}
 		else if (car_state == "NEW" || car_state == "OLD") {
-			
+
 			string car_data;
 			getline(ss_car_data, car_data, ',');
 			uint8_t car_length = stoi(car_data);
@@ -222,8 +223,8 @@ string handle_request(string &in_str) {
 
 	// Run routing in each district
 	for (Coord& MEC_id: _MEC_id_list){
-		
-		// Record top N congested list for a district 
+
+		// Record top N congested list for a district
 		vector< pair<int32_t, Intersection*> > district_top_congested_intersections = top_congested_intersections;
 
 		auto begin = high_resolution_clock::now();

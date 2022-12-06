@@ -111,7 +111,7 @@ void read_src_dst_file(string src_dst_file_name) {
 
 void run_sumo(Thread_Worker& router_thread) {
     double simu_step = 0;
-    
+
 
     // Create a list with intersection managers
     map<My_Coord, IntersectionManager*> intersection_map;
@@ -282,7 +282,7 @@ void run_sumo(Thread_Worker& router_thread) {
 
                 car_info_dict[car_id].compute_shortest_time(lane_id, dst_node_str);
                 arrival_car_num++;
-                
+
                 if (first_1000_car_id.size() <= 1000) {
                     first_1000_car_id.push_back(car_id);
                 }
@@ -302,7 +302,7 @@ void run_sumo(Thread_Worker& router_thread) {
                     char next_turn = car_info_dict[car_id].route[1];
 
                     intersection_ptr->update_car(car_id, lane_id, simu_step, current_turn, next_turn);
-                    
+
                     is_handled = true;
                     car_info_dict[car_id].inter_status = "On my lane";
                     car_info_dict[car_id].intersection_manager_ptr = intersection_ptr;
@@ -350,7 +350,7 @@ void run_sumo(Thread_Worker& router_thread) {
             all_delay_time[car_id] = car_travel_time - car_info_dict[car_id].shortest_travel_time;
             all_shortest_time[car_id] = car_info_dict[car_id].shortest_travel_time;
             all_diff_exit_time[car_id] = simu_step - (car_info_dict[car_id].estimated_exit_time);
-                        
+
             car_info_dict.erase(car_id);
             to_delete_car_in_database.push_back(car_id);    // This is for telling the router to delete the car
         }
@@ -372,9 +372,9 @@ void run_sumo(Thread_Worker& router_thread) {
     }
 
     // Statistics
-    string file_name_prefix = string("result/") + to_string(_grid_size) + "_" + 
-        to_string(_TOP_N_CONGESTED) + "_" + to_string(_CHOOSE_CAR_OPTION) + "_" + 
-        to_string(_THREAD_NUM) + "_" + to_string(_ITERATION_NUM) + "_" + 
+    string file_name_prefix = string("result/") + to_string(_grid_size) + "_" +
+        to_string(_TOP_N_CONGESTED) + "_" + to_string(_CHOOSE_CAR_OPTION) + "_" +
+        to_string(_THREAD_NUM) + "_" + to_string(_ITERATION_NUM) + "_" +
         _CAR_TIME_ERROR + "_" + _ARRIVAL_RATE + "_" + _RANDOM_SEED + "_" +
         to_string(_MEC_num_per_edge) + "_" + _Enable_Load_Balance + "_";
     ofstream all_car_file(file_name_prefix + "allCars.csv");
@@ -420,7 +420,7 @@ void run_sumo(Thread_Worker& router_thread) {
     statistic_file << (int)_MEC_num_per_edge << ',' << _Enable_Load_Balance << ',';
     statistic_file << _ARRIVAL_RATE << ',' << _RANDOM_SEED << ',' << avg_shortest_travel_time << ',' << avg_travel_time << ',' << avg_delay_time << ',' << arrival_car_num << ',' << all_travel_time.size() << ',' << avg_diff_exit_time << ',';
     statistic_file << avg_first_1000_travel_time << ',' << avg_first_1000_delay_time << ',' << avg_first_1000_shortest_travel_time << ',' << first_1000_car_id.size() << endl;
-    
+
     all_car_file.close();
     statistic_file.close();
 
